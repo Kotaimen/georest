@@ -1,6 +1,6 @@
 # GeoRest
 
-Restful geo feature storage/computing/query engine.
+Restful geospatial feature storage/computing/query engine.
 
 Planned Capabilities:
 
