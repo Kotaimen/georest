@@ -22,8 +22,6 @@ class TestGeoRestApp(unittest.TestCase):
         rv = self.app.get('/stat')
         self.assertEqual(200, rv.status_code)
 
-    def testFail(self):
-        self.assert_(False)
 
 
 if __name__ == '__main__':

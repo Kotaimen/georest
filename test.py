@@ -7,7 +7,7 @@ __date__ = '3/19/14'
 
 import nose
 
-import test
+import tests
 
-nose.run(module=test)
+nose.run(module=tests)
 
