@@ -14,4 +14,3 @@ Planned Capabilities:
 * Spatial query
 * Temporal query
 * Property query
-
