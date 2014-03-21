@@ -164,7 +164,7 @@ def build_geometry(geoinput, srid=None):
     """
 
     # XXX: Wrapping GEOS Geometry here, which does not support CRS, just SRID
-    if not isinstance(srid, int):
+    if srid is not None and not isinstance(srid, int):
         raise InvalidCoordinateReferenceSystem('CRS Must be SRID integer')
 
     try:

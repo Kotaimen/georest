@@ -84,7 +84,15 @@ class Feature(object):
 
     @property
     def type(self):
+        return 'Feature'
+
+    @property
+    def geotype(self):
         return self._geometry.geom_type
+
+    @property
+    def geohash(self):
+        return self._geohash
 
     @property
     def crs(self):
@@ -99,7 +107,7 @@ class Feature(object):
         self._bbox = calc_bbox(self._geometry.the_geom)
 
     def __repr__(self):
-        return 'Feature(%r,%s)'%(self._geometry, self._properties)
+        return 'Feature(%r,%s)' % (self._geometry, self._properties)
 
 
 #

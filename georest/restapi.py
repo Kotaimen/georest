@@ -9,10 +9,9 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-from flask import current_app
 from flask.ext import restful
 
-from .rest import EngineStatus
+from .rest import *
 
 
 class GeoRestApi(restful.Api):
@@ -28,5 +27,7 @@ class GeoRestApi(restful.Api):
         self.add_resources()
 
     def add_resources(self):
-        self.add_resource(EngineStatus, '/stat')
+        self.add_resource(Stat, '/stat')
+        self.add_resource(TestFeature, '/getfeature')
+        self.add_resource(TestGeometry, '/getgeometry')
 

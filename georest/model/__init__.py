@@ -10,7 +10,8 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-from ..geo import GEOS_VERSION, GDAL_VERSION, Feature
+from ..geo.engine import VERSION
+from ..geo import build_feature, build_geometry
 
 
 #
@@ -27,10 +28,20 @@ class VeryDumbGeoModel(object):
         self.store = store
 
     def describe_engine(self):
-        return dict(geos=GEOS_VERSION, gdal=GDAL_VERSION)
+        return VERSION
+
+    def describe_capabilities(self):
+        return dict(storage=False,
+                    version=False,
+                    changeset=False,
+                    property_query=False,
+                    spatial_query=False)
 
     def put_feature(self, geom, props=None, key=None):
         pass
 
     def get_feature(self, key):
-        return Feature()
+        return build_feature('POINT(1 2)', 4326, {'hello,': 'world!'})
+
+    def get_geometry(self, key):
+        return build_geometry('POINT(1 2)')

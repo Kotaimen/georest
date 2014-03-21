@@ -50,7 +50,6 @@ class GeoRestApp(Flask):
         self.config.from_object(default_settings)
         self.config.from_pyfile(self.settings, silent=True)
 
-
     def create_store(self):
         return VeryDumbGeoStore()
 
@@ -58,11 +57,13 @@ class GeoRestApp(Flask):
         return VeryDumbGeoModel(self.store)
 
     def init_plugins(self):
+        # Flask-Restful
         api = GeoRestApi(self)
+        # Flask-Markdown
         Markdown(self,
                  extensions=self.config.get('MARKDOWN_EXTENSIONS'),
                  extension_configs=self.config.get(
-                     'MARKDOWN_EXTENSIONS_CONFIG'))
+                     'MARKDOWN_EXTENSIONS_CONFIG'), )
 
     def init_routes(self):
         # Add a test route
