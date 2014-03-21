@@ -49,7 +49,7 @@ class Geometry(object):
             return Delegation.type_guard(ret)
 
     def __repr__(self):
-        return 'Geometry(%r)' % self._the_geom.wkt
+        return 'Geometry(%s)' % self._the_geom.ewkt
 
     def __getstate__(self):
         return bytes(self._the_geom.ewkb)
@@ -83,7 +83,7 @@ class SpatialReference(object):
             return Delegation.type_guard(ret)
 
     def __repr__(self):
-        return 'SpatialReference(%r)' % self._the_srs.name
+        return 'SpatialReference(%s)' % self._the_srs.name
 
     def __getstate__(self):
         return self._the_srs.wkt

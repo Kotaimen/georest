@@ -20,52 +20,86 @@ from .engine import geos
 from .geometry import build_geometry
 
 
-class Feature(collections.OrderedDict):
+class Feature(object):
     """
-        GeoFeature
+        GeoFeature with more GeoJson friendly properties
 
-        A more GeoJson friendly data layout
+        Unlike OGRFeature, does not require property have a field definition,
+        thus is more json friendly.
     """
 
-    # Fields starts with "_" are not part of the geojson standard
-    FIELDS = ('_id', '_etag', '_created', '_modified',
-              '_geotype', '_geoformat', '_geohash',
-              'type', 'geometry', 'crs', 'bbox', 'properties')
+    __slots__ = ('_id', '_etag', '_created', '_modified',
+                 '_geometry', '_properties', '_bbox', '_geohash')
 
-    def __init__(self, geometry, properties,
-                 id_, created, modified, geoformat):
-        super(Feature, self).__init__(itertools.izip_longest(self.FIELDS, []))
+    def __init__(self,
+                 id_, etag,
+                 created, modified,
+                 geometry, properties,
+                 bbox, geohash
+    ):
+        self._id = id_
+        self._etag = etag
 
-        self['_id'] = id_
-        self['_created'] = created
-        self['_modified'] = modified
-        self['_geoformat'] = geoformat
-        # XXX: Consider FeatureCollection...
-        self['type'] = 'Feature'
-        self['geometry'] = geometry
+        self._created = created
+        self._modified = modified
 
-        self['properties'] = properties
+        self._geometry = geometry
+        self._properties = properties
+
+        self._bbox = bbox
+        self._geohash = geohash
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def etag(self):
+        return self._etag
+
+    @property
+    def created(self):
+        return self._created
+
+    @property
+    def modified(self):
+        return self._modified
+
+    @property
+    def geometry(self):
+        return self._geometry
+
+    @geometry.setter
+    def set_geometry(self, new_geometry):
+        self._geometry = new_geometry
         self.recalculate()
 
+    @property
+    def properties(self):
+        return self._properties
+
+    @property
+    def bbox(self):
+        return self._bbox
+
+    @property
+    def type(self):
+        return self._geometry.geom_type
+
+    @property
+    def crs(self):
+        return self._geometry.crs
+
     def recalculate(self):
-        # XXX: Add a hooker to recalculate these after __setitem__
-        self['_geotype'] = self['geometry'].geom_type
-        self['_etag'] = calc_etag(self['geometry'].the_geom, self['properties'])
-        self['_modified'] = datetime.datetime.utcnow()
-        self['_geohash'] = calc_geohash(self['geometry'].the_geom)
-        self['bbox'] = calc_bbox(self['geometry'].the_geom)
-        self['crs'] = self['geometry'].crs
+        # XXX: Add a hooker to recalculate these after changed major properties
 
-    def __setitem__(self, key, value):
-        if key not in self.FIELDS:
-            raise KeyError(key)
-        super(Feature, self).__setitem__(key, value)
+        self._modified = datetime.datetime.utcnow()
+        self._etag = calc_etag(self._geometry.the_geom, self._properties)
+        self._geohash = calc_geohash(self._geometry.the_geom)
+        self._bbox = calc_bbox(self._geometry.the_geom)
 
-    def __getattr__(self, item):
-        try:
-            return self[item]
-        except KeyError:
-            return self.__getattribute__(item)
+    def __repr__(self):
+        return 'Feature(%r,%s)'%(self._geometry, self._properties)
 
 
 #
@@ -140,8 +174,7 @@ def build_feature(geoinput,
                   properties=None,
                   id_=None,
                   created=None,
-                  modified=None,
-                  geoformat='geojson'):
+                  modified=None):
     """
         Build a geometry feature
     """
@@ -160,8 +193,11 @@ def build_feature(geoinput,
 
     geometry = build_geometry(geoinput, srid)
 
-    feature = Feature(geometry, properties,
-                      id_, created, modified,
-                      geoformat)
+    feature = Feature(id_=id_, etag=None,
+                      created=created, modified=modified,
+                      geometry=geometry, properties=properties,
+                      bbox=None, geohash=None)
+
+    feature.recalculate()
     return feature
 

@@ -49,9 +49,11 @@ class TestFeatureHelpers(unittest.TestCase):
 class TestFeature(unittest.TestCase):
     def test_build(self):
         feat1 = build_feature('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)',
-                              properties={'hello': 'world'},
-                              )
-        pprint(dict(feat1))
+                              properties={'hello': 'world'}, )
+        self.assertEqual(feat1.geometry.srid, 4326)
+        self.assertEqual(feat1.properties['hello'], 'world')
+        # TODO: Add more tests...
 
-        if __name__ == '__main__':
-            unittest.main()
+
+if __name__ == '__main__':
+    unittest.main()
