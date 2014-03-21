@@ -11,7 +11,9 @@ __date__ = '3/18/14'
 
 from georest import GeoRestApp
 
-application = GeoRestApp(settings='settings.py')
+app = GeoRestApp(settings='settings.py')
+
+application = app
 
 if __name__ == '__main__':
     application.run(debug=True)
