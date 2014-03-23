@@ -9,16 +9,13 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-from ..geo import Feature
+from .simple import SimpleGeoStore
 
 #
-# Mock IF
+# Factory
 #
-
-
-class VeryDumbGeoStore(object):
-    def put_feature(self, feature, key=None):
-        pass
-
-    def get_feature(self, key):
-        return Feature()
+def build_store(type='simple', **argv):
+    if type == 'simple':
+        return SimpleGeoStore()
+    else:
+        raise RuntimeError('Invalid feature store type "%s"' % type)
