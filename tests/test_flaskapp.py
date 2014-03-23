@@ -6,6 +6,8 @@ __date__ = '3/19/14'
 from georest import GeoRestApp
 
 import unittest
+import json
+from pprint import pprint
 
 
 class TestGeoRestApp(unittest.TestCase):
@@ -14,14 +16,13 @@ class TestGeoRestApp(unittest.TestCase):
         app.config['TESTING'] = True
         self.app = app.test_client()
 
-    def testIndex(self):
+    def test_index(self):
         rv = self.app.get('/')
         self.assertEqual(200, rv.status_code)
 
-    def testStat(self):
+    def test_get_stat(self):
         rv = self.app.get('/stat')
         self.assertEqual(200, rv.status_code)
-
 
 
 if __name__ == '__main__':

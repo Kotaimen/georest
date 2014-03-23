@@ -28,6 +28,6 @@ class GeoRestApi(restful.Api):
 
     def add_resources(self):
         self.add_resource(Stat, '/stat')
-        self.add_resource(TestFeature, '/getfeature')
-        self.add_resource(TestGeometry, '/getgeometry')
+        self.add_resource(GeometryResource, '/geometry/<key>')
+        self.add_resource(FeatureResource, '/feature/<key>')
 

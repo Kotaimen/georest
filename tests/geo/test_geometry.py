@@ -5,7 +5,8 @@ __date__ = '3/19/14'
 
 import unittest
 import pickle
-from georest.geo import Geometry, GeoException, build_geometry, build_srs
+from georest.geo import Geometry, build_geometry, build_srs
+from georest.geo.exception import GeoException
 
 
 class TestGeometryBuilding(unittest.TestCase):
