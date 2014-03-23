@@ -16,7 +16,7 @@ class GeoException(Exception):
     """
 
     def __init__(self, other_or_message=None):
-        self.trace = sys.exc_info()
+        self.exc_info = sys.exc_info()
         if isinstance(other_or_message, basestring):
             super(GeoException, self).__init__(other_or_message)
         elif isinstance(other_or_message, BaseException):
