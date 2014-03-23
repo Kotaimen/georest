@@ -28,8 +28,9 @@ class Feature(object):
         thus is more json friendly.
     """
 
-    __slots__ = ('_id', '_etag', '_created', '_modified',
-                 '_geometry', '_properties', '_bbox', '_geohash')
+    # XXX: automatic pickling doesn't work with this, disable it as of now
+    # __slots__ = ('_id', '_etag', '_created', '_modified',
+    #              '_geometry', '_properties', '_bbox', '_geohash')
 
     def __init__(self,
                  id_, etag,
@@ -178,8 +179,8 @@ def calc_bbox(geom):
 
 
 def build_feature(geoinput,
-                  srid=4326,
                   properties=None,
+                  srid=4326,
                   id_=None,
                   created=None,
                   modified=None):
