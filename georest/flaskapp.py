@@ -16,8 +16,8 @@ from flask.ext.markdown import Markdown
 
 from . import default_settings
 
-from .model import VeryDumbGeoModel
-from .store import VeryDumbGeoStore
+from .model import build_model
+from .store import build_store
 
 from .restapi import GeoRestApi
 
@@ -37,35 +37,41 @@ class GeoRestApp(Flask):
         super(GeoRestApp, self).__init__(import_name,
                                          instance_relative_config=True,
                                          **kwargs)
-        self.settings = settings
-        self.load_config()
+        self.load_config(settings)
 
         self.store = self.create_store()
         self.model = self.create_model()
 
         self.init_plugins()
-        self.init_routes()
+        self.init_views()
 
-    def load_config(self):
+    def load_config(self, settings):
+        # Load default settings first
         self.config.from_object(default_settings)
-        self.config.from_pyfile(self.settings, silent=True)
+        if isinstance(settings, dict):
+            # Load setting from a dict
+            self.config.from_object(settings)
+        else:
+            # Load setting from instance config
+            self.config.from_pyfile(settings, silent=True)
 
     def create_store(self):
-        return VeryDumbGeoStore()
+        return build_store(**self.config['GEOREST_GEOSTORE_CONFIG'])
 
     def create_model(self):
-        return VeryDumbGeoModel(self.store)
+        return build_model(store=self.store, **self.config['GEOREST_GEOMODEL_CONFIG'])
 
     def init_plugins(self):
-        # Flask-Restful
-        api = GeoRestApi(self)
         # Flask-Markdown
         Markdown(self,
                  extensions=self.config.get('MARKDOWN_EXTENSIONS'),
                  extension_configs=self.config.get(
                      'MARKDOWN_EXTENSIONS_CONFIG'), )
 
-    def init_routes(self):
+        # Flask-Restful
+        api = GeoRestApi(self)
+
+    def init_views(self):
         # Add a test route
         @self.route('/')
         def index():

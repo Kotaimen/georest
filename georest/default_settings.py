@@ -5,10 +5,20 @@
 """
 
 #
-# Test
+# Georest
 #
-GEOREST_FOOBAR = False
-GEOREST_FOOBAZ = False
+
+DATE_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+
+FEATURE_EXPIRES = 10
+
+GEOREST_GEOSTORE_CONFIG = {
+    'type': 'simple'
+}
+
+GEOREST_GEOMODEL_CONFIG = {
+    'type': 'simple'
+}
 
 
 #
