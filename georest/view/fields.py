@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 
 """
-    georest.rest.fields
+    georest.view.fields
     ~~~~~~~~~~~~~~~~~~~
 
     Custom flask.restful.fields for marshaling

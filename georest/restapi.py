@@ -11,7 +11,7 @@ __date__ = '3/18/14'
 
 from flask.ext import restful
 
-from .rest import *
+from .view import *
 
 
 class GeoRestApi(restful.Api):

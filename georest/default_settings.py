@@ -27,7 +27,7 @@ GEOREST_GEOMODEL_CONFIG = {
 MARKDOWN_EXTENSIONS = ['def_list', 'attr_list',
                        'fenced_code', 'codehilite']
 
-MARKDOWN_EXTENSIONS_CONFIG = {
+MARKDOWN_EXTENSION_CONFIGS = {
     'codehilite': {'pygments_style': 'emacs',
                    # for list of styles, run: pygmentize -L styles
                    'linenums': None,  # True=always, False=never, None=auto

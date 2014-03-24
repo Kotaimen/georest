@@ -66,8 +66,7 @@ class GeoRestApp(Flask):
         Markdown(self,
                  extensions=self.config.get('MARKDOWN_EXTENSIONS'),
                  extension_configs=self.config.get(
-                     'MARKDOWN_EXTENSIONS_CONFIG'), )
-
+                     'MARKDOWN_EXTENSION_CONFIGS'), )
         # Flask-Restful
         api = GeoRestApi(self)
 
