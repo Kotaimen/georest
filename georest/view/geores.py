@@ -29,16 +29,34 @@ class GeometryResource(BaseResource):
                         action='store',
                         location='args',
                         type=str,
-                        choices=['json', 'wkt', 'ewkt', 'ewkb'],
+                        choices=['json', 'geojson', 'ewkt', 'ewkb'],
                         default='json',
                         required=False)
 
     def get(self, key):
+        args = self.parser.parse_args()
         try:
             feature = self.model.get_feature(key)
         except GeoException as e:
             self.abort(e)
-        return json.loads(feature.geometry.json), 200, self.header(feature)
+
+        headers = self.header(feature)
+
+        if args.format in ('json', 'geojson'):
+            return json.loads(feature.geometry.json), 200, headers
+
+        if args.format == 'ewkt':
+            response_data = feature.geometry.ewkt
+            response = make_response(response_data, 200)
+            response.headers['Content-Type'] = 'text/plain'
+        elif args.format == 'ewkb':
+            response_data = str(feature.geometry.ewkb)
+            response = make_response(response_data, 200)
+            response.headers['Content-Type'] = 'application/binary'
+
+        for k, v in headers.iteritems():
+            response.headers[k] = v
+        return response
 
     def post(self, key):
         data = request.data
@@ -48,6 +66,13 @@ class GeometryResource(BaseResource):
             self.abort(e)
 
         return None, 201, self.header(feature)
+
+    def delete(self, key):
+        try:
+            self.model.delete_feature(key)
+        except GeoException as e:
+            self.abort(e)
+        return None, 200
 
 
 class FeatureResource(BaseResource):
@@ -59,6 +84,3 @@ class FeatureResource(BaseResource):
             self.abort(e)
         return feature, 200, self.header(feature)
 
-
-    def delete(self, key):
-        self.model.delete_feature(key)

@@ -43,7 +43,7 @@ class BaseResource(Resource):
 
     def header(self, feature):
         """ Generate a header using feature metadata"""
-        age = current_app.config['FEATURE_EXPIRES']
+        age = current_app.config['EXPIRES']
         expires = feature.modified + datetime.timedelta(seconds=age)
         date_format = current_app.config['DATE_FORMAT']
         return {

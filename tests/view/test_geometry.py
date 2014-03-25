@@ -15,30 +15,37 @@ from georest.geo import build_feature
 class ResourceTestBase(object):
     def setUp(self):
         # Build test features
-        self.timestamp = datetime.datetime.utcnow()
-        feature1 = build_feature('POINT (0.0001 0.0001)',
-                                 {'name': 'feature1'},
-                                 srid=4326,
-                                 id_=1,
-                                 created=self.timestamp)
-        feature2 = build_feature('POINT (0.00015 -0.00015)',
-                                 {'name': 'feature2'})
+
+        # Round timestamp since http header timestamp has 1 second resolution
+        timestamp = datetime.datetime.utcnow().replace(microsecond=0)
+
+        self.feature1 = build_feature('POINT (0.0001 0.0001)',
+                                      {'name': 'feature1'},
+                                      srid=4326,
+                                      id_=1,
+                                      created=timestamp)
+
+        # Reset modified timestamp since build_feature recalculates it
+        self.feature1._modified = timestamp
+
+        self.feature2 = build_feature(
+            'LINESTRING (0.00015 -0.00015, 0.00016 -0.00017)',
+            {'name': 'feature2'})
 
         # Load test settings
         settings = {
             'GEOREST_GEOSTORE_CONFIG': {'type': 'simple'},
             'GEOREST_GEOMODEL_CONFIG': {'type': 'simple'},
-            'LOGGER_NAME': 'blah'
         }
 
         # Create test app
-        app = GeoRestApp(settings=settings)
-        app.config['TESTING'] = True
-        self.app = app.test_client()
+        self.app = GeoRestApp(settings=settings)
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
 
         # Preload test features into store
-        app.model.store.put_feature(feature1, 'point1')
-        app.model.store.put_feature(feature2, 'point2')
+        self.app.model.store.put_feature(self.feature1, 'point1')
+        self.app.model.store.put_feature(self.feature2, 'point2')
 
     def tearDown(self):
         pass
@@ -51,7 +58,32 @@ class ResourceTestBase(object):
 
 
 class TestGeometryGet(ResourceTestBase, unittest.TestCase):
-    pass
+    def test_get_geometry(self):
+        key = 'point1'
+
+        response = self.client.get(
+            path='/geometry/%s' % key,
+            query_string={'format': 'json'},
+        )
+
+        result = self.checkResponse(response, 200)
+
+        self.assertEqual(response.headers['Etag'], self.feature1.etag)
+        self.assertEqual(response.date, self.feature1.created)
+        self.assertEqual(response.last_modified, self.feature1.modified)
+        expires = self.feature1.created + \
+                  datetime.timedelta(seconds=self.app.config['EXPIRES'])
+        self.assertEqual(response.expires, expires)
+
+    def test_get_geometry_not_found(self):
+        key = 'never_found'
+
+        response = self.client.get(
+            path='/geometry/%s' % key,
+            query_string={},
+        )
+
+        self.checkResponse(response, 404)
 
 
 class TestGeometryPut(ResourceTestBase, unittest.TestCase):
@@ -59,9 +91,8 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         key = 'geometry1'
         data = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
-        response = self.app.post(
+        response = self.client.post(
             path='/geometry/%s' % key,
-            query_string={},
             data=data,
             content_type='application/json',
         )
@@ -77,9 +108,8 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         key = 'very bad key'
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
-        response = self.app.post(
+        response = self.client.post(
             path='/geometry/%s' % key,
-            query_string={},
             data=payload,
             content_type='application/json',
         )
@@ -94,9 +124,8 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         payload = json.dumps(
             {'type': 'what ever', 'coordinates': 'where am i?'})
 
-        response = self.app.post(
+        response = self.client.post(
             path='/geometry/%s' % key,
-            query_string={},
             data=payload,
             content_type='application/json',
         )
@@ -110,9 +139,8 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         key = 'point1'
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
-        response = self.app.post(
+        response = self.client.post(
             path='/geometry/%s' % key,
-            query_string={},
             data=payload,
             content_type='application/json',
         )
@@ -121,6 +149,16 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
 
         self.assertIn('message', result)
         self.assertRegexpMatches(result['message'], r'^Geometry exists.*')
+
+
+class TestGeometryDelete(ResourceTestBase, unittest.TestCase):
+    def test_delete_geometry(self):
+        key = 'point2'
+        path = '/geometry/%s' % key
+        self.checkResponse(self.client.get(path=path), 200)
+        self.checkResponse(self.client.delete(path=path), 200)
+        self.checkResponse(self.client.get(path=path), 404)
+        self.checkResponse(self.client.delete(path=path), 404)
 
 
 if __name__ == '__main__':

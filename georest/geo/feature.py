@@ -208,5 +208,6 @@ def build_feature(geoinput,
                       bbox=None, geohash=None)
 
     feature.recalculate()
+
     return feature
 

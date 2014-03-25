@@ -23,11 +23,12 @@ class SimpleGeoStore(object):
         self._features = dict()
 
     def put_feature(self, feature, key=None):
+        if not is_key_valid(key):
+            raise InvalidKey(key)
+
         with self._lock:
             if key is None:
                 key = 'feature-%d' % len(self._features)
-            if not is_key_valid(key):
-                raise InvalidKey(key)
 
             if key in self._features:
                 raise GeometryAlreadyExists(key)
@@ -36,6 +37,8 @@ class SimpleGeoStore(object):
             self._features[key] = pickle.dumps(feature)
 
     def get_feature(self, key):
+        if not is_key_valid(key):
+            raise InvalidKey(key)
         with self._lock:
             try:
                 return pickle.loads(self._features[key])
