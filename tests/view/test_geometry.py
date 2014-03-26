@@ -92,10 +92,11 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
 
         response = self.client.get(
             path='/geometry/%s' % key,
-            query_string={'format': 'ewkt'},
+            query_string={'format': 'ewkt', 'srid': 3857},
         )
-
         self.assertEqual('text/plain', response.content_type)
+        self.assertNotEqual(response.data,
+                         self.feature1.geometry.ewkt)
 
 
 class TestGeometryPut(ResourceTestBase, unittest.TestCase):

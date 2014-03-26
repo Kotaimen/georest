@@ -14,14 +14,13 @@ from .fields import FEATURE_FIELDS
 
 from ..geo.exception import GeoException
 
-__all__ = ['Stat', 'GeometryResource', 'FeatureResource']
+__all__ = ['Stat', 'GeometryResource', 'FeatureResource',
+           'UnaryGeometryOperation']
 
 
 class Stat(BaseResource):
     def get(self):
         return self.model.describe_capabilities()
-
-
 
 
 class GeometryResource(BaseResource):
@@ -34,6 +33,13 @@ class GeometryResource(BaseResource):
                         choices=['json', 'ewkt', 'ewkb'],
                         default='json',
                         required=False)
+    parser.add_argument('srid',
+                        dest='srid',
+                        action='store',
+                        location='args',
+                        type=str,
+                        default=0,
+                        required=False)
 
     def get(self, key):
         args = self.parser.parse_args()
@@ -42,11 +48,12 @@ class GeometryResource(BaseResource):
         except GeoException as e:
             self.abort(e)
 
-        geometry = feature.geometry
         headers = self.make_header_from_feature(feature)
-        format_ = args.format
 
-        return self.make_response_from_geometry(geometry, format_, headers)
+        return self.make_response_from_geometry(feature.geometry,
+                                                args.format,
+                                                args.srid,
+                                                headers)
 
     def post(self, key):
         data = request.data
@@ -72,5 +79,7 @@ class FeatureResource(BaseResource):
             feature = self.model.get_feature(key)
         except GeoException as e:
             self.abort(e)
-        return feature, 200, self.header(feature)
+        return feature, 200, self.make_header_from_feature(feature)
+
+
 

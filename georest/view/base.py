@@ -56,9 +56,12 @@ class BaseResource(Resource):
             'Expires': expires.strftime(date_format),
         }
 
-    def make_response_from_geometry(self, geometry, format_, headers):
+    def make_response_from_geometry(self, geometry, format_, srid, headers):
         """ Make a geometry response """
         assert isinstance(geometry, Geometry)
+
+        if srid:
+            geometry.transform(srid)
 
         if format_ == 'ewkt':
             response_data = geometry.ewkt
