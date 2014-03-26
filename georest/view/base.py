@@ -10,11 +10,13 @@ __date__ = '3/21/14'
 
 import datetime
 
-from flask import current_app
+from flask import current_app, make_response
 from flask.ext.restful import Resource, abort
 
-from ..store.exception import GeometryAlreadyExists, InvalidKey, GeometryDoesNotExist
+from ..store.exception import GeometryAlreadyExists, InvalidKey, \
+    GeometryDoesNotExist
 from ..geo.exception import InvalidGeometry, InvalidCoordinateReferenceSystem
+from ..geo import Geometry
 
 
 class BaseResource(Resource):
@@ -41,7 +43,7 @@ class BaseResource(Resource):
         else:
             raise
 
-    def header(self, feature):
+    def make_header_from_feature(self, feature):
         """ Generate a header using feature metadata"""
         age = current_app.config['EXPIRES']
         expires = feature.modified + datetime.timedelta(seconds=age)
@@ -53,4 +55,27 @@ class BaseResource(Resource):
             'Cache-Control': 'max-age=%d,must-revalidate' % age,
             'Expires': expires.strftime(date_format),
         }
+
+    def make_response_from_geometry(self, geometry, format_, headers):
+        """ Make a geometry response """
+        assert isinstance(geometry, Geometry)
+
+        if format_ == 'ewkt':
+            response_data = geometry.ewkt
+            content_type = 'text/plain'
+        elif format_ == 'ewkb':
+            response_data = str(geometry.ewkb)
+            content_type = 'application/oct-stream'
+        if format_ == 'json':
+            response_data = geometry.json
+            content_type = 'application/json'
+
+        response = make_response(response_data, 200)
+        response.headers['Content-Type'] = content_type
+
+        for k, v in headers.iteritems():
+            response.headers[k] = v
+
+        return response
+
 

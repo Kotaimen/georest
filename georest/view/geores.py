@@ -10,7 +10,7 @@ from flask.ext.restful import marshal_with, abort
 from flask.ext.restful.reqparse import RequestParser
 
 from .base import BaseResource
-from .fields import FEATURE_FIELDS, METADATA_FIELDS
+from .fields import FEATURE_FIELDS
 
 from ..geo.exception import GeoException
 
@@ -22,6 +22,8 @@ class Stat(BaseResource):
         return self.model.describe_capabilities()
 
 
+
+
 class GeometryResource(BaseResource):
     parser = RequestParser()
     parser.add_argument('format',
@@ -29,7 +31,7 @@ class GeometryResource(BaseResource):
                         action='store',
                         location='args',
                         type=str,
-                        choices=['json', 'geojson', 'ewkt', 'ewkb'],
+                        choices=['json', 'ewkt', 'ewkb'],
                         default='json',
                         required=False)
 
@@ -40,23 +42,11 @@ class GeometryResource(BaseResource):
         except GeoException as e:
             self.abort(e)
 
-        headers = self.header(feature)
+        geometry = feature.geometry
+        headers = self.make_header_from_feature(feature)
+        format_ = args.format
 
-        if args.format in ('json', 'geojson'):
-            return json.loads(feature.geometry.json), 200, headers
-
-        if args.format == 'ewkt':
-            response_data = feature.geometry.ewkt
-            response = make_response(response_data, 200)
-            response.headers['Content-Type'] = 'text/plain'
-        elif args.format == 'ewkb':
-            response_data = str(feature.geometry.ewkb)
-            response = make_response(response_data, 200)
-            response.headers['Content-Type'] = 'application/binary'
-
-        for k, v in headers.iteritems():
-            response.headers[k] = v
-        return response
+        return self.make_response_from_geometry(geometry, format_, headers)
 
     def post(self, key):
         data = request.data
@@ -65,7 +55,7 @@ class GeometryResource(BaseResource):
         except GeoException as e:
             self.abort(e)
 
-        return None, 201, self.header(feature)
+        return None, 201, self.make_header_from_feature(feature)
 
     def delete(self, key):
         try:

@@ -74,6 +74,8 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         expires = self.feature1.created + \
                   datetime.timedelta(seconds=self.app.config['EXPIRES'])
         self.assertEqual(response.expires, expires)
+        self.assertEqual(result,
+                         json.loads(self.feature1.geometry.json))
 
     def test_get_geometry_not_found(self):
         key = 'never_found'
@@ -84,6 +86,16 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         )
 
         self.checkResponse(response, 404)
+
+    def test_get_geometry_ewkt(self):
+        key = 'point1'
+
+        response = self.client.get(
+            path='/geometry/%s' % key,
+            query_string={'format': 'ewkt'},
+        )
+
+        self.assertEqual('text/plain', response.content_type)
 
 
 class TestGeometryPut(ResourceTestBase, unittest.TestCase):
