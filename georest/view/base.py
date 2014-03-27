@@ -80,7 +80,7 @@ def throws_geo_exceptions(f):
                       message='Invalid geometry operator: %s' % e.message)
             if isinstance(e, IdentialGeometryError):
                 abort(400,
-                      message='Idential geometry: %s' % e.message)
+                      message='Identical geometry: %s' % e.message)
             elif isinstance(e, GeometryDoesNotExist):
                 abort(404, message='Key does not exist: "%s"' % e.message)
             elif isinstance(e, InvalidKey):
@@ -118,6 +118,7 @@ class GeometryRequestParser(reqparse.RequestParser):
                           choices=['json', 'ewkt', 'ewkb'],
                           default='json',
                           required=False)
+
         self.add_argument('srid',
                           dest='srid',
                           action='store',
