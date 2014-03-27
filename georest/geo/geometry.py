@@ -11,7 +11,7 @@ import six
 
 from .engine import geos, gdal
 from .exception import GeoException, InvalidGeometry, \
-    InvalidCoordinateReferenceSystem
+    InvalidCRS
 
 
 #
@@ -135,7 +135,7 @@ def build_srs(srsinput):
     try:
         srs = gdal.SpatialReference(srs_input=srsinput)
     except (ValueError, gdal.SRSException, gdal.OGRException) as e:
-        raise InvalidCoordinateReferenceSystem(e)
+        raise InvalidCRS(e)
 
     return SpatialReference(srs)
 
@@ -165,7 +165,7 @@ def build_geometry(geoinput, srid=None):
 
     # XXX: Wrapping GEOS Geometry here, which does not support CRS, just SRID
     if srid is not None and not isinstance(srid, int):
-        raise InvalidCoordinateReferenceSystem('CRS Must be SRID integer')
+        raise InvalidCRS('CRS Must be SRID integer')
 
     try:
         geom = geos.GEOSGeometry(geoinput, srid=srid)
@@ -179,7 +179,7 @@ def build_geometry(geoinput, srid=None):
         raise InvalidGeometry('Empty geometry')
 
     if geom.srid is not None and geom.crs is None:
-        raise InvalidCoordinateReferenceSystem('Invalid srid "%s"' % geom.srid)
+        raise InvalidCRS('Invalid srid "%s"' % geom.srid)
 
     if geom.geom_type not in ALLOWED_GEOMETRY_TYPES:
         raise InvalidGeometry('Invalid geometry type "%s"' % geom.geom_type)

@@ -30,6 +30,10 @@ class ResourceTestBase(object):
             'LINESTRING (0.00015 -0.00015, 0.00016 -0.00017)',
             {'name': 'feature2'})
 
+        self.feature3 = build_feature(
+            'POLYGON ((0 0, 1 0, 1 1, 0 1, 0 0))'
+        )
+
         # Load test settings
         settings = {
             'GEOREST_GEOSTORE_CONFIG': {'type': 'simple'},
@@ -43,7 +47,8 @@ class ResourceTestBase(object):
 
         # Preload test features into store
         self.app.model.store.put_feature(self.feature1, 'point1')
-        self.app.model.store.put_feature(self.feature2, 'point2')
+        self.app.model.store.put_feature(self.feature2, 'linestring1')
+        self.app.model.store.put_feature(self.feature3, 'polygon1')
 
     def tearDown(self):
         pass

@@ -25,8 +25,8 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         self.assertEqual(response.headers['Etag'], self.feature1.etag)
         self.assertEqual(response.date, self.feature1.created)
         self.assertEqual(response.last_modified, self.feature1.modified)
-        expires = self.feature1.created + \
-                  datetime.timedelta(seconds=self.app.config['EXPIRES'])
+        expires = self.feature1.created + datetime.timedelta(
+            seconds=self.app.config['EXPIRES'])
         self.assertEqual(response.expires, expires)
         self.assertEqual(result,
                          json.loads(self.feature1.geometry.json))
@@ -120,7 +120,7 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
 
 class TestGeometryDelete(ResourceTestBase, unittest.TestCase):
     def test_delete_geometry(self):
-        key = 'point2'
+        key = 'linestring1'
         path = '/geometry/%s' % key
         self.checkResponse(self.client.get(path=path), 200)
         self.checkResponse(self.client.delete(path=path), 200)

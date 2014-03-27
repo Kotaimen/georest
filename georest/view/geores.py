@@ -14,18 +14,24 @@ from .fields import FEATURE_FIELDS
 
 from ..geo.exception import GeoException
 
-__all__ = ['Stat', 'GeometryResource', 'FeatureResource',
-           'UnaryGeometryOperation']
+__all__ = ['Stat', 'GeometryResource', 'FeatureResource']
 
+#
+# Stats
+#
 
 class Stat(BaseResource):
+    """ API Status """
     def get(self):
         return self.model.describe_capabilities()
 
+#
+# Object get/set/delete
+#
 
 class GeometryResource(BaseResource):
+    """ Interact with geometry in a feature """
     parser = GeometryRequestParser()
-
 
     def get(self, key):
         args = self.parser.parse_args()
@@ -47,12 +53,12 @@ class GeometryResource(BaseResource):
 
 
 class FeatureResource(BaseResource):
+    """ Feature
+    """
+    # TODO: Not finished yet, only need geometry api above
     @marshal_with(FEATURE_FIELDS)
     def get(self, key):
         feature = self.model.get_feature(key)
         return feature, 200, make_header_from_feature(feature)
-
-
-
 
 

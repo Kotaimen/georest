@@ -29,5 +29,5 @@ class InvalidGeometry(GeoException):
     pass
 
 
-class InvalidCoordinateReferenceSystem(GeoException):
+class InvalidCRS(GeoException):
     pass

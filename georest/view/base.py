@@ -13,12 +13,13 @@ import datetime
 from flask import current_app, make_response
 from flask.ext.restful import Resource, abort, reqparse
 
+from ..geo import Geometry
+
 from ..geo.exception import GeoException, InvalidGeometry, \
-    InvalidCoordinateReferenceSystem
+    InvalidCRS
 from ..store.exception import GeometryAlreadyExists, InvalidKey, \
     GeometryDoesNotExist
-
-from ..geo import Geometry
+from .exception import InvalidGeometryOperator, IdentialGeometryError
 
 #
 # Response Helpers
@@ -45,7 +46,7 @@ def make_response_from_geometry(geometry, format_='json', srid=0, headers={}):
         try:
             geometry.transform(srid)
         except GeoException as e:
-            raise InvalidCoordinateReferenceSystem(e)
+            raise InvalidCRS(e)
 
     if format_ == 'ewkt':
         response_data = geometry.ewkt
@@ -72,8 +73,14 @@ def throws_geo_exceptions(f):
             return f(*args, **kwargs)
         except Exception as e:
             if isinstance(e,
-                          (InvalidGeometry, InvalidCoordinateReferenceSystem)):
+                          (InvalidGeometry, InvalidCRS)):
                 abort(400, message='Invalid geometry: %s' % e.message)
+            if isinstance(e, InvalidGeometryOperator):
+                abort(400,
+                      message='Invalid geometry operator: %s' % e.message)
+            if isinstance(e, IdentialGeometryError):
+                abort(400,
+                      message='Idential geometry: %s' % e.message)
             elif isinstance(e, GeometryDoesNotExist):
                 abort(404, message='Key does not exist: "%s"' % e.message)
             elif isinstance(e, InvalidKey):

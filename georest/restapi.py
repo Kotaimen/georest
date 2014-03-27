@@ -30,4 +30,7 @@ class GeoRestApi(restful.Api):
         self.add_resource(Stat, '/stat')
         self.add_resource(GeometryResource, '/geometry/<key>')
         self.add_resource(FeatureResource, '/feature/<key>')
+        self.add_resource(UnaryGeometryOperation, '/geometry/<key>/<operation>')
+        self.add_resource(BinaryGeometryOperation,
+                          '/geometry/<this>/<operation>/<other>')
 
