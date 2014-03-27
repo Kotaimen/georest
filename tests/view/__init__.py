@@ -5,6 +5,7 @@ __date__ = '3/23/14'
 
 import datetime
 import json
+import uuid
 
 from georest import GeoRestApp
 from georest.geo import build_feature
@@ -20,7 +21,7 @@ class ResourceTestBase(object):
         self.feature1 = build_feature('POINT (0.0001 0.0001)',
                                       {'name': 'feature1'},
                                       srid=4326,
-                                      id_=1,
+                                      id_=uuid.uuid4(),
                                       created=timestamp)
 
         # Reset modified timestamp since build_feature recalculates it

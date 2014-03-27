@@ -22,8 +22,11 @@ __all__ = ['Stat', 'GeometryResource', 'FeatureResource']
 
 class Stat(BaseResource):
     """ API Status """
+
     def get(self):
-        return self.model.describe_capabilities()
+        return {'capabilities': self.model.describe_capabilities(),
+                'engine': self.model.describe_engine()}
+
 
 #
 # Object get/set/delete

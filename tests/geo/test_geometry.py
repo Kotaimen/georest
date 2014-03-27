@@ -15,6 +15,11 @@ class TestGeometryBuilding(unittest.TestCase):
         self.assertRaises(GeoException, build_geometry, 'POINT(1 2, x)')
         self.assertRaises(GeoException, build_geometry, 'POINT(1 2)',
                           srid=123456)
+        self.assertRaises(GeoException, build_geometry, 'POINT(1 2)',
+                          srid='blah')
+        self.assertRaises(GeoException, build_geometry,
+                          'POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', )
+
 
     def test_build_geojson(self):
         geom = build_geometry(
@@ -31,6 +36,10 @@ class TestGeometryBuilding(unittest.TestCase):
         geom2 = build_geometry('POINT(3 4)', srid=4326)
         self.assertIsInstance(geom1.buffer(3), Geometry)
         self.assertIsInstance(geom1.union(geom2), Geometry)
+
+    def test_geometry_methods_failure(self):
+        geom1 = build_geometry('POINT(1 2)', srid=4326)
+        self.assertIsInstance(geom1.buffer(0), Geometry)
 
 
 class TestGeometryPickle(unittest.TestCase):
@@ -49,9 +58,18 @@ class TestSpatialReference(unittest.TestCase):
         self.assertRaises(GeoException, build_srs, 'wgs blah')
 
     def test_build_srs(self):
-        srs0 = build_srs(3857)
-        srs1 = build_srs(4326)
-        srs2 = build_srs('EPSG:4326')
+        self.assertRaises(GeoException, build_srs, 12345678)
+        self.assertEqual(build_srs(4326).srid, 4326)
+        self.assertEqual(build_srs('wgs84').srid, 4326)
+
+
+class TestSpatialReferencePickling(unittest.TestCase):
+    def test_pickle(self):
+        srs = build_srs(3857)
+        pk = pickle.dumps(srs)
+        srs2 = pickle.loads(pk)
+
+        self.assertEqual(srs.proj, srs2.proj)
 
 
 if __name__ == '__main__':
