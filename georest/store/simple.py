@@ -22,6 +22,21 @@ class SimpleGeoStore(object):
         self._lock = threading.Lock()
         self._features = dict()
 
+    def describe(self):
+        return {
+            'backend': 'Magic',
+            'capabilities': dict(presistence=False,
+                                 efficient_lookup=True,
+                                 key_namepace=False,
+                                 in_memory=True,
+                                 distributed=False,
+                                 versioning=False,
+                                 changeset=False,
+                                 property_query=False,
+                                 spatial_query=False,
+                                 full_text_search=False, )
+        }
+
     def put_feature(self, feature, key=None):
         if not is_key_valid(key):
             raise InvalidKey(key)

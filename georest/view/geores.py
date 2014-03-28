@@ -14,18 +14,8 @@ from .fields import FEATURE_FIELDS
 
 from ..geo.exception import GeoException
 
-__all__ = ['Stat', 'GeometryResource', 'FeatureResource']
+__all__ = ['GeometryResource', 'FeatureResource']
 
-#
-# Stats
-#
-
-class Stat(BaseResource):
-    """ API Status """
-
-    def get(self):
-        return {'capabilities': self.model.describe_capabilities(),
-                'engine': self.model.describe_engine()}
 
 
 #

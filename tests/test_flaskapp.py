@@ -21,7 +21,7 @@ class TestGeoRestApp(unittest.TestCase):
         self.assertEqual(200, rv.status_code)
 
     def test_get_stat(self):
-        rv = self.app.get('/stat')
+        rv = self.app.get('/describe')
         self.assertEqual(200, rv.status_code)
 
 

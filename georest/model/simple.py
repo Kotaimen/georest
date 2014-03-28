@@ -16,24 +16,16 @@ class SimpleGeoModel(object):
         assert isinstance(store, SimpleGeoStore)
         self.store = store
 
-    def describe_engine(self):
-        return VERSION
-
     def describe_capabilities(self):
-        return dict(presistence=False,
-                    cached=True,
-                    versioning=False,
-                    changeset=False,
-                    property_query=False,
-                    spatial_query=False,
-                    efficient_lookup=True, )
+        raise NotImplementedError
 
     def get_feature(self, key):
         feature = self.store.get_feature(key)
         return feature
 
     def put_feature(self, key, geometry_input, properties=None):
-        feature = build_feature(geometry_input, srid=4326, properties=properties)
+        feature = build_feature(geometry_input, srid=4326,
+                                properties=properties)
         self.store.put_feature(feature, key=key)
         return feature
 
