@@ -76,7 +76,7 @@ UNARY_TOPOLOGICAL_METHODS = {
     'simplify': ('simplify', simplify_parser)
 }
 
-BINARY_GEOM_PREDICATES = {
+BINARY_GEOMETRY_PREDICATES = {
     'contains': 'contains',
     'crosses': 'crosses',
     'disjoint': 'disjoint',
@@ -119,6 +119,7 @@ class UnaryGeometryOperation(BaseResource):
         if args.srid:
             geometry.transform(args.srid)
 
+        # TODO: Ugly, refactor later ...
         if operation in UNARY_GEOMETRY_PROPERTIES:
             result = getattr(geometry, UNARY_GEOMETRY_PROPERTIES[operation])
             return make_predicate_result(result)
@@ -139,19 +140,28 @@ class UnaryGeometryOperation(BaseResource):
 
 
 class BinaryGeometryOperation(BaseResource):
+    OPERATIONS = set()
+    OPERATIONS.update(BINARY_GEOMETRY_PREDICATES)
+
+    def _parse_args(self, operation):
+        return default_parser.parse_args()
+
     def get(self, this, operation, other):
+
+        if operation not in self.OPERATIONS:
+            raise InvalidGeometryOperator(operation)
+
         if this == other:
             raise IdentialGeometryError
 
         this_geom = self.model.get_feature(this).geometry
         other_geom = self.model.get_feature(other).geometry
 
-        if operation in BINARY_GEOM_PREDICATES:
-
+        if operation in BINARY_GEOMETRY_PREDICATES:
             method = getattr(this_geom,
-                             BINARY_GEOM_PREDICATES[operation])
+                             BINARY_GEOMETRY_PREDICATES[operation])
             result = method(other_geom)
-
             return make_predicate_result(result)
         else:
-            raise InvalidGeometryOperator(operation)
+            assert False
+

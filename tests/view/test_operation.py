@@ -164,7 +164,7 @@ class TestUnaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
                                   'width': 0.001,
                                   'quadsec': 8,
                               })
-        # print result
+        # XXX: make a proper check
         self.assertEqual(result['type'], 'Polygon')
 
     def test_simplify(self):
@@ -173,7 +173,42 @@ class TestUnaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
                                   'tolerance': 1,
                                   'topo': True,
                               })
-        print result
+        # XXX: make a proper check
         self.assertEqual(result['type'], 'Polygon')
+
+
+class TestBinaryGeometryPredicates(ResourceTestBase, unittest.TestCase):
+    def checkOp(self, this, operation, other, query={}):
+        assert 'format' not in query
+        response = self.client.get(
+            path='/geometry/%s/%s/%s' % (this, operation, other),
+            query_string=query
+        )
+        result = self.checkResponse(response)
+        return result['result']
+
+    def test_contains(self):
+        self.assertTrue(self.checkOp('polygon1', 'contains', 'point1'))
+        self.assertFalse(self.checkOp('point1', 'contains', 'polygon1'))
+
+    def test_crosses(self):
+        self.assertFalse(self.checkOp('polygon1', 'crosses', 'point1'))
+
+    def test_disjoint(self):
+        self.assertFalse(self.checkOp('polygon1', 'disjoint', 'point1'))
+
+    def test_equals(self):
+        self.assertFalse(self.checkOp('polygon1', 'equals', 'point1'))
+
+    def test_intersects(self):
+        self.assertFalse(self.checkOp('point1', 'intersects', 'linestring1'))
+
+    def test_overlaps(self):
+        self.assertFalse(self.checkOp('polygon1', 'overlaps', 'linestring1'))
+
+    def test_within(self):
+        self.assertTrue(self.checkOp('point1', 'within', 'polygon1'))
+
+
 if __name__ == '__main__':
     unittest.main()
