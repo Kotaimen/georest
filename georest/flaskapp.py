@@ -84,15 +84,13 @@ class GeoRestApp(Flask):
         @self.route('/doc/')
         def doc_index():
             markdown = open(
-                os.path.join(self.config['GEOREST_DOC_DIR'],
-                             'index.md')).read()
+                os.path.join(self.config['GEOREST_DOC_DIR'], 'index.md')).read()
             return render_template('mdtemplate.html', title='GeoRest Doc',
                                    markdown=markdown)
 
         @self.route('/doc/<doc>')
         def doc_page(doc):
             markdown = open(
-                os.path.join(self.config['GEOREST_DOC_DIR'],
-                             doc + '.md')).read()
+                os.path.join(self.config['GEOREST_DOC_DIR'], doc)).read()
             return render_template('mdtemplate.html', title=doc,
                                    markdown=markdown)
