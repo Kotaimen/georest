@@ -18,7 +18,7 @@ class TestGeoRestApp(unittest.TestCase):
 
     def test_index(self):
         rv = self.app.get('/')
-        self.assertEqual(200, rv.status_code)
+        self.assertEqual(302, rv.status_code)
 
     def test_get_stat(self):
         rv = self.app.get('/describe')

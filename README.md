@@ -1,9 +1,10 @@
 # GeoRest
 
-Restful geospatial feature storage/computing/query engine.
+Restful geospatial feature storage/query/operation interface.
 
-Planned Capabilities:
+## Capabilities
 
+* Feature collection
 * Feature persistence
 * Collection using key namespace
 * Properties

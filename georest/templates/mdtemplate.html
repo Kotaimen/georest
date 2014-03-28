@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<head>
+    <title>{{ title }}</title>
+</head>
+<link rel="stylesheet" href="../static/mdstyle.css" type="text/css">
+<body>
+
+{% filter markdown %}
+
+{{ markdown }}
+
+{% endfilter %}
+
+</body>
+</html>

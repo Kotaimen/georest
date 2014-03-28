@@ -3,6 +3,6 @@
 """
     App instance specific settings
 """
+import os
 
-GEOREST_FOOBAZ = True
-
+GEOREST_DOC_DIR = os.path.abspath('doc')

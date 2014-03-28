@@ -11,7 +11,9 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-from flask import Flask, render_template
+import os
+
+from flask import Flask, render_template, redirect
 from flask.ext.markdown import Markdown
 
 from . import default_settings
@@ -59,7 +61,8 @@ class GeoRestApp(Flask):
         return build_store(**self.config['GEOREST_GEOSTORE_CONFIG'])
 
     def create_model(self):
-        return build_model(store=self.store, **self.config['GEOREST_GEOMODEL_CONFIG'])
+        return build_model(store=self.store,
+                           **self.config['GEOREST_GEOMODEL_CONFIG'])
 
     def init_plugins(self):
         # Flask-Markdown
@@ -71,7 +74,25 @@ class GeoRestApp(Flask):
         api = GeoRestApi(self)
 
     def init_views(self):
-        # Add a test route
+        self.install_markdown_doc()
+
+    def install_markdown_doc(self):
         @self.route('/')
         def index():
-            return render_template('index.html')
+            return redirect('/doc')
+
+        @self.route('/doc/')
+        def doc_index():
+            markdown = open(
+                os.path.join(self.config['GEOREST_DOC_DIR'],
+                             'index.md')).read()
+            return render_template('mdtemplate.html', title='GeoRest Doc',
+                                   markdown=markdown)
+
+        @self.route('/doc/<doc>')
+        def doc_page(doc):
+            markdown = open(
+                os.path.join(self.config['GEOREST_DOC_DIR'],
+                             doc + '.md')).read()
+            return render_template('mdtemplate.html', title=doc,
+                                   markdown=markdown)
