@@ -15,14 +15,12 @@ from .geoops import *
 
 from flask import current_app
 from flask.ext.restful import Resource
-from ..geo.engine import VERSION
-
+from ..geo.engine import describe
 
 class Describe(Resource):
-
     def get(self):
         return {
-            'engine': VERSION,
+            'engine': describe(),
             'store': current_app.model.store.describe(),
             'resources': {
                 'feature': {'methods': ['GET', ]},
@@ -31,7 +29,7 @@ class Describe(Resource):
             },
             'operations': {
                 'unary': sorted(UnaryGeometryOperation.OPERATIONS),
-                'binary': [],
+                'binary': sorted(BinaryGeometryOperation.OPERATIONS),
             }
         }
 

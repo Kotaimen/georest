@@ -17,7 +17,9 @@ if not geos.HAS_GEOS:
 if not gdal.HAS_GDAL:
     raise ImportError('Requires libgdal installed')
 
-VERSION = {'name': 'geodjango',
-           'geos': geos.geos_version(),
-           'gdal': gdal.gdal_full_version()}
+
+def describe():
+    return {'geometry': 'GEOS Geometry',
+            'geos': geos.geos_version(),
+            'gdal': gdal.gdal_full_version(), }
 

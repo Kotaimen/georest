@@ -11,5 +11,5 @@
 __author__ = 'kotaimen'
 __date__ = '3/19/14'
 
-from .geodjango import VERSION, geos, gdal
+from .geodjango import describe, geos, gdal
 

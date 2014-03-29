@@ -4,7 +4,7 @@ __author__ = 'kotaimen'
 __date__ = '3/22/14'
 
 from ..geo import build_feature
-from ..geo.engine import VERSION
+from ..geo.engine import describe
 
 from ..store.simple import SimpleGeoStore
 
