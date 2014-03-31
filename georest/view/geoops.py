@@ -109,7 +109,8 @@ class UnaryGeometryOperation(BaseResource):
 
     def get(self, key, operation):
         if operation not in self.OPERATIONS:
-            raise InvalidGeometryOperator(operation)
+            raise InvalidGeometryOperator(
+                'Invalid geometry operation :"%s"' % operation)
 
         args = self._parse_args(operation)
 
@@ -149,19 +150,29 @@ class BinaryGeometryOperation(BaseResource):
     def get(self, this, operation, other):
 
         if operation not in self.OPERATIONS:
-            raise InvalidGeometryOperator(operation)
+            raise InvalidGeometryOperator(
+                'Invalid geometry operation :"%s"' % operation)
 
         if this == other:
-            raise IdentialGeometryError
+            raise IdentialGeometryError('Given geometries are identical')
+
+        args = self._parse_args(operation)
 
         this_geom = self.model.get_feature(this).geometry
         other_geom = self.model.get_feature(other).geometry
 
-        if operation in BINARY_GEOMETRY_PREDICATES:
+        if operation in BINARY_GEOMETRY_PREDICATES \
+                or operation in BINARY_GEOMETRY_METHODS:
             method = getattr(this_geom,
                              BINARY_GEOMETRY_PREDICATES[operation])
             result = method(other_geom)
             return make_predicate_result(result)
+        elif operation in BINARY_TOPOLOGICAL_METHODS:
+            method = getattr(this_geom,
+                             BINARY_GEOMETRY_PREDICATES[operation])
+            result = method(other_geom)
+            return make_predicate_result(result)
+            return make_response_from_geometry(result, args.format)
         else:
             assert False
 

@@ -15,12 +15,14 @@ class GeoException(Exception):
         Try to emulate python3 exception chain
     """
 
-    def __init__(self, other_or_message=None):
-        self.exc_info = sys.exc_info()
-        if isinstance(other_or_message, basestring):
-            super(GeoException, self).__init__(other_or_message)
-        elif isinstance(other_or_message, BaseException):
-            super(GeoException, self).__init__(other_or_message.message)
+    def __init__(self, message=None, e=None):
+        self.tb = sys.exc_info()[2]
+        if message is None and e is not None:
+            super(GeoException, self).__init__(e.message)
+        elif message is not None and e is None:
+            super(GeoException, self).__init__(message)
+        elif message is not None and e is not None:
+            super(GeoException, self).__init__('%s: %s' % (message, e.message))
         else:
             super(GeoException, self).__init__()
 

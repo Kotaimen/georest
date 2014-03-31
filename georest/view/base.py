@@ -9,6 +9,7 @@ __author__ = 'kotaimen'
 __date__ = '3/21/14'
 
 import datetime
+import traceback
 
 from flask import current_app, make_response
 from flask.ext.restful import Resource, abort, reqparse
@@ -46,7 +47,7 @@ def make_response_from_geometry(geometry, format_='json', srid=0, headers={}):
         try:
             geometry.transform(srid)
         except GeoException as e:
-            raise InvalidCRS(e)
+            raise InvalidCRS('Cannot transform geometry crs', e)
 
     if format_ == 'ewkt':
         response_data = geometry.ewkt
@@ -72,25 +73,29 @@ def throws_geo_exceptions(f):
         try:
             return f(*args, **kwargs)
         except Exception as e:
+            code = 200
             if isinstance(e,
-                          (InvalidGeometry, InvalidCRS)):
-                abort(400, message='Invalid geometry: %s' % e.message)
-            if isinstance(e, InvalidGeometryOperator):
-                abort(400,
-                      message='Invalid geometry operator: %s' % e.message)
-            if isinstance(e, IdentialGeometryError):
-                abort(400,
-                      message='Identical geometry: %s' % e.message)
+                          (InvalidGeometry, InvalidCRS,
+                           InvalidGeometryOperator,
+                           IdentialGeometryError,
+                           InvalidKey,
+                          )):
+                code = 400
             elif isinstance(e, GeometryDoesNotExist):
-                abort(404, message='Key does not exist: "%s"' % e.message)
-            elif isinstance(e, InvalidKey):
-                abort(400, message='Invalid key: "%s"' % e.message)
+                code = 404
             elif isinstance(e, GeometryAlreadyExists):
-                abort(409, message='Geometry exists: "%s"' % e.message)
+                code = 409
             elif isinstance(e, GeoException):
-                abort(500, message='Geometry exception: "%s"' % e.message)
+                code = 500
             else:
                 raise
+
+            abort(code,
+                  code=code,
+                  message=e.message,
+                  exception=e.__class__.__name__,
+                  # traceback=traceback.format_tb(e.tb)
+            )
 
     return decorator
 

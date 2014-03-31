@@ -38,7 +38,7 @@ class GeometryResource(BaseResource):
     def post(self, key):
         data = request.data
         feature = self.model.put_feature(key, data)
-        return None, 201, make_header_from_feature(feature)
+        return {'code': 201}, 201, make_header_from_feature(feature)
 
     def delete(self, key):
         self.model.delete_feature(key)

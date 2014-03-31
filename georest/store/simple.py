@@ -39,14 +39,15 @@ class SimpleGeoStore(object):
 
     def put_feature(self, feature, key=None):
         if not is_key_valid(key):
-            raise InvalidKey(key)
+            raise InvalidKey('Invalid key: "%s"' % key)
 
         with self._lock:
             if key is None:
                 key = 'feature-%d' % len(self._features)
 
             if key in self._features:
-                raise GeometryAlreadyExists(key)
+                raise GeometryAlreadyExists(
+                    'Geometry already exists: "%s"' % key)
 
             # Simulate storage by pickling the feature object
             self._features[key] = pickle.dumps(feature)
@@ -58,11 +59,13 @@ class SimpleGeoStore(object):
             try:
                 return pickle.loads(self._features[key])
             except KeyError as e:
-                raise GeometryDoesNotExist(e)
+                raise GeometryDoesNotExist(
+                    'Geometry does not exist: "%s"' % key)
 
     def delete_feature(self, key):
         with self._lock:
             try:
                 del self._features[key]
             except KeyError as e:
-                raise GeometryDoesNotExist(e)
+                raise GeometryDoesNotExist(
+                    'Geometry does not exist: "%s"' % key)

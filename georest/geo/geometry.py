@@ -41,7 +41,7 @@ class Geometry(object):
         try:
             ret = getattr(self._the_geom, name)
         except Delegation.ENGINE_EXCEPTIONS as e:
-            raise GeoException(e)
+            raise GeoException(e=e)
 
         if six.callable(ret):
             return Delegation(ret)
@@ -75,7 +75,7 @@ class SpatialReference(object):
         try:
             ret = getattr(self._the_srs, name)
         except Delegation.ENGINE_EXCEPTIONS as e:
-            raise GeoException(e)
+            raise GeoException(e=e)
 
         if six.callable(ret):
             return Delegation(ret)
@@ -119,7 +119,7 @@ class Delegation(object):
         try:
             ret = self._target(*args, **kwargs)
         except self.ENGINE_EXCEPTIONS as e:
-            raise GeoException(e)
+            raise GeoException(e=e)
 
         return self.type_guard(ret)
 
@@ -135,7 +135,7 @@ def build_srs(srsinput):
     try:
         srs = gdal.SpatialReference(srs_input=srsinput)
     except (ValueError, gdal.SRSException, gdal.OGRException) as e:
-        raise InvalidCRS(e)
+        raise InvalidCRS(e=e)
 
     return SpatialReference(srs)
 
@@ -170,10 +170,10 @@ def build_geometry(geoinput, srid=None):
     try:
         geom = geos.GEOSGeometry(geoinput, srid=srid)
     except (TypeError, ValueError, geos.GEOSException) as e:
-        raise InvalidGeometry(e)
+        raise InvalidGeometry(e=e)
 
     if not geom.valid:
-        raise InvalidGeometry(geom.valid_reason)
+        raise InvalidGeometry('Invalid geometry: %s' % geom.valid_reason)
 
     if geom.empty:
         raise InvalidGeometry('Empty geometry')
