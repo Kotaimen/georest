@@ -39,7 +39,7 @@ Returns simple POD:
 ## Unary Topological Properties
 
 Property         | Parameters
------------------|- ----------
+-----------------|-----------
 boundary         | `format`, `srid`
 centroid         | `format`, `srid`
 convex_hull      | `format`, `srid`
@@ -80,7 +80,7 @@ Returns result geometry.
 ## Binary Geometry Predicates
 
 Property         | Parameters
------------------|- ----------
+-----------------|------------
 overlaps         | 
 touches          |
 crosses          |
