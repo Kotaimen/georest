@@ -33,6 +33,7 @@ default_parser = GeometryRequestParser()
 UNARY_GEOMETRY_PROPERTIES = {
     'type': 'geom_type',
     'coords': 'coords',
+    'geoms': 'num_geom',
     'area': 'area',
     'length': 'length',
     'is_empty': 'empty',
@@ -165,7 +166,6 @@ class UnaryGeometryOperation(BaseResource):
         geometry = build_geometry(request.data, srid=4326)
 
         return self._process(geometry, operation)
-
 
 
 class BinaryGeometryOperation(BaseResource):

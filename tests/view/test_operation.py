@@ -217,6 +217,7 @@ class TestUnaryTopologicalMethodsPost(ResourceTestBase, unittest.TestCase):
             query_string={
                 'width': 0.001,
                 'quadsec': 8,
+                'format': 'ewkt',
             },
             data='POINT(1 1)'
         )

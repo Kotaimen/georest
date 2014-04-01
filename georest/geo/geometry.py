@@ -32,6 +32,9 @@ class Geometry(object):
     def the_geom(self):
         return self._the_geom
 
+    def __len__(self):
+        return len(self._the_geom)
+
     def __getattr__(self, name):
         """
             Pretend to be a geos.Geometry instance without much coding
@@ -145,7 +148,8 @@ ALLOWED_GEOMETRY_TYPES = frozenset(['Point',
                                     'Polygon',
                                     'MultiPoint',
                                     'MultiLineString',
-                                    'MultiPolygon'])
+                                    'MultiPolygon',
+                                    'GeometryCollection'])
 
 
 def build_geometry(geoinput, srid=None):
@@ -169,7 +173,7 @@ def build_geometry(geoinput, srid=None):
 
     try:
         geom = geos.GEOSGeometry(geoinput, srid=srid)
-    except (TypeError, ValueError, geos.GEOSException) as e:
+    except (TypeError, ValueError, geos.GEOSException, gdal.OGRException) as e:
         raise InvalidGeometry(e=e)
 
     if not geom.valid:
