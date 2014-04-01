@@ -168,6 +168,7 @@ class UnaryGeometryOperation(BaseResource):
         return self._process(geometry, operation)
 
 
+
 class BinaryGeometryOperation(BaseResource):
     OPERATIONS = set()
     OPERATIONS.update(BINARY_GEOMETRY_PREDICATES)

@@ -24,6 +24,13 @@ from .store import build_store
 from .restapi import GeoRestApi
 
 
+def render_markdown(md_file, title):
+    with open(md_file, 'r') as fp:
+        markdown = fp.read()
+        return render_template('markdown.html', title=title,
+                               markdown=markdown)
+
+
 class GeoRestApp(Flask):
     """
         Main flask app
@@ -83,14 +90,10 @@ class GeoRestApp(Flask):
 
         @self.route('/doc/')
         def doc_index():
-            markdown = open(
-                os.path.join(self.config['GEOREST_DOC_DIR'], 'index.md')).read()
-            return render_template('mdtemplate.html', title='GeoRest Doc',
-                                   markdown=markdown)
+            md_file = os.path.join(self.config['GEOREST_DOC_DIR'], 'index.md')
+            return render_markdown(md_file, 'GeoRest Doc')
 
         @self.route('/doc/<doc>')
         def doc_page(doc):
-            markdown = open(
-                os.path.join(self.config['GEOREST_DOC_DIR'], doc)).read()
-            return render_template('mdtemplate.html', title=doc,
-                                   markdown=markdown)
+            md_file = os.path.join(self.config['GEOREST_DOC_DIR'], doc)
+            return render_markdown(md_file, doc)
