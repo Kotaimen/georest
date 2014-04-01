@@ -26,6 +26,7 @@ from .exception import InvalidGeometryOperator, IdentialGeometryError
 # Response Helpers
 #
 
+
 def make_header_from_feature(feature):
     """ Generate a header using feature metadata"""
     age = current_app.config['EXPIRES']
@@ -39,7 +40,7 @@ def make_header_from_feature(feature):
         'Expires': expires.strftime(date_format), }
 
 
-def make_response_from_geometry(geometry, format_='json', srid=0, headers={}):
+def make_response_from_geometry(geometry, format_='json', srid=0, headers=None):
     """ Make a geometry response """
     assert isinstance(geometry, Geometry)
 
@@ -55,15 +56,16 @@ def make_response_from_geometry(geometry, format_='json', srid=0, headers={}):
     elif format_ == 'ewkb':
         response_data = str(geometry.ewkb)
         content_type = 'application/oct-stream'
-    if format_ == 'json':
+    elif format_ == 'json':
         response_data = geometry.json
         content_type = 'application/json'
 
     response = make_response(response_data, 200)
     response.headers['Content-Type'] = content_type
 
-    for k, v in headers.iteritems():
-        response.headers[k] = v
+    if headers is not None:
+        for k, v in headers.iteritems():
+            response.headers[k] = v
 
     return response
 
@@ -78,8 +80,7 @@ def throws_geo_exceptions(f):
                           (InvalidGeometry, InvalidCRS,
                            InvalidGeometryOperator,
                            IdentialGeometryError,
-                           InvalidKey,
-                          )):
+                           InvalidKey,)):
                 code = 400
             elif isinstance(e, GeometryDoesNotExist):
                 code = 404

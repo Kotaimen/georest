@@ -25,7 +25,7 @@ from .restapi import GeoRestApi
 
 
 def render_markdown(md_file, title):
-    with open(md_file, 'r') as fp:
+    with open(md_file) as fp:
         markdown = fp.read()
         return render_template('markdown.html', title=title,
                                markdown=markdown)

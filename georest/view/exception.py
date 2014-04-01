@@ -9,8 +9,10 @@ from ..geo.exception import GeoException
 class InvalidGeometryOperator(GeoException):
     pass
 
+
 class BadGeometryOperation(GeoException):
     pass
+
 
 class IdentialGeometryError(GeoException):
     pass

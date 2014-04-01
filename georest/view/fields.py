@@ -19,6 +19,8 @@ from flask.ext.restful.fields import Raw, String, Integer, List
 #
 # Formatters
 #
+
+
 class UUID(Raw):
     def format(self, value):
         return value.hex

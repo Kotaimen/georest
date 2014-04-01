@@ -30,7 +30,6 @@ class TestUnaryOperation(ResourceTestBase, unittest.TestCase):
         )
         result = self.checkResponse(response, 404)
 
-
     def test_operation_not_found(self):
         response = self.client.get(
             path='/geometries/point1/what_ever',
@@ -46,7 +45,6 @@ class TestBinaryOperation(ResourceTestBase, unittest.TestCase):
         result = self.checkResponse(response, 200)
         self.assertEqual(result['result'], False)
 
-
     def test_geometry_not_found(self):
         response = self.client.get(
             path='/geometries/point1/intersects/what_ever',
@@ -59,7 +57,6 @@ class TestBinaryOperation(ResourceTestBase, unittest.TestCase):
         )
         result = self.checkResponse(response, 400)
 
-
     def test_operation_not_found(self):
         response = self.client.get(
             path='/geometries/point1/what_ever/linestring1',
@@ -68,7 +65,7 @@ class TestBinaryOperation(ResourceTestBase, unittest.TestCase):
 
 
 class TestUnaryGeometryProperties(ResourceTestBase, unittest.TestCase):
-    def checkOp(self, key, operation, query={}):
+    def checkOp(self, key, operation, query=None):
         response = self.client.get(
             path='/geometries/%s/%s' % (key, operation),
             query_string=query
@@ -76,7 +73,6 @@ class TestUnaryGeometryProperties(ResourceTestBase, unittest.TestCase):
         result = self.checkResponse(response)
         self.assertIn('result', result)
         return result['result']
-
 
     def test_get_type(self):
         self.assertEqual('Point', self.checkOp('point1', 'type'))
@@ -109,14 +105,15 @@ class TestUnaryGeometryProperties(ResourceTestBase, unittest.TestCase):
 
 
 class TestUnaryTopologicalProperties(ResourceTestBase, unittest.TestCase):
-    def checkOp(self, key, operation, query={}):
-        assert 'format' not in query
+    def checkOp(self, key, operation, query=None):
         response = self.client.get(
             path='/geometries/%s/%s' % (key, operation),
             query_string=query
+
         )
         result = self.checkResponse(response)
         return result
+
 
     def test_boundary(self):
         result = self.checkOp('polygon1', 'boundary')
@@ -124,11 +121,13 @@ class TestUnaryTopologicalProperties(ResourceTestBase, unittest.TestCase):
                              [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.5, 1.0],
                               [0.5, 0.5], [0.0, 0.5], [0.0, 0.0]])
 
+
     def test_centroid(self):
         result = self.checkOp('polygon1', 'centroid')
         # XXX: No idea why centroid is this...
         self.assertListEqual(result['coordinates'],
                              [0.583333333333333, 0.416666666666667])
+
 
     def test_convex_hull(self):
         result = self.checkOp('polygon1', 'convex_hull')
@@ -136,11 +135,13 @@ class TestUnaryTopologicalProperties(ResourceTestBase, unittest.TestCase):
                              [[[0.0, 0.0], [0.0, 0.5], [0.5, 1.0], [1.0, 1.0],
                                [1.0, 0.0], [0.0, 0.0]]])
 
+
     def test_envelope(self):
         result = self.checkOp('polygon1', 'envelope')
         self.assertListEqual(result['coordinates'],
                              [[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0],
                                [0.0, 1.0], [0.0, 0.0]]])
+
 
     def test_point_on_surface(self):
         result = self.checkOp('polygon1', 'point_on_surface')
@@ -149,7 +150,7 @@ class TestUnaryTopologicalProperties(ResourceTestBase, unittest.TestCase):
 
 
 class TestUnaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
-    def checkOp(self, key, operation, query={}):
+    def checkOp(self, key, operation, query=None):
         assert 'format' not in query
         response = self.client.get(
             path='/geometries/%s/%s' % (key, operation),
@@ -178,8 +179,7 @@ class TestUnaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
 
 
 class TestBinaryGeometryPredicates(ResourceTestBase, unittest.TestCase):
-    def checkOp(self, this, operation, other, query={}):
-        assert 'format' not in query
+    def checkOp(self, this, operation, other, query=None):
         response = self.client.get(
             path='/geometries/%s/%s/%s' % (this, operation, other),
             query_string=query
@@ -213,7 +213,7 @@ class TestBinaryGeometryPredicates(ResourceTestBase, unittest.TestCase):
 class TestUnaryTopologicalMethodsPost(ResourceTestBase, unittest.TestCase):
     def test_buffer(self):
         response = self.client.post(
-            path='/operation/buffer' ,
+            path='/operation/buffer',
             query_string={
                 'width': 0.001,
                 'quadsec': 8,

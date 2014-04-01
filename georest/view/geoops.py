@@ -21,6 +21,8 @@ __all__ = ['UnaryGeometryOperation', 'BinaryGeometryOperation']
 #
 # Result
 #
+
+
 def make_predicate_result(ret):
     return dict(result=ret)
 
@@ -110,6 +112,10 @@ BINARY_TOPOLOGICAL_METHODS = {
 }
 
 
+#
+# Unary operations
+#
+
 class UnaryGeometryOperation(BaseResource):
     OPERATIONS = set()
     OPERATIONS.update(UNARY_GEOMETRY_PROPERTIES.keys())
@@ -158,7 +164,6 @@ class UnaryGeometryOperation(BaseResource):
 
         return self._process(geometry, operation)
 
-
     def post(self, operation):
         if operation not in self.OPERATIONS:
             raise InvalidGeometryOperator(
@@ -166,7 +171,6 @@ class UnaryGeometryOperation(BaseResource):
         geometry = build_geometry(request.data, srid=4326)
 
         return self._process(geometry, operation)
-
 
 
 class BinaryGeometryOperation(BaseResource):

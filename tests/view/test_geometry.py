@@ -84,7 +84,6 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         self.assertIsInstance(response.last_modified, datetime.datetime)
         self.assertIsInstance(response.expires, datetime.datetime)
 
-
     def test_put_geometry_bad_key(self):
         key = 'very bad key'
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})

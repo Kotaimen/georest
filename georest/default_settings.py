@@ -24,8 +24,7 @@ GEOREST_GEOMODEL_CONFIG = {
 #
 # Flask-Markdown Plugin
 #
-MARKDOWN_EXTENSIONS = ['extra', 'toc',
-                       'codehilite',]
+MARKDOWN_EXTENSIONS = ['extra', 'toc', 'codehilite', ]
 
 MARKDOWN_EXTENSION_CONFIGS = {
     'codehilite': {'pygments_style': 'emacs',

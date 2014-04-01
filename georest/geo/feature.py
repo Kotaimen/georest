@@ -36,8 +36,7 @@ class Feature(object):
                  id_, etag,
                  created, modified,
                  geometry, properties,
-                 bbox, geohash
-    ):
+                 bbox, geohash):
         self._id = id_
         self._etag = etag
 
@@ -75,7 +74,7 @@ class Feature(object):
         return self._geometry
 
     @geometry.setter
-    def set_geometry(self, new_geometry):
+    def geometry(self, new_geometry):
         self._geometry = new_geometry
         self.recalculate()
 

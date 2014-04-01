@@ -22,7 +22,6 @@ class TestGeometryBuilding(unittest.TestCase):
         self.assertRaises(GeoException, build_geometry,
                           'POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', )
 
-
     def test_build_geometry(self):
         geom = build_geometry(
             '{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }', srid=4326)
@@ -121,14 +120,6 @@ class TestGeoJsonGeometryBuilding(unittest.TestCase):
                               srid=4326)
         self.assertEqual(geom.geom_type, 'GeometryCollection')
         self.assertEqual(2, geom.num_geom)
-
-    def test_geomcollection(self):
-        geom = build_geometry(json.dumps(self.geoms['geomcollection']),
-                              srid=4326)
-        self.assertEqual(geom.geom_type, 'GeometryCollection')
-        self.assertEqual(2, geom.num_geom)
-
-        print geom.the_geom[1]
 
     def test_feature(self):
         feat = {'type': 'Feature', 'geometry': self.geoms['point']}
