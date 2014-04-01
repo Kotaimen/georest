@@ -54,6 +54,10 @@ class Feature(object):
     def id(self):
         return self._id
 
+    @id.setter
+    def id(self, id_):
+        self._id = id_
+
     @property
     def etag(self):
         return self._etag
@@ -198,7 +202,7 @@ def build_feature(geoinput,
         properties = dict()
 
     if id_ is None:
-        id_ = uuid.uuid4()
+        id_ = uuid.uuid4().hex
 
     geometry = build_geometry(geoinput, srid)
 

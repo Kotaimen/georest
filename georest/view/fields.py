@@ -51,7 +51,7 @@ class DateTime(Raw):
 #
 
 FEATURE_FIELDS = {
-    '_id': UUID(attribute='id'),
+    '_id': String(attribute='id'),
     '_etag': String(attribute='etag'),
     '_created': DateTime(attribute='created'),
     '_modified': DateTime(attribute='modified'),

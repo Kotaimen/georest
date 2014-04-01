@@ -24,13 +24,13 @@ GEOREST_GEOMODEL_CONFIG = {
 #
 # Flask-Markdown Plugin
 #
-MARKDOWN_EXTENSIONS = ['def_list', 'attr_list',
-                       'fenced_code', 'codehilite']
+MARKDOWN_EXTENSIONS = ['extra', 'toc',
+                       'codehilite',]
 
 MARKDOWN_EXTENSION_CONFIGS = {
     'codehilite': {'pygments_style': 'emacs',
                    # for list of styles, run: pygmentize -L styles
                    'linenums': None,  # True=always, False=never, None=auto
-                   'noclasses': True,  # no RSS
+                   'noclasses': True,  # no CSS generated
     }
 }

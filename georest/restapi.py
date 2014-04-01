@@ -28,9 +28,21 @@ class GeoRestApi(restful.Api):
 
     def add_resources(self):
         self.add_resource(Describe, '/describe')
-        self.add_resource(GeometryResource, '/geometry/<key>')
-        self.add_resource(FeatureResource, '/feature/<key>')
-        self.add_resource(UnaryGeometryOperation, '/geometry/<key>/<operation>')
+
+
+        self.add_resource(GeometriesResource,
+                          '/geometries',
+                          methods=['POST'])
+        self.add_resource(GeometryResource,
+                          '/geometries/<key>',
+                          methods=['GET', 'PUT', 'DELETE'])
+
+        self.add_resource(FeatureResource,
+                          '/features/<key>')
+
+        self.add_resource(UnaryGeometryOperation,
+                          '/geometries/<key>/<operation>',
+                          '/operation/<operation>',)
         self.add_resource(BinaryGeometryOperation,
-                          '/geometry/<this>/<operation>/<other>')
+                          '/geometries/<this>/<operation>/<other>')
 

@@ -37,20 +37,22 @@ class SimpleGeoStore(object):
                                  full_text_search=False, )
         }
 
-    def put_feature(self, feature, key=None):
-        if not is_key_valid(key):
+    def put_feature(self, feature, key=None, overwrite=False):
+        if key is not None and not is_key_valid(key):
             raise InvalidKey('Invalid key: "%s"' % key)
 
         with self._lock:
             if key is None:
                 key = 'feature-%d' % len(self._features)
 
-            if key in self._features:
+            if not overwrite and key in self._features:
                 raise GeometryAlreadyExists(
                     'Geometry already exists: "%s"' % key)
 
+            feature.id = key
             # Simulate storage by pickling the feature object
             self._features[key] = pickle.dumps(feature)
+
 
     def get_feature(self, key):
         if not is_key_valid(key):

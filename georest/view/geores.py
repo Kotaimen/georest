@@ -14,13 +14,21 @@ from .fields import FEATURE_FIELDS
 
 from ..geo.exception import GeoException
 
-__all__ = ['GeometryResource', 'FeatureResource']
+__all__ = ['GeometriesResource', 'GeometryResource', 'FeatureResource']
 
 
 
 #
 # Object get/set/delete
 #
+
+class GeometriesResource(BaseResource):
+    def post(self):
+        data = request.data
+        feature = self.model.put_feature(None, data, overwrite=False)
+        return {'key': feature.id, 'code': 201}, \
+               201, make_header_from_feature(feature)
+
 
 class GeometryResource(BaseResource):
     """ Interact with geometry in a feature """
@@ -37,9 +45,15 @@ class GeometryResource(BaseResource):
 
     def post(self, key):
         data = request.data
-        feature = self.model.put_feature(key, data)
-        return {'code': 201}, 201, make_header_from_feature(feature)
+        feature = self.model.put_feature(key, data, overwrite=True)
+        return {'key': feature.id, 'code': 201}, \
+               201, make_header_from_feature(feature)
 
+    def put(self, key):
+        data = request.data
+        feature = self.model.put_feature(key, data)
+        return {'key': feature.id, 'code': 201}, \
+               201, make_header_from_feature(feature)
     def delete(self, key):
         self.model.delete_feature(key)
         return None, 200

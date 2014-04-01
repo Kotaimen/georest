@@ -16,7 +16,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         key = 'point1'
 
         response = self.client.get(
-            path='/geometry/%s' % key,
+            path='/geometries/%s' % key,
             query_string={'format': 'json'},
         )
 
@@ -35,7 +35,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         key = 'never_found'
 
         response = self.client.get(
-            path='/geometry/%s' % key,
+            path='/geometries/%s' % key,
             query_string={},
         )
 
@@ -45,12 +45,22 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         key = 'point1'
 
         response = self.client.get(
-            path='/geometry/%s' % key,
+            path='/geometries/%s' % key,
             query_string={'format': 'ewkt', 'srid': 3857},
         )
         self.assertEqual('text/plain', response.content_type)
         self.assertNotEqual(response.data,
                             self.feature1.geometry.ewkt)
+
+    def test_get_geometry_ewkb(self):
+        key = 'point1'
+
+        response = self.client.get(
+            path='/geometries/%s' % key,
+            query_string={'format': 'ewkb'},
+        )
+        self.assertEqual('application/oct-stream', response.content_type)
+        self.assertEqual(response.data, str(self.feature1.geometry.ewkb))
 
 
 class TestGeometryPut(ResourceTestBase, unittest.TestCase):
@@ -58,25 +68,29 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         key = 'geometry1'
         data = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
-        response = self.client.post(
-            path='/geometry/%s' % key,
+        response = self.client.put(
+            path='/geometries/%s' % key,
             data=data,
             content_type='application/json',
         )
 
-        self.checkResponse(response, 201)
+        result = self.checkResponse(response, 201)
 
+        self.assertIn('key', result)
+
+        self.assertEqual(201, result['code'])
         self.assertIn('Etag', response.headers)
         self.assertIsInstance(response.date, datetime.datetime)
         self.assertIsInstance(response.last_modified, datetime.datetime)
         self.assertIsInstance(response.expires, datetime.datetime)
 
+
     def test_put_geometry_bad_key(self):
         key = 'very bad key'
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
-        response = self.client.post(
-            path='/geometry/%s' % key,
+        response = self.client.put(
+            path='/geometries/%s' % key,
             data=payload,
             content_type='application/json',
         )
@@ -84,15 +98,15 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         result = self.checkResponse(response, 400)
 
         self.assertIn('message', result)
-        self.assertRegexpMatches(result['message'], r'^Invalid key.*')
+        self.assertEqual(result['exception'], 'InvalidKey')
 
     def test_put_geometry_bad_geometry(self):
         key = 'bad_geometry'
         payload = json.dumps(
             {'type': 'what ever', 'coordinates': 'where am i?'})
 
-        response = self.client.post(
-            path='/geometry/%s' % key,
+        response = self.client.put(
+            path='/geometries/%s' % key,
             data=payload,
             content_type='application/json',
         )
@@ -100,14 +114,14 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         result = self.checkResponse(response, 400)
 
         self.assertIn('message', result)
-        self.assertRegexpMatches(result['message'], r'^Invalid geometry.*')
+        self.assertEqual(result['exception'], 'InvalidGeometry')
 
     def test_put_geometry_key_duplicate(self):
         key = 'point1'
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
-        response = self.client.post(
-            path='/geometry/%s' % key,
+        response = self.client.put(
+            path='/geometries/%s' % key,
             data=payload,
             content_type='application/json',
         )
@@ -115,13 +129,39 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         result = self.checkResponse(response, 409)
 
         self.assertIn('message', result)
-        self.assertRegexpMatches(result['message'], r'^Geometry exists.*')
+        self.assertEqual(result['exception'], 'GeometryAlreadyExists')
+
+
+class TestGeometryPost(ResourceTestBase, unittest.TestCase):
+    def test_post_geometry_invalid(self):
+        key = 'point1'
+        payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
+
+        response = self.client.post(
+            path='/geometries/%s' % key,
+            data=payload,
+            content_type='application/json',
+        )
+
+        self.checkResponse(response, 405)
+
+    def test_post_geometry_without_key(self):
+        payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
+
+        response = self.client.post(
+            path='/geometries',
+            data=payload,
+            content_type='application/json',
+        )
+
+        result = self.checkResponse(response, 201)
+        self.assertIn('key', result)
 
 
 class TestGeometryDelete(ResourceTestBase, unittest.TestCase):
     def test_delete_geometry(self):
         key = 'linestring1'
-        path = '/geometry/%s' % key
+        path = '/geometries/%s' % key
         self.checkResponse(self.client.get(path=path), 200)
         self.checkResponse(self.client.delete(path=path), 200)
         self.checkResponse(self.client.get(path=path), 404)

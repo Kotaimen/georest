@@ -8,21 +8,28 @@ import json
 from flask import make_response, request
 from flask.ext.restful import marshal_with, abort
 
+from ..geo import build_geometry
+
 from .base import BaseResource, make_header_from_feature, \
     make_response_from_geometry, GeometryRequestParser
-from .fields import FEATURE_FIELDS
 
 from .exception import InvalidGeometryOperator, IdentialGeometryError
 
+
 __all__ = ['UnaryGeometryOperation', 'BinaryGeometryOperation']
 
-
+#
+# Result
+#
 def make_predicate_result(ret):
     return dict(result=ret)
 
-
+#
+# Default geometry parser
+#
 default_parser = GeometryRequestParser()
 
+# operation name: method name
 UNARY_GEOMETRY_PROPERTIES = {
     'type': 'geom_type',
     'coords': 'coords',
@@ -33,6 +40,7 @@ UNARY_GEOMETRY_PROPERTIES = {
     'is_simple': 'simple',
 }
 
+# operation name: method name
 UNARY_TOPOLOGICAL_PROPERTIES = {
     'boundary': 'boundary',
     'centroid': 'centroid',
@@ -71,11 +79,13 @@ simplify_parser.add_argument('topo',
                              default=False,
                              required=False)
 
+# operation name: (method name, parser)
 UNARY_TOPOLOGICAL_METHODS = {
     'buffer': ('buffer', buffer_parser),
     'simplify': ('simplify', simplify_parser)
 }
 
+# operation name: (method name, parser)
 BINARY_GEOMETRY_PREDICATES = {
     'contains': 'contains',
     'crosses': 'crosses',
@@ -87,9 +97,15 @@ BINARY_GEOMETRY_PREDICATES = {
     'within': 'within',
 }
 
-BINARY_GEOM_METHODS = {
+# operation name: (method name, parser)
+BINARY_GEOMETRY_METHODS = {
     'distance': 'distance',
-    'equals_exact': 'equals_exact',
+}
+
+BINARY_TOPOLOGICAL_METHODS = {
+    'intersection': 'intersection',
+    'difference': 'difference',
+    'union': 'union',
 }
 
 
@@ -106,16 +122,9 @@ class UnaryGeometryOperation(BaseResource):
         else:
             return default_parser.parse_args()
 
-
-    def get(self, key, operation):
-        if operation not in self.OPERATIONS:
-            raise InvalidGeometryOperator(
-                'Invalid geometry operation :"%s"' % operation)
+    def _process(self, geometry, operation):
 
         args = self._parse_args(operation)
-
-        feature = self.model.get_feature(key)
-        geometry = feature.geometry
 
         if args.srid:
             geometry.transform(args.srid)
@@ -138,6 +147,25 @@ class UnaryGeometryOperation(BaseResource):
             return make_response_from_geometry(result, args.format)
         else:
             assert False
+
+    def get(self, key, operation):
+        if operation not in self.OPERATIONS:
+            raise InvalidGeometryOperator(
+                'Invalid geometry operation :"%s"' % operation)
+        feature = self.model.get_feature(key)
+        geometry = feature.geometry
+
+        return self._process(geometry, operation)
+
+
+    def post(self, operation):
+        if operation not in self.OPERATIONS:
+            raise InvalidGeometryOperator(
+                'Invalid geometry operation :"%s"' % operation)
+        geometry = build_geometry(request.data, srid=4326)
+
+        return self._process(geometry, operation)
+
 
 
 class BinaryGeometryOperation(BaseResource):
@@ -171,7 +199,6 @@ class BinaryGeometryOperation(BaseResource):
             method = getattr(this_geom,
                              BINARY_GEOMETRY_PREDICATES[operation])
             result = method(other_geom)
-            return make_predicate_result(result)
             return make_response_from_geometry(result, args.format)
         else:
             assert False

@@ -19,7 +19,7 @@ class TestFeatureGet(ResourceTestBase, unittest.TestCase):
         key = 'point1'
 
         response = self.client.get(
-            path='/feature/%s' % key,
+            path='/features/%s' % key,
             query_string={'format': 'json'},
         )
 
