@@ -3,54 +3,30 @@
 __author__ = 'kotaimen'
 __date__ = '3/25/14'
 
-import json
 
-from flask import make_response, request
-from flask.ext.restful import marshal_with, abort
+from flask import request
 
 from ..geo import build_geometry
+from ..geo.exception import InvalidGeometry
 
-from .base import BaseResource, make_header_from_feature, \
-    make_response_from_geometry, GeometryRequestParser
+from .base import BaseResource, make_response_from_geometry, \
+    GeometryRequestParser
 
 from .exception import InvalidGeometryOperator, IdentialGeometryError
 
 
-__all__ = ['UnaryGeometryOperation', 'BinaryGeometryOperation']
-
-#
-# Result
-#
+__all__ = ['UNARY_OPERATIONS', 'BINARY_OPERATIONS',
+           'MixedGeometryOperation', 'BinaryGeometryOperation',
+           'MixedPostGeometryOperation']
 
 
 def make_predicate_result(ret):
     return dict(result=ret)
 
 #
-# Default geometry parser
+# Parsers
 #
 default_parser = GeometryRequestParser()
-
-# operation name: method name
-UNARY_GEOMETRY_PROPERTIES = {
-    'type': 'geom_type',
-    'coords': 'coords',
-    'geoms': 'num_geom',
-    'area': 'area',
-    'length': 'length',
-    'is_empty': 'empty',
-    'is_ring': 'ring',
-    'is_simple': 'simple',
-}
-
-# operation name: method name
-UNARY_TOPOLOGICAL_PROPERTIES = {
-    'boundary': 'boundary',
-    'centroid': 'centroid',
-    'convex_hull': 'convex_hull',
-    'envelope': 'envelope',
-    'point_on_surface': 'point_on_surface',
-}
 
 buffer_parser = GeometryRequestParser()
 buffer_parser.add_argument('width',
@@ -82,6 +58,31 @@ simplify_parser.add_argument('topo',
                              default=False,
                              required=False)
 
+#
+# Operations
+#
+
+# operation name: method name
+UNARY_GEOMETRY_PROPERTIES = {
+    'type': 'geom_type',
+    'coords': 'coords',
+    'geoms': 'num_geom',
+    'area': 'area',
+    'length': 'length',
+    'is_empty': 'empty',
+    'is_ring': 'ring',
+    'is_simple': 'simple',
+}
+
+# operation name: method name
+UNARY_TOPOLOGICAL_PROPERTIES = {
+    'boundary': 'boundary',
+    'centroid': 'centroid',
+    'convex_hull': 'convex_hull',
+    'envelope': 'envelope',
+    'point_on_surface': 'point_on_surface',
+}
+
 # operation name: (method name, parser)
 UNARY_TOPOLOGICAL_METHODS = {
     'buffer': ('buffer', buffer_parser),
@@ -111,100 +112,152 @@ BINARY_TOPOLOGICAL_METHODS = {
     'union': 'union',
 }
 
+UNARY_OPERATIONS = set()
+UNARY_OPERATIONS.update(UNARY_GEOMETRY_PROPERTIES.keys())
+UNARY_OPERATIONS.update(UNARY_TOPOLOGICAL_METHODS.keys())
+UNARY_OPERATIONS.update(UNARY_TOPOLOGICAL_PROPERTIES.keys())
+
+BINARY_OPERATIONS = set()
+BINARY_OPERATIONS.update(BINARY_GEOMETRY_METHODS.keys())
+BINARY_OPERATIONS.update(BINARY_GEOMETRY_PREDICATES.keys())
+BINARY_OPERATIONS.update(BINARY_TOPOLOGICAL_METHODS.keys())
+
 
 #
 # Unary operations
 #
 
-class UnaryGeometryOperation(BaseResource):
-    OPERATIONS = set()
-    OPERATIONS.update(UNARY_GEOMETRY_PROPERTIES.keys())
-    OPERATIONS.update(UNARY_TOPOLOGICAL_METHODS.keys())
-    OPERATIONS.update(UNARY_TOPOLOGICAL_PROPERTIES.keys())
-
+class GeometryOperationBase(object):
     def _parse_args(self, operation):
         if operation in UNARY_TOPOLOGICAL_METHODS:
-            method, parser = UNARY_TOPOLOGICAL_METHODS[operation]
-            return parser.parse_args()
+            _method, parser = UNARY_TOPOLOGICAL_METHODS[operation]
         else:
-            return default_parser.parse_args()
+            parser = default_parser
 
-    def _process(self, geometry, operation):
+        return parser.parse_args()
 
+    def _process(self, operation, this, other=None):
         args = self._parse_args(operation)
 
         if args.srid:
-            geometry.transform(args.srid)
+            this.transform(args.srid)
+            if other is not None:
+                other.transform(args.srid)
 
-        # TODO: Ugly, refactor later ...
+        # XXX: This is so so ugly...
+        # NOTE: Select a geometry attribute or bounded method call from given
+        # operation string.  Argument list, arg parsing, result are all
+        # different and depends on the operation selected.  Maybe Command
+        # patten fits here?
         if operation in UNARY_GEOMETRY_PROPERTIES:
-            result = getattr(geometry, UNARY_GEOMETRY_PROPERTIES[operation])
-            return make_predicate_result(result)
+            attribute_name = UNARY_GEOMETRY_PROPERTIES[operation]
+            return make_predicate_result(getattr(this, attribute_name))
+
         elif operation in UNARY_TOPOLOGICAL_PROPERTIES:
-            result = getattr(geometry, UNARY_TOPOLOGICAL_PROPERTIES[operation])
-            return make_response_from_geometry(result, args.format)
+            attribute_name = UNARY_TOPOLOGICAL_PROPERTIES[operation]
+            attribute = getattr(this, attribute_name)
+            return make_response_from_geometry(attribute, args.format)
+
         elif operation in UNARY_TOPOLOGICAL_METHODS:
             method_args = dict(args)
             del method_args['srid']
             del method_args['format']
             method_name, parser = UNARY_TOPOLOGICAL_METHODS[operation]
-            method = getattr(geometry, method_name)
-            result = method(**method_args)
-
+            bounded_method = getattr(this, method_name)
+            result = bounded_method(**method_args)
             return make_response_from_geometry(result, args.format)
+
+        elif operation in BINARY_GEOMETRY_PREDICATES:
+            method_name = BINARY_GEOMETRY_PREDICATES[operation]
+            bounded_method = getattr(this, method_name)
+            result = bounded_method(other)
+            return make_predicate_result(result)
+
+        elif operation in BINARY_GEOMETRY_METHODS:
+            method_name = BINARY_GEOMETRY_METHODS[operation]
+            bounded_method = getattr(this, method_name)
+            result = bounded_method(other)
+            return make_predicate_result(result)
+
+        elif operation in BINARY_TOPOLOGICAL_METHODS:
+            method_name = BINARY_TOPOLOGICAL_METHODS[operation]
+            bounded_method = getattr(this, method_name)
+            result = bounded_method(other)
+            return make_response_from_geometry(result, args.format)
+
         else:
-            assert False
+            raise InvalidGeometryOperator(operation)
 
+
+class MixedGeometryOperation(GeometryOperationBase, BaseResource):
     def get(self, key, operation):
-        if operation not in self.OPERATIONS:
+        """ Unary operation on stored geometry
+
+            GET /geometries/<key>/operation
+        """
+        if operation not in UNARY_OPERATIONS:
             raise InvalidGeometryOperator(
-                'Invalid geometry operation :"%s"' % operation)
+                'Invalid unary operation :"%s"' % operation)
+
         feature = self.model.get_feature(key)
-        geometry = feature.geometry
+        return self._process(operation, feature.geometry)
 
-        return self._process(geometry, operation)
-
-    def post(self, operation):
-        if operation not in self.OPERATIONS:
+    def post(self, key, operation):
+        """ Binary operation on stored geometry and posted geometry
+            POST /geometries/<this>/operation
+            DATA <other>
+        """
+        if operation not in BINARY_OPERATIONS:
             raise InvalidGeometryOperator(
-                'Invalid geometry operation :"%s"' % operation)
-        geometry = build_geometry(request.data, srid=4326)
+                'Invalid binary operation :"%s"' % operation)
 
-        return self._process(geometry, operation)
+        this_geometry = self.model.get_feature(key).geometry
+        other_geometry = build_geometry(request.data, srid=4326)
+
+        return self._process(operation, this_geometry, other_geometry)
 
 
-class BinaryGeometryOperation(BaseResource):
-    OPERATIONS = set()
-    OPERATIONS.update(BINARY_GEOMETRY_PREDICATES)
-
-    def _parse_args(self, operation):
-        return default_parser.parse_args()
-
+class BinaryGeometryOperation(GeometryOperationBase, BaseResource):
     def get(self, this, operation, other):
-
-        if operation not in self.OPERATIONS:
+        """ Binary operation on stored geometries
+            GET /geometries/<this>/operation/<other>
+        """
+        if operation not in BINARY_OPERATIONS:
             raise InvalidGeometryOperator(
-                'Invalid geometry operation :"%s"' % operation)
+                'Invalid binary operation :"%s"' % operation)
 
         if this == other:
             raise IdentialGeometryError('Given geometries are identical')
 
-        args = self._parse_args(operation)
+        this_geometry = self.model.get_feature(this).geometry
+        other_geometry = self.model.get_feature(other).geometry
 
-        this_geom = self.model.get_feature(this).geometry
-        other_geom = self.model.get_feature(other).geometry
+        return self._process(operation, this_geometry, other_geometry)
 
-        if operation in BINARY_GEOMETRY_PREDICATES \
-                or operation in BINARY_GEOMETRY_METHODS:
-            method = getattr(this_geom,
-                             BINARY_GEOMETRY_PREDICATES[operation])
-            result = method(other_geom)
-            return make_predicate_result(result)
-        elif operation in BINARY_TOPOLOGICAL_METHODS:
-            method = getattr(this_geom,
-                             BINARY_GEOMETRY_PREDICATES[operation])
-            result = method(other_geom)
-            return make_response_from_geometry(result, args.format)
+
+class MixedPostGeometryOperation(GeometryOperationBase, BaseResource):
+    def post(self, operation):
+        if operation in UNARY_OPERATIONS:
+            geometry = build_geometry(request.data)
+            return self._process(operation, geometry)
+
+        elif operation in BINARY_OPERATIONS:
+            geometry_collection = build_geometry(request.data)
+            if geometry_collection.geom_typeid < 7:
+                raise InvalidGeometry(
+                    'Requires a GeometryCollection, got "%s" instead' % geometry_collection.geo_type)
+
+            if geometry_collection.num_geom != 2:
+                raise InvalidGeometry(
+                    'GeometryCollection, should contain 2 geometries, got %d',
+                    geometry_collection.num_geom)
+            this_geometry = geometry_collection[0]
+            other_geometry = geometry_collection[1]
+            return self._process(operation, this_geometry, other_geometry)
+
         else:
-            assert False
+            raise InvalidGeometryOperator(
+                'Invalid geometry operation :"%s"' % operation)
+
+
 

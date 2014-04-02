@@ -35,6 +35,9 @@ class Geometry(object):
     def __len__(self):
         return len(self._the_geom)
 
+    def __getitem__(self, key):
+        return Delegation.type_guard(self._the_geom[key])
+
     def __getattr__(self, name):
         """
             Pretend to be a geos.Geometry instance without much coding

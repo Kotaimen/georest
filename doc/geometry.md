@@ -11,7 +11,6 @@ Access the Geometry object of a Feature.
     "message": "Geometry not found: blah",
     "exception": "GeometryNotFound"
 }
-
 ```
 
 ## Geometry Access
@@ -35,10 +34,23 @@ Delete geometry       | DELETE | /geometries/`key`
 
 ### Request Headers
 
-Headers
 ```
 Content-Type: "application/json"
 ```
+
+### Request Body
+Accepted format:
+- GeoJson Geometry
+- WKT/EWKT
+
+Accepted geometry types:
+- Point
+- LineString
+- Polygon
+- MultiLineString
+- MultiPolygon
+- GeometryCollection
+
 
 ### Response
 

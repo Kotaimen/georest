@@ -29,8 +29,8 @@ class Describe(Resource):
                 'property': {'methods': []},
             },
             'operations': {
-                'unary': sorted(UnaryGeometryOperation.OPERATIONS),
-                'binary': sorted(BinaryGeometryOperation.OPERATIONS),
+                'unary': sorted(UNARY_OPERATIONS),
+                'binary': sorted(BINARY_OPERATIONS),
             }
         }
 

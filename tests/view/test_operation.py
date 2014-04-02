@@ -4,64 +4,9 @@ __author__ = 'kotaimen'
 __date__ = '3/25/14'
 
 import unittest
-import datetime
 import json
-from pprint import pprint
-
-from georest import GeoRestApp
-from georest.geo import build_feature
 
 from tests.view import ResourceTestBase
-
-
-class TestUnaryOperation(ResourceTestBase, unittest.TestCase):
-    def test_get_type(self):
-        response = self.client.get(
-            path='/geometries/point1/type',
-        )
-        result = self.checkResponse(response, 200)
-
-        self.assertEqual(result['result'], 'Point')
-
-
-    def test_geometry_not_found(self):
-        response = self.client.get(
-            path='/geometries/what_ever/type',
-        )
-        result = self.checkResponse(response, 404)
-
-    def test_operation_not_found(self):
-        response = self.client.get(
-            path='/geometries/point1/what_ever',
-        )
-        result = self.checkResponse(response, 400)
-
-
-class TestBinaryOperation(ResourceTestBase, unittest.TestCase):
-    def test_intersects(self):
-        response = self.client.get(
-            path='/geometries/point1/intersects/linestring1',
-        )
-        result = self.checkResponse(response, 200)
-        self.assertEqual(result['result'], False)
-
-    def test_geometry_not_found(self):
-        response = self.client.get(
-            path='/geometries/point1/intersects/what_ever',
-        )
-        result = self.checkResponse(response, 404)
-
-    def test_geometry_identical(self):
-        response = self.client.get(
-            path='/geometries/point1/intersects/point1',
-        )
-        result = self.checkResponse(response, 400)
-
-    def test_operation_not_found(self):
-        response = self.client.get(
-            path='/geometries/point1/what_ever/linestring1',
-        )
-        result = self.checkResponse(response, 400)
 
 
 class TestUnaryGeometryProperties(ResourceTestBase, unittest.TestCase):
@@ -78,6 +23,9 @@ class TestUnaryGeometryProperties(ResourceTestBase, unittest.TestCase):
         self.assertEqual('Point', self.checkOp('point1', 'type'))
         self.assertEqual('LineString', self.checkOp('linestring1', 'type'))
         self.assertEqual('Polygon', self.checkOp('polygon1', 'type'))
+
+    def test_get_geoms(self):
+        self.assertEqual(1, self.checkOp('point1', 'geoms'))
 
     def test_coords(self):
         self.assertListEqual([0.0001, 0.0001], self.checkOp('point1', 'coords'))
@@ -210,19 +158,128 @@ class TestBinaryGeometryPredicates(ResourceTestBase, unittest.TestCase):
         self.assertTrue(self.checkOp('point1', 'within', 'polygon1'))
 
 
-class TestUnaryTopologicalMethodsPost(ResourceTestBase, unittest.TestCase):
+class TestBinaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
+    def checkOp(self, this, operation, other, query=None):
+        response = self.client.get(
+            path='/geometries/%s/%s/%s' % (this, operation, other),
+            query_string=query
+        )
+        result = self.checkResponse(response)
+        return result
+
+    def test_union(self):
+        result = self.checkOp('point1', 'union', 'linestring1')
+        self.assertEqual(result['type'], 'GeometryCollection')
+
+
+#
+# Only check endpoints here, full api check is done above
+#
+
+class TestGetUnaryOperation(ResourceTestBase, unittest.TestCase):
+    def test_get_type(self):
+        response = self.client.get(
+            path='/geometries/point1/type',
+        )
+        result = self.checkResponse(response, 200)
+
+        self.assertEqual(result['result'], 'Point')
+
+    def test_geometry_not_found(self):
+        response = self.client.get(
+            path='/geometries/what_ever/type',
+        )
+        result = self.checkResponse(response, 404)
+
+    def test_operation_not_found(self):
+        response = self.client.get(
+            path='/geometries/point1/what_ever',
+        )
+        result = self.checkResponse(response, 400)
+
+
+class TestGetBinaryOperation(ResourceTestBase, unittest.TestCase):
+    def test_intersects(self):
+        response = self.client.get(
+            path='/geometries/point1/intersects/linestring1',
+        )
+        result = self.checkResponse(response, 200)
+        self.assertEqual(result['result'], False)
+
+    def test_geometry_not_found(self):
+        response = self.client.get(
+            path='/geometries/point1/intersects/what_ever',
+        )
+        result = self.checkResponse(response, 404)
+
+    def test_geometry_identical(self):
+        response = self.client.get(
+            path='/geometries/point1/intersects/point1',
+        )
+        result = self.checkResponse(response, 400)
+
+    def test_operation_not_found(self):
+        response = self.client.get(
+            path='/geometries/point1/what_ever/linestring1',
+        )
+        result = self.checkResponse(response, 400)
+
+
+class TestPostOperation(ResourceTestBase, unittest.TestCase):
+    def test_type(self):
+        response = self.client.post(
+            path='/operation/type',
+            query_string={
+                'width': 0.001,
+                'quadsec': 8,
+            },
+            data='POINT(1 1)'
+        )
+
+        result = self.checkResponse(response)
+
+        self.assertEqual(result['result'], 'Point')
+
+
     def test_buffer(self):
         response = self.client.post(
             path='/operation/buffer',
             query_string={
                 'width': 0.001,
                 'quadsec': 8,
-                'format': 'ewkt',
+                'format': 'json',
             },
             data='POINT(1 1)'
         )
 
-        self.assertEqual(200, response.status_code)
+        result = self.checkResponse(response)
+        self.assertEqual(result['type'], 'Polygon')
+
+    def test_union(self):
+        response = self.client.post(
+            path='/operation/union',
+            data=json.dumps({"type": "GeometryCollection",
+                             "geometries": [
+                                 {"type": "Point",
+                                  "coordinates": [100.0, 0.0]
+                                 },
+                                 {"type": "LineString",
+                                  "coordinates": [[101.0, 0.0], [102.0, 1.0]]
+                                 }
+                             ]
+            })
+        )
+        result = self.checkResponse(response)
+        self.assertEqual(result['type'], 'GeometryCollection')
+
+    def test_intersects(self):
+        response = self.client.post(
+            path='/geometries/polygon1/intersects',
+            data=json.dumps({"type": "LineString",
+                             "coordinates": [[101.0, 0.0], [102.0, 1.0]]})
+        )
+        result = self.checkResponse(response)
+        self.assertFalse(result['result'])
 
 
 if __name__ == '__main__':

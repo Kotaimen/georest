@@ -22,7 +22,7 @@ class TestGeometryBuilding(unittest.TestCase):
         self.assertRaises(GeoException, build_geometry,
                           'POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', )
 
-    def test_build_geometry(self):
+    def test_build_geojson_geometry(self):
         geom = build_geometry(
             '{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }', srid=4326)
         self.assertEqual(
@@ -31,6 +31,14 @@ class TestGeometryBuilding(unittest.TestCase):
         self.assertEqual(
             'SRID=4326;POINT (1.0000000000000000 2.0000000000000000)',
             geom.ewkt)
+
+    def test_build_ewkt_geometry(self):
+        geom = build_geometry(
+            'SRID=3857;POINT(1 2)', srid=4326)
+        self.assertEqual(
+            'SRID=3857;POINT (1.0000000000000000 2.0000000000000000)',
+            geom.ewkt)
+
 
     def test_geometry_methods(self):
         geom1 = build_geometry('POINT(1 2)', srid=4326)
