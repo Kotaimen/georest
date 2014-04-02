@@ -59,7 +59,7 @@ class GeoRestApp(Flask):
         self.config.from_object(default_settings)
         if isinstance(settings, dict):
             # Load setting from a dict
-            self.config.from_object(settings)
+            self.config.update(settings)
         else:
             # Load setting from instance config
             self.config.from_pyfile(settings, silent=True)
