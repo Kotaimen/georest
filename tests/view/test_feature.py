@@ -20,7 +20,6 @@ class TestFeatureGet(ResourceTestBase, unittest.TestCase):
 
         response = self.client.get(
             path='/features/%s' % key,
-            query_string={'format': 'json'},
         )
 
         result = self.checkResponse(response, 200)
@@ -39,6 +38,24 @@ class TestFeatureGet(ResourceTestBase, unittest.TestCase):
         self.assertIn('_geohash', result)
         self.assertIn('bbox', result)
         self.assertIn('crs', result)
+
+    def test_get_feature_geohash(self):
+        key = 'point1'
+
+        response = self.client.get(
+            path='/features/%s/geohash' % key,
+        )
+        result = self.checkResponse(response, 200)
+        self.assertEqual(result['result'], 's0000000d6ds')
+
+    def test_get_feature_bbox(self):
+        key = 'point1'
+
+        response = self.client.get(
+            path='/features/%s/bbox' % key,
+        )
+        result = self.checkResponse(response, 200)
+        self.assertListEqual(result['result'], [0.0001, 0.0001, 0.0001, 0.0001])
 
 if __name__ == '__main__':
     unittest.main()

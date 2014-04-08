@@ -12,7 +12,7 @@ from tests.view import ResourceTestBase
 class TestUnaryGeometryProperties(ResourceTestBase, unittest.TestCase):
     def checkOp(self, key, operation, query=None):
         response = self.client.get(
-            path='/geometries/%s/%s' % (key, operation),
+            path='/operations/%s/%s' % (operation, key),
             query_string=query
         )
         result = self.checkResponse(response)
@@ -55,7 +55,7 @@ class TestUnaryGeometryProperties(ResourceTestBase, unittest.TestCase):
 class TestUnaryTopologicalProperties(ResourceTestBase, unittest.TestCase):
     def checkOp(self, key, operation, query=None):
         response = self.client.get(
-            path='/geometries/%s/%s' % (key, operation),
+            path='/operations/%s/%s' % (operation, key),
             query_string=query
 
         )
@@ -101,7 +101,7 @@ class TestUnaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
     def checkOp(self, key, operation, query=None):
         assert 'format' not in query
         response = self.client.get(
-            path='/geometries/%s/%s' % (key, operation),
+            path='/operations/%s/%s' % (operation, key),
             query_string=query
         )
         result = self.checkResponse(response)
@@ -129,7 +129,7 @@ class TestUnaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
 class TestBinaryGeometryPredicates(ResourceTestBase, unittest.TestCase):
     def checkOp(self, this, operation, other, query=None):
         response = self.client.get(
-            path='/geometries/%s/%s/%s' % (this, operation, other),
+            path='/operations/%s/%s/%s' % (operation,this, other),
             query_string=query
         )
         result = self.checkResponse(response)
@@ -161,7 +161,7 @@ class TestBinaryGeometryPredicates(ResourceTestBase, unittest.TestCase):
 class TestBinaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
     def checkOp(self, this, operation, other, query=None):
         response = self.client.get(
-            path='/geometries/%s/%s/%s' % (this, operation, other),
+            path='/operations/%s/%s/%s' % (operation,this, other),
             query_string=query
         )
         result = self.checkResponse(response)
@@ -179,7 +179,7 @@ class TestBinaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
 class TestGetUnaryOperation(ResourceTestBase, unittest.TestCase):
     def test_get_type(self):
         response = self.client.get(
-            path='/geometries/point1/type',
+            path='/operations/type/point1',
         )
         result = self.checkResponse(response, 200)
 
@@ -187,13 +187,13 @@ class TestGetUnaryOperation(ResourceTestBase, unittest.TestCase):
 
     def test_geometry_not_found(self):
         response = self.client.get(
-            path='/geometries/what_ever/type',
+            path='/operations/type/what_ever',
         )
         result = self.checkResponse(response, 404)
 
     def test_operation_not_found(self):
         response = self.client.get(
-            path='/geometries/point1/what_ever',
+            path='/operations/what_ever/point1',
         )
         result = self.checkResponse(response, 400)
 
@@ -201,26 +201,26 @@ class TestGetUnaryOperation(ResourceTestBase, unittest.TestCase):
 class TestGetBinaryOperation(ResourceTestBase, unittest.TestCase):
     def test_intersects(self):
         response = self.client.get(
-            path='/geometries/point1/intersects/linestring1',
+            path='/operations/intersects/point1/linestring1',
         )
         result = self.checkResponse(response, 200)
         self.assertEqual(result['result'], False)
 
     def test_geometry_not_found(self):
         response = self.client.get(
-            path='/geometries/point1/intersects/what_ever',
+            path='/operations/intersects/point1/what_ever',
         )
         result = self.checkResponse(response, 404)
 
     def test_geometry_identical(self):
         response = self.client.get(
-            path='/geometries/point1/intersects/point1',
+            path='/operations/point1/intersects/point1',
         )
         result = self.checkResponse(response, 400)
 
     def test_operation_not_found(self):
         response = self.client.get(
-            path='/geometries/point1/what_ever/linestring1',
+            path='/operations/what_ever/point1/linestring1',
         )
         result = self.checkResponse(response, 400)
 
@@ -228,7 +228,7 @@ class TestGetBinaryOperation(ResourceTestBase, unittest.TestCase):
 class TestPostOperation(ResourceTestBase, unittest.TestCase):
     def test_type(self):
         response = self.client.post(
-            path='/operation/type',
+            path='/operations/type',
             query_string={
                 'width': 0.001,
                 'quadsec': 8,
@@ -243,7 +243,7 @@ class TestPostOperation(ResourceTestBase, unittest.TestCase):
 
     def test_buffer(self):
         response = self.client.post(
-            path='/operation/buffer',
+            path='/operations/buffer',
             query_string={
                 'width': 0.001,
                 'quadsec': 8,
@@ -257,7 +257,7 @@ class TestPostOperation(ResourceTestBase, unittest.TestCase):
 
     def test_union(self):
         response = self.client.post(
-            path='/operation/union',
+            path='/operations/union',
             data=json.dumps({"type": "GeometryCollection",
                              "geometries": [
                                  {"type": "Point",
@@ -274,7 +274,7 @@ class TestPostOperation(ResourceTestBase, unittest.TestCase):
 
     def test_intersects(self):
         response = self.client.post(
-            path='/geometries/polygon1/intersects',
+            path='/operations/intersects/polygon1',
             data=json.dumps({"type": "LineString",
                              "coordinates": [[101.0, 0.0], [102.0, 1.0]]})
         )

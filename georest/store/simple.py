@@ -53,7 +53,6 @@ class SimpleGeoStore(object):
             # Simulate storage by pickling the feature object
             self._features[key] = pickle.dumps(feature)
 
-
     def get_feature(self, key):
         if not is_key_valid(key):
             raise InvalidKey(key)

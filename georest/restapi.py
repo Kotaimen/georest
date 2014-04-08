@@ -31,20 +31,22 @@ class GeoRestApi(restful.Api):
 
         # Geometry resource
         self.add_resource(GeometriesResource,
-                          '/geometries', methods=['POST'])
+                          '/features/geometry', methods=['POST'])
         self.add_resource(GeometryResource,
-                          '/geometries/<key>', methods=['GET', 'PUT', 'DELETE'])
+                          '/features/<key>/geometry', methods=['GET', 'PUT', 'DELETE'])
         # Feature resource
-        self.add_resource(FeatureResource,
-                          '/features/<key>')
+        self.add_resource(FeatureResource, '/features/<key>', methods=['GET'])
+        self.add_resource(FeatureResourceGeoHash, '/features/<key>/geohash', methods=['GET'])
+        self.add_resource(FeatureResourceBBox, '/features/<key>/bbox', methods=['GET'])
+
 
         # Geometry operation
         self.add_resource(MixedGeometryOperation,
-                          '/geometries/<key>/<operation>',
+                          '/operations/<operation>/<key>',
                           methods=['GET', 'POST'])
         self.add_resource(BinaryGeometryOperation,
-                          '/geometries/<this>/<operation>/<other>',
+                          '/operations/<operation>/<this>/<other>',
                           methods=['GET'])
         self.add_resource(MixedPostGeometryOperation,
-                          '/operation/<operation>',
+                          '/operations/<operation>',
                           methods=['POST'])

@@ -6,22 +6,21 @@ __date__ = '3/19/14'
 from georest import GeoRestApp
 
 import unittest
-import json
-from pprint import pprint
+import os
 
 
 class TestGeoRestApp(unittest.TestCase):
     def setUp(self):
-        app = GeoRestApp()
-        app.config['TESTING'] = True
-        self.app = app.test_client()
+        settings = {
+            'GEOREST_DOC_DIR': os.path.abspath(os.path.dirname(__file__))
+        }
+        self.app = GeoRestApp(settings=settings)
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
 
-    def test_index(self):
-        rv = self.app.get('/')
-        self.assertEqual(302, rv.status_code)
 
-    def test_get_stat(self):
-        rv = self.app.get('/describe')
+    def test_doc(self):
+        rv = self.client.get('/doc/helloworld.md')
         self.assertEqual(200, rv.status_code)
 
 

@@ -14,9 +14,8 @@ from .fields import FEATURE_FIELDS
 
 from ..geo.exception import GeoException
 
-__all__ = ['GeometriesResource', 'GeometryResource', 'FeatureResource']
-
-
+__all__ = ['GeometriesResource', 'GeometryResource', 'FeatureResource',
+           'FeatureResourceGeoHash', 'FeatureResourceBBox']
 
 #
 # Object get/set/delete
@@ -70,3 +69,15 @@ class FeatureResource(BaseResource):
         return feature, 200, make_header_from_feature(feature)
 
 
+class FeatureResourceGeoHash(BaseResource):
+    def get(self, key):
+        feature = self.model.get_feature(key)
+
+        return {'result': feature.geohash}
+
+
+class FeatureResourceBBox(BaseResource):
+    def get(self, key):
+        feature = self.model.get_feature(key)
+
+        return {'result': feature.bbox}

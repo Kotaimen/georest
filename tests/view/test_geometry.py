@@ -16,7 +16,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         key = 'point1'
 
         response = self.client.get(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             query_string={'format': 'json'},
         )
 
@@ -35,7 +35,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         key = 'never_found'
 
         response = self.client.get(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             query_string={},
         )
 
@@ -45,7 +45,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         key = 'point1'
 
         response = self.client.get(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             query_string={'format': 'ewkt', 'srid': 3857},
         )
         self.assertEqual('text/plain', response.content_type)
@@ -56,7 +56,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         key = 'point1'
 
         response = self.client.get(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             query_string={'format': 'ewkb'},
         )
         self.assertEqual('application/oct-stream', response.content_type)
@@ -69,7 +69,7 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         data = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
         response = self.client.put(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             data=data,
             content_type='application/json',
         )
@@ -89,7 +89,7 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
         response = self.client.put(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             data=payload,
             content_type='application/json',
         )
@@ -105,7 +105,7 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
             {'type': 'what ever', 'coordinates': 'where am i?'})
 
         response = self.client.put(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             data=payload,
             content_type='application/json',
         )
@@ -120,7 +120,7 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
         response = self.client.put(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             data=payload,
             content_type='application/json',
         )
@@ -137,7 +137,7 @@ class TestGeometryPost(ResourceTestBase, unittest.TestCase):
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
         response = self.client.post(
-            path='/geometries/%s' % key,
+            path='/features/%s/geometry' % key,
             data=payload,
             content_type='application/json',
         )
@@ -148,19 +148,20 @@ class TestGeometryPost(ResourceTestBase, unittest.TestCase):
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
         response = self.client.post(
-            path='/geometries',
+            path='/features/geometry',
             data=payload,
             content_type='application/json',
         )
 
         result = self.checkResponse(response, 201)
         self.assertIn('key', result)
+        self.assertEqual(result['code'], 201)
 
 
 class TestGeometryDelete(ResourceTestBase, unittest.TestCase):
     def test_delete_geometry(self):
         key = 'linestring1'
-        path = '/geometries/%s' % key
+        path = '/features/%s/geometry' % key
         self.checkResponse(self.client.get(path=path), 200)
         self.checkResponse(self.client.delete(path=path), 200)
         self.checkResponse(self.client.get(path=path), 404)

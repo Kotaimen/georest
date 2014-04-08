@@ -3,7 +3,6 @@
 __author__ = 'kotaimen'
 __date__ = '3/25/14'
 
-
 from flask import request
 
 from ..geo import build_geometry
