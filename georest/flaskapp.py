@@ -13,6 +13,8 @@ __date__ = '3/18/14'
 
 import os
 
+from werkzeug.security import safe_join
+
 from flask import Flask, render_template, redirect
 from flask.ext.markdown import Markdown
 
@@ -90,10 +92,10 @@ class GeoRestApp(Flask):
 
         @self.route('/doc/')
         def doc_index():
-            md_file = os.path.join(self.config['GEOREST_DOC_DIR'], 'index.md')
+            md_file = safe_join(self.config['GEOREST_DOC_DIR'], 'index.md')
             return render_markdown(md_file, 'GeoRest Doc')
 
         @self.route('/doc/<doc>')
         def doc_page(doc):
-            md_file = os.path.join(self.config['GEOREST_DOC_DIR'], doc)
+            md_file = safe_join(self.config['GEOREST_DOC_DIR'], doc)
             return render_markdown(md_file, doc)

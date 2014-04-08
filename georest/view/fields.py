@@ -10,7 +10,7 @@ __author__ = 'kotaimen'
 __date__ = '3/21/14'
 
 import json
-import datetime
+from werkzeug.http import http_date
 
 from flask import current_app
 from flask.ext.restful import fields, marshal_with
@@ -45,8 +45,7 @@ class CRS(Raw):
 
 class DateTime(Raw):
     def format(self, value):
-        date_format = current_app.config['DATE_FORMAT']
-        return value.strftime(date_format)
+        return http_date(value)
 
 #
 # Fields

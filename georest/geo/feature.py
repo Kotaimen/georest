@@ -10,9 +10,7 @@ __author__ = 'kotaimen'
 __date__ = '3/19/14'
 
 import hashlib
-import itertools
 import datetime
-import collections
 import uuid
 import geohash
 

@@ -9,8 +9,8 @@ __author__ = 'kotaimen'
 __date__ = '3/21/14'
 
 import datetime
-import traceback
 
+from werkzeug.http import http_date
 from flask import current_app, make_response
 from flask.ext.restful import Resource, abort, reqparse
 
@@ -31,13 +31,12 @@ def make_header_from_feature(feature):
     """ Generate a header using feature metadata"""
     age = current_app.config['EXPIRES']
     expires = feature.modified + datetime.timedelta(seconds=age)
-    date_format = current_app.config['DATE_FORMAT']
     return {
         'Etag': feature.etag,
-        'Date': feature.created.strftime(date_format),
-        'Last-Modified': feature.modified.strftime(date_format),
+        'Date': http_date(feature.created),
+        'Last-Modified': http_date(feature.modified),
         'Cache-Control': 'max-age=%d,must-revalidate' % age,
-        'Expires': expires.strftime(date_format), }
+        'Expires': http_date(expires) }
 
 
 def make_response_from_geometry(geometry, format_='json', srid=0, headers=None):
