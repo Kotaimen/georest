@@ -9,7 +9,7 @@ from pprint import pprint
 
 from georest.geo.engine import geos
 
-from georest.geo import build_feature
+from georest.geo import build_feature, build_feature_from_geojson
 from georest.geo.feature import calc_etag, calc_bbox, calc_geohash
 
 
@@ -52,7 +52,25 @@ class TestFeature(unittest.TestCase):
                               properties={'hello': 'world'}, )
         self.assertEqual(feat1.geometry.srid, 4326)
         self.assertEqual(feat1.properties['hello'], 'world')
-        # TODO: Add more tests...
+
+
+    def test_build_from_geojson(self):
+        feat1 = build_feature_from_geojson('''
+{ "type": "Feature",
+    "geometry":  { "type": "Polygon",
+        "coordinates": [
+          [ [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0] ],
+          [ [100.2, 0.2], [100.8, 0.2], [100.8, 0.8], [100.2, 0.8], [100.2, 0.2] ]
+          ]
+    },
+    "properties": {
+      "hello": "world",
+      "life": 42
+    }
+}
+        ''')
+        self.assertEqual(feat1.geometry.srid, 4326)
+        self.assertEqual(feat1.properties['hello'], 'world')
 
 
 if __name__ == '__main__':

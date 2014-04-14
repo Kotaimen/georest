@@ -158,15 +158,5 @@ class TestGeometryPost(ResourceTestBase, unittest.TestCase):
         self.assertEqual(result['code'], 201)
 
 
-class TestGeometryDelete(ResourceTestBase, unittest.TestCase):
-    def test_delete_geometry(self):
-        key = 'linestring1'
-        path = '/features/%s/geometry' % key
-        self.checkResponse(self.client.get(path=path), 200)
-        self.checkResponse(self.client.delete(path=path), 200)
-        self.checkResponse(self.client.get(path=path), 404)
-        self.checkResponse(self.client.delete(path=path), 404)
-
-
 if __name__ == '__main__':
     unittest.main()

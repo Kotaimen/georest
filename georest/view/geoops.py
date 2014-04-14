@@ -1,5 +1,13 @@
 # -*- encoding: utf-8 -*-
 
+"""
+    georest.view.geoops
+    ~~~~~~~~~~~~~~~~~~~
+
+    Spatial operations
+"""
+
+
 __author__ = 'kotaimen'
 __date__ = '3/25/14'
 

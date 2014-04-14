@@ -52,7 +52,7 @@ class DateTime(Raw):
 #
 
 FEATURE_FIELDS = {
-    '_id': String(attribute='id'),
+    '_key': String(attribute='key'),
     '_etag': String(attribute='etag'),
     '_created': DateTime(attribute='created'),
     '_modified': DateTime(attribute='modified'),

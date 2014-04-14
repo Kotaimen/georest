@@ -1,5 +1,10 @@
 # -*- encoding: utf-8 -*-
 
+"""
+    georest.view.exception
+    ~~~~~~~~~~~~~~~~~~~~~~
+"""
+
 __author__ = 'kotaimen'
 __date__ = '3/26/14'
 

@@ -19,9 +19,10 @@ class ResourceTestBase(object):
         timestamp = datetime.datetime.utcnow().replace(microsecond=0)
 
         self.feature1 = build_feature('POINT (0.0001 0.0001)',
-                                      {'name': 'feature1'},
+                                      {'question': 'meaning of life',
+                                       'answer': 42},
                                       srid=4326,
-                                      id_=uuid.uuid4(),
+                                      key=uuid.uuid4(),
                                       created=timestamp)
 
         # Reset modified timestamp since build_feature recalculates it

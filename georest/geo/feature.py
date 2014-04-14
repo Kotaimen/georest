@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 
 """
-    Feature Object
-    ~~~~~~~~~~~~~~
+    georest.geo.feature
+    ~~~~~~~~~~~~~~~~~~~
+
+    Spatial feature object and creation
 
 """
 
@@ -12,30 +14,27 @@ __date__ = '3/19/14'
 import hashlib
 import datetime
 import uuid
+import json
+
 import geohash
 
 from .engine import geos
 from .geometry import build_geometry
+from .exception import InvalidFeature
 
 
 class Feature(object):
-    """
-        GeoFeature with more GeoJson friendly properties
+    """GeoFeature with more GeoJson friendly properties.
 
-        Unlike OGRFeature, does not require property have a field definition,
-        thus is more json friendly.
+    Unlike OGRFeature, does not require property have a field definition.
     """
-
-    # XXX: automatic pickling doesn't work with this, disable it as of now
-    # __slots__ = ('_id', '_etag', '_created', '_modified',
-    #              '_geometry', '_properties', '_bbox', '_geohash')
 
     def __init__(self,
-                 id_, etag,
+                 key, etag,
                  created, modified,
                  geometry, properties,
                  bbox, geohash):
-        self._id = id_
+        self._key = key
         self._etag = etag
 
         self._created = created
@@ -48,12 +47,12 @@ class Feature(object):
         self._geohash = geohash
 
     @property
-    def id(self):
-        return self._id
+    def key(self):
+        return self._key
 
-    @id.setter
-    def id(self, id_):
-        self._id = id_
+    @key.setter
+    def key(self, key):
+        self._key = key
 
     @property
     def etag(self):
@@ -117,7 +116,7 @@ class Feature(object):
 #
 
 def calc_etag(geom, props):
-    """ Calculate etag of a feature using geometry and properties """
+    """Calculate etag of a feature using geometry and properties"""
     assert isinstance(geom, geos.GEOSGeometry)
     h = hashlib.sha1()
     h.update(geom.ewkb)
@@ -129,10 +128,7 @@ GEOHASH_PRECISION = 12
 
 
 def calc_geohash(geom):
-    """
-        Calculate geohash of th geometry
-
-        Mimics behaviour of postgis st_geohash
+    """Calculate geohash of th geometry, mimics behaviour of postgis st_geohash
     """
     assert isinstance(geom, geos.GEOSGeometry)
     if geom.crs is not None and geom.crs.angular_name != 'degree':
@@ -163,7 +159,7 @@ def calc_geohash(geom):
 
 
 def calc_bbox(geom):
-    """ Calculate bounding box of the geometry """
+    """Calculate bounding box of the geometry"""
     assert isinstance(geom, geos.GEOSGeometry)
 
     if geom.geom_type == 'Point':
@@ -182,12 +178,10 @@ def calc_bbox(geom):
 def build_feature(geoinput,
                   properties=None,
                   srid=4326,
-                  id_=None,
+                  key=None,
                   created=None,
                   modified=None):
-    """
-        Build a geometry feature
-    """
+    """Build a feature from geometry and properties."""
 
     if created is None:
         created = datetime.datetime.utcnow()
@@ -198,12 +192,12 @@ def build_feature(geoinput,
     if properties is None:
         properties = dict()
 
-    if id_ is None:
-        id_ = uuid.uuid4().hex
+    if key is None:
+        key = uuid.uuid4().hex
 
     geometry = build_geometry(geoinput, srid)
 
-    feature = Feature(id_=id_, etag=None,
+    feature = Feature(key=key, etag=None,
                       created=created, modified=modified,
                       geometry=geometry, properties=properties,
                       bbox=None, geohash=None)
@@ -212,3 +206,26 @@ def build_feature(geoinput,
 
     return feature
 
+
+def build_feature_from_geojson(geojsoninput,
+                               key=None,
+                               created=None,
+                               modified=None):
+    input = json.loads(geojsoninput)
+
+    if 'type' not in input or input['type'] != 'Feature' \
+            or 'geometry' not in input:
+        raise InvalidFeature('Must be a GeoJson Feature object')
+
+    geoinput = json.dumps(input['geometry'])
+
+    if 'properties' not in input:
+        props = {}
+    else:
+        props = input['properties']
+
+    return build_feature(geoinput,
+                         props,
+                         key=key,
+                         created=created,
+                         modified=modified)

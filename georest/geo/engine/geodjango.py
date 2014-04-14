@@ -1,8 +1,11 @@
 # -*- encoding: utf-8 -*-
 
 """
-    Geodjango Engine
-    ~~~~~~~~~~~~~~~~
+    georest.geo.engine.django
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Django geos/gdal wrapper
+
 """
 
 __author__ = 'kotaimen'

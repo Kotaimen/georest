@@ -25,7 +25,7 @@ class SimpleGeoModel(object):
 
     def put_feature(self, key, geometry_input, properties=None,
                     overwrite=False):
-        feature = build_feature(geometry_input, srid=4326, id_=key,
+        feature = build_feature(geometry_input, srid=4326, key=key,
                                 properties=properties)
         self.store.put_feature(feature, key=key, overwrite=overwrite)
         return feature

@@ -1,8 +1,8 @@
 # -*- encoding: utf-8 -*-
 
 """
-    GeoExceptions
-    ~~~~~~~~~~~~~
+    georest.geo.exception
+    ~~~~~~~~~~~~~~~~~~~~~
 """
 __author__ = 'kotaimen'
 __date__ = '3/19/14'
@@ -33,3 +33,8 @@ class InvalidGeometry(GeoException):
 
 class InvalidCRS(GeoException):
     pass
+
+
+class InvalidFeature(GeoException):
+    pass
+

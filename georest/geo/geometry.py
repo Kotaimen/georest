@@ -1,8 +1,9 @@
 # -*- encoding: utf-8 -*-
 
 """
-    Geometry object
-    ~~~~~~~~~~~~~~~
+    georest.geo.geometry
+    ~~~~~~~~~~~~~~~~~~~~
+
 """
 __author__ = 'kotaimen'
 __date__ = '3/19/14'
@@ -21,7 +22,7 @@ from .exception import GeoException, InvalidGeometry, \
 class Geometry(object):
     """ Wrapper for Geometry object
 
-        Contains geometry coordinate data and coordinate reference system
+    Contains geometry coordinate? data and coordinate reference system
     """
 
     def __init__(self, the_geom):
@@ -39,9 +40,7 @@ class Geometry(object):
         return Delegation.type_guard(self._the_geom[key])
 
     def __getattr__(self, name):
-        """
-            Pretend to be a geos.Geometry instance without much coding
-        """
+        """Pretend to be a geos.Geometry instance without much coding"""
         # XXX: Violates DIP but much less coding
         # XXX: I like dynamic languages
         try:
