@@ -1,10 +1,9 @@
 # -*- encoding: utf-8 -*-
 
 """
-    georest.view.geoops
-    ~~~~~~~~~~~~~~~~~~~
+    georest.view.operations
+    ~~~~~~~~~~~~~~~~~~~~~~~
 
-    Spatial operations
 """
 
 

@@ -10,8 +10,9 @@
 __author__ = 'kotaimen'
 __date__ = '3/19/14'
 
-from .geores import *
-from .geoops import *
+from .geometries import *
+from .operations import *
+from .features import *
 
 from flask import current_app
 from flask.ext.restful import Resource
@@ -35,4 +36,4 @@ class Describe(Resource):
         }
 
 
-
+del current_app, Resource, describe

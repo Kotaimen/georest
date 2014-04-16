@@ -54,22 +54,53 @@ class TestFeatureGet(ResourceTestBase, unittest.TestCase):
         self.assertListEqual(result['result'], [0.0001, 0.0001, 0.0001, 0.0001])
 
 
+class TestFeaturePut(ResourceTestBase, unittest.TestCase):
+    def setUp(self):
+        ResourceTestBase.setUp(self)
 
-class TestFeaturePut():
-    pass
+        self.payload = json.dumps(
+            {"type": "Feature",
+             "geometry": {"type": "Polygon",
+                          "coordinates": [
+                              [[100.0, 0.0], [101.0, 0.0], [101.0, 1.0],
+                               [100.0, 1.0], [100.0, 0.0]],
+                              [[100.2, 0.2], [100.8, 0.2], [100.8, 0.8],
+                               [100.2, 0.8], [100.2, 0.2]]
+                          ]
+             },
+             "properties": {
+                 "hello": "world",
+                 "life": 42
+             }
+            })
+
+    def test_post_feature(self):
+        payload = self.payload
+
+        response = self.client.post(
+            path='/features',
+            data=payload
+        )
+        self.assertEqual(response.status_code, 201)
+
+    def test_put_feature(self):
+        payload = self.payload
+
+        response = self.client.put(
+            path='/features/blah',
+            data=payload
+        )
+        self.assertEqual(response.status_code, 201)
 
 
-
-# class TestGeometryDelete(ResourceTestBase, unittest.TestCase):
-#     def test_delete_geometry(self):
-#         key = 'linestring1'
-#         path = '/features/%s/geometry' % key
-#         self.checkResponse(self.client.get(path=path), 200)
-#         self.checkResponse(self.client.delete(path=path), 200)
-#         self.checkResponse(self.client.get(path=path), 404)
-#         self.checkResponse(self.client.delete(path=path), 404)
-
-
+class TestFeatureDelete(ResourceTestBase, unittest.TestCase):
+    def test_delete_feature(self):
+        key = 'linestring1'
+        path = '/features/%s' % key
+        self.checkResponse(self.client.get(path=path), 200)
+        self.checkResponse(self.client.delete(path=path), 204)
+        self.checkResponse(self.client.get(path=path), 404)
+        self.checkResponse(self.client.delete(path=path), 404)
 
 
 if __name__ == '__main__':

@@ -209,6 +209,7 @@ def build_feature(geoinput,
 
 def build_feature_from_geojson(geojsoninput,
                                key=None,
+                               srid=4326,
                                created=None,
                                modified=None):
     input = json.loads(geojsoninput)
@@ -227,5 +228,7 @@ def build_feature_from_geojson(geojsoninput,
     return build_feature(geoinput,
                          props,
                          key=key,
+                         srid=srid,
                          created=created,
                          modified=modified)
+

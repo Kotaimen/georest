@@ -155,6 +155,7 @@ class TestGeometryPost(ResourceTestBase, unittest.TestCase):
 
         result = self.checkResponse(response, 201)
         self.assertIn('key', result)
+        self.assertIsNotNone(result['key'])
         self.assertEqual(result['code'], 201)
 
 

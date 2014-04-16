@@ -4,8 +4,7 @@ __author__ = 'kotaimen'
 __date__ = '3/20/14'
 
 import unittest
-import uuid
-from pprint import pprint
+import json
 
 from georest.geo.engine import geos
 
@@ -55,20 +54,21 @@ class TestFeature(unittest.TestCase):
 
 
     def test_build_from_geojson(self):
-        feat1 = build_feature_from_geojson('''
-{ "type": "Feature",
-    "geometry":  { "type": "Polygon",
-        "coordinates": [
-          [ [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0] ],
-          [ [100.2, 0.2], [100.8, 0.2], [100.8, 0.8], [100.2, 0.8], [100.2, 0.2] ]
-          ]
-    },
-    "properties": {
-      "hello": "world",
-      "life": 42
-    }
-}
-        ''')
+        feat1 = build_feature_from_geojson(json.dumps(
+            {"type": "Feature",
+             "geometry": {"type": "Polygon",
+                          "coordinates": [
+                              [[100.0, 0.0], [101.0, 0.0], [101.0, 1.0],
+                               [100.0, 1.0], [100.0, 0.0]],
+                              [[100.2, 0.2], [100.8, 0.2], [100.8, 0.8],
+                               [100.2, 0.8], [100.2, 0.2]]
+                          ]
+             },
+             "properties": {
+                 "hello": "world",
+                 "life": 42
+             }
+            }))
         self.assertEqual(feat1.geometry.srid, 4326)
         self.assertEqual(feat1.properties['hello'], 'world')
 

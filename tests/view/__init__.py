@@ -58,5 +58,8 @@ class ResourceTestBase(object):
     def checkResponse(self, response, status_code=200):
         self.assertEqual(status_code, response.status_code)
         self.assertEqual('application/json', response.content_type)
-        data = json.loads(response.data)
-        return data
+        if status_code == 204:  # No content
+            return None
+        else:
+            data = json.loads(response.data)
+            return data
