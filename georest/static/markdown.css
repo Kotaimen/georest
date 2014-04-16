@@ -27,11 +27,10 @@ a.anchor {
   bottom: 0; }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Charter', 'Georgia', serif
+  font-family: 'Garamond', 'Cambria', 'Georgia', serif;
+  font-style: Italic;
   margin: 20px 0 10px;
   padding: 0;
-  font-weight: Bold;
-  font-style: Italic;
   -webkit-font-smoothing: antialiased;
   cursor: text;
   position: relative; }
@@ -80,7 +79,7 @@ h6 {
   font-size: 16px; }
 
 p, blockquote, table, pre {
-  margin: 15px; }
+  margin: 14px; }
 
 hr {
   background: transparent;

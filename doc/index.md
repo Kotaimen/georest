@@ -9,8 +9,10 @@ Restful geospatial feature storage/query/operation interface.
     
 ### Geo Formats
 
-As a RESTful service, all spatial data is exchanged using GeoJson.  
-Besides GeoJson, `ewkt` and `ewkb` are also supported when getting or storing  Geometry, note `ewkt`/`ewkb` does not support `GeometryCollection`.
+All spatial data is exchanged using GeoJson.  
+Besides GeoJson, `ewkt` and `ewkb` are also supported when getting or storing  geometries.
+
+Note `ewkt`/`ewkb` does not support `GeometryCollection`.
 
 By default, all feature's geometry are 2d and in epsg:4326 CRS.
 
@@ -56,13 +58,26 @@ Standard error response:
 }
 ```
 
-### Operatoin Result
+### Operation Result
 
 ```json
 {
     "result": "blah"
 }
 ```
+
+### Response Headers 
+
+General response headers when getting/setting a geometry/feature:
+
+``` text
+Content-Type: application/json
+Etag: 3be55d5f844a2a4abf5efeb03d0b0e1ebcdc0a74
+Date: Mon, 14 Apr 2014 07:35:00 GMT
+Last-Modified: Mon, 14 Apr 2014 07:35:00 GMT
+Cache-Control: max-age=30,must-revalidate
+Expires:  Mon, 14 Apr 2014 07:35:30 GMT  
+```    
 
 ### Http Verbs
 
@@ -77,5 +92,5 @@ DELETE | Used for deleting resources.
 ## Endpoints
 
 - [Geospatial Features](api_geo.md)  
-- [Geometry Operation](api_ops.md)
+- [Geometry Operations](api_ops.md)
 

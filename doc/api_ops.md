@@ -14,11 +14,13 @@ Operations always works with Geometry, not Feature.
 
 ### Unary
 
-Endpoint:
+#### Endpoint
 
     GET /operations/:operation/:key
 
-Unary Geometry Properties, returns result:
+#### Unary Geometry Properties
+
+Returns a POD result.
 
 Operation | Parameters | Description
 ----------|------------|----------------------
@@ -30,7 +32,9 @@ length    | `srid`     | Length of the geometry
 is_empty  |            | Whether geometry is empty
 is_simple |            | Whether geometry is simple
 
-Unary Topological Properties, returns a new geometry:
+#### Unary Topological Properties
+
+Returns a new geometry.
 
 Operation        | Parameters       | Description
 -----------------|------------------|--------------
@@ -40,12 +44,16 @@ convex_hull      | `format`, `srid` | Convex hull of the geometry
 envelope         | `format`, `srid` | Envelope of the geometry
 point_on_surface | `format`, `srid` | A point on geometry surface
 
-Unary Topological Methods, returns a new geometry:
+#### Unary Topological Methods
+
+Returns a new geometry.
 
 Method           | Parameters                            
 -----------------|---------------------------------------
 buffer           | `width`, `quadsegs`, `format`, `srid` 
 simplify         | `tolerance`, `topo`, `format`, `srid` 
+
+#### Parameters
 
 Common Parameters:
 
@@ -71,40 +79,45 @@ Name        | Type    | Description
 
 ### Binary
 
-Endpoint:
+#### Endpoint:
 
     
     GET /operations/:operation/:this/:other
     
 
-Binary Geometry Predicates, returns result:
+#### Binary Geometry Predicates
+
+Returns result.
 
 Operation     | Description
 --------------|-----------------
-`overlaps`    | 
-`touches`     |
-`crosses`     |
-`intersects`  |
-`within`      |
-`disjoint`    |
-`contains`    |
-`equals`      |
+overlaps    | 
+touches     |
+crosses     |
+intersects  |
+within      |
+disjoint    |
+contains    |
+equals      |
 
-Binary Topological Methods, returns geometry:
+#### Binary Topological Methods
+
+Returns a new geometry:
 
 Operation      | Parameters       | Description
 ---------------|------------------|------------
-`intersection` | `format`, `srid` |
-`difference`   | `format`, `srid` |
-`union`        | `format`, `srid` |
+intersection | `format`, `srid` |
+difference   | `format`, `srid` |
+union        | `format`, `srid` |
 
 ## Operations on Stored Geometry
 
-Endpoint:
+#### Endpoint:
     
     POST /operations/:operation
     
-Request:
+
+#### Request:
 
 - For unary operation, post a Geometry 
 - For binary operation, post a GeometryCollection containing two geometries

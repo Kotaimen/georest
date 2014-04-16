@@ -1,10 +1,10 @@
-# Gepspatial Resource API
+# Geospatial Resource API
 
 [TOC]
 
 ## Data Model
 
-Georest implements a schemaless data model:
+Georest implements a schema-less data model:
 
     Collection
       |-Features{}
@@ -16,13 +16,11 @@ Georest implements a schemaless data model:
 
 ## Key
 
-Each feature has a unique `key`.
-
-Key must match regular expression:
+Each feature has a unique `key` which must match following regular expression:
 
     [a-z][a-zA-Z0-9_-]+
 
-Following keys are reserved:
+These keys are reserved:
 
     geometry
     properties
@@ -31,85 +29,212 @@ Following keys are reserved:
 
 > Not implemented.
 
-## Features
-
-Get or store GeoJson Features object:
-
-    POST /features
-    GET /features/:key
-    PUT /features/:key
-
-> Only `GET /features/:key` is implemented.
-
-
-### Get Feature Attributes
-
-    GET /features/:key/geohash
-    GET /features/:key/bbox    
-
 ## Geometries
 
-Get or store Geometry of the Feature object:
+Access geometry part of a feature object.  
 
-### Create a Geometry
+> Geometry of a feature is considered immutable thus cannot be changed after creation.
 
-Endpoints:
+### Create a New Geometry
+
+Create a new feature with given geometry, with empty properties.  
+
+Allowed geometry types: 
+    
+    Point
+    Linestring
+    Polygon
+    MultiPoint
+    MultiLinestring
+    MultiPolygon
+    GeometryCollection
+
+Note empty or invalid geometry is not allowed.
+
+#### Endpoints
 
     POST /features/geometry
     PUT /features/:key/geometry
 
+`POST` will create a new feature with a random unique `key`, `PUT` will create new feature if it does not exist.
+
+#### Parameters
+
+Name      | Type    | Description
+----------|---------|--------------------
+`:key`    | string  | Key of the new geometry.
+
+
+#### Request
+
+Allowed geometry formats: 
+
+    geojson
+    wkt
+    ewkt
+    hexwkb
+    hexewkb
+    
+
 Request:
 
-    Data: geojson, wkt, ewkt, hexwkb, hexewkb
+    Data: geometry
     Headers:
         Content-type: application/json            
 
-Response:
+#### Response
+
+Status:
     
-    Status: 201 Created
+    201 Created
     
-    {
-        "code": 201,
-        "key": "<key_of_created_geometry>"
-    }
+Data:
+
+```json
+{
+    "code": 201,
+    "key": "<key_of_created_feature>"
+}
+```
 
 ### Retrieve a Geometry
 
-Endpoint:
+Retrieve geometry object of given feature with specified format and SRID.
+
+#### Endpoint
 
     GET /features/:key/geometry
 
-Parameters:
+#### Parameters
     
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the geometry
 `format`  | string  | Format of the return geometry, one of `json`, `ewkt`, `ewkb`.  Default is `json`
-`srid`    | integer | SRID of the geometry, default is 0 (which means "as is")
+`srid`    | integer | SRID of the geometry, default is `0` (which means "as is")
     
 ### Delete a Geometry
 
-Delete the feature together with the geometry.
+Use delete feature API.
 
-Endpoint:
-        
-    DELETE /features/:key/geometry
+## Features
 
-Parameters:
+### Create a New Feature
+
+#### Endpoints
+
+`POST` will create a new feature with a random unique `key`, PUT will create new feature if it does not exist.
+
+    POST /features
+    PUT /features/:key
+
+#### Request
+
+Feature data must be a GeoJson `Feature` object.
+
+    Data: GeoJson Feature
+    Headers:
+        Content-type: application/json            
+
+#### Response
+    
+    Status: 201 Created
+    
+    {
+        "code": 201,
+        "key": "<key_of_created_feature>"
+    }
+
+
+### Retrieve a Feature
+
+#### Endpoint
+    
+    GET /features/:key
+
+#### Parameters
 
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the geometry    
+    
+#### Response
 
-Response:
+``` json
+{
+    "type": "Feature", 
+    "geometry": {
+        "type": "Point", 
+        "coordinates": [
+            0.0001, 
+            0.0001
+        ]
+    }, 
+    "properties": {
+        "name": "feature1"
+    }, 
+    "crs": {
+        "type": "name", 
+        "properties": {
+            "name": "EPSG:4326"
+        }
+    },     
+    "bbox": [
+        0.0001, 
+        0.0001, 
+        0.0001, 
+        0.0001
+    ],     
+    "_geohash": "s0000000d6ds", 
+    "_modified": "Mon, 14 Apr 2014 07:35:00 GMT", 
+    "_created": "Mon, 14 Apr 2014 07:35:00 GMT", 
+    "_key": "point1", 
+    "_etag": "3be55d5f844a2a4abf5efeb03d0b0e1ebcdc0a74"
+}  
+```
+
+    
+### Delete a Feature
+
+#### Endpoint
+        
+    DELETE /features/:key
+
+#### Parameters
+
+Name      | Type    | Description
+----------|---------|--------------------
+`:key`    | string  | Key of the feature    
+
+#### Response
     
     Code: 204
+
+### Feature Attributes
+
+Access special feature attributes.
+
+Get `geohash` of the feature as a string:
+
+    GET /features/:key/geohash
+    
+Get bounding box (envelope) of the feature as a point list:   
+
+    GET /features/:key/bbox    
+
     
 ## Properties
 
-    POST /features/:key/properties
+Access properties part of a feature object.
+
+    POST /features/:key/properties    
     GET /features/:key/properties
+    DELETE /features/:key/properties
+        
     GET /features/:key/properties/:name
+    PUT /features/:key/properties/:name    
+    DELETE /features/:key/properties/:name   
+    
     
 > Not implemented.
 
