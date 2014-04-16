@@ -4,12 +4,6 @@ Operations always works with Geometry, not Feature.
 
 [TOC]
 
-    GET /operations/:unary/:key
-    GET /operations/:binary/:this/:other
-    POST /operations/:unary
-    POST /operations/:binary    
-    POST /operations/:unary/:this
-
 ## Operations on Stored Geometry
 
 ### Unary

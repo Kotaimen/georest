@@ -36,7 +36,7 @@ def make_header_from_feature(feature):
         'Date': http_date(feature.created),
         'Last-Modified': http_date(feature.modified),
         'Cache-Control': 'max-age=%d,must-revalidate' % age,
-        'Expires': http_date(expires) }
+        'Expires': http_date(expires)}
 
 
 def make_response_from_geometry(geometry, format_='json', srid=0, headers=None):
@@ -130,4 +130,17 @@ class GeometryRequestParser(reqparse.RequestParser):
                           location='args',
                           type=str,
                           default=0,
+                          required=False)
+
+
+class PrefixParser(reqparse.RequestParser):
+    def __init__(self):
+        super(PrefixParser, self).__init__()
+
+        self.add_argument('prefix',
+                          dest='prefix',
+                          action='store',
+                          location='args',
+                          type=str,
+                          default=None,
                           required=False)

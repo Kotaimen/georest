@@ -22,7 +22,7 @@ if not gdal.HAS_GDAL:
 
 
 def describe():
-    return {'geometry': 'GEOS Geometry',
+    return {'data_model': 'GEOS Geometry',
             'geos': geos.geos_version(),
             'gdal': gdal.gdal_full_version(), }
 

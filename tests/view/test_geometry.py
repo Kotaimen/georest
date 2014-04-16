@@ -65,18 +65,19 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
 
 class TestGeometryPut(ResourceTestBase, unittest.TestCase):
     def test_put_geometry(self):
-        key = 'geometry1'
+        key = 'geometry'
         data = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
         response = self.client.put(
             path='/features/%s/geometry' % key,
             data=data,
+            query_string={'prefix': 'a_'},
             content_type='application/json',
         )
 
         result = self.checkResponse(response, 201)
 
-        self.assertIn('key', result)
+        self.assertEqual(result['key'], 'a_geometry')
 
         self.assertEqual(201, result['code'])
         self.assertIn('Etag', response.headers)
@@ -150,12 +151,14 @@ class TestGeometryPost(ResourceTestBase, unittest.TestCase):
         response = self.client.post(
             path='/features/geometry',
             data=payload,
+            query_string={'prefix': 'blah-'},
             content_type='application/json',
         )
 
         result = self.checkResponse(response, 201)
         self.assertIn('key', result)
         self.assertIsNotNone(result['key'])
+        self.assert_(result['key'].startswith('blah-'))
         self.assertEqual(result['code'], 201)
 
 

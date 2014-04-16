@@ -10,6 +10,7 @@
 __author__ = 'kotaimen'
 __date__ = '3/19/14'
 
+from flask import current_app
 from flask.ext.restful import Resource
 
 
@@ -26,7 +27,8 @@ class Describe(Resource):
     def get(self):
         return {
             'version': __version__,
-            'engine': describe(),
+            'geo_engine': describe(),
+            'geo_store': current_app.store.describe(),
         }
 
 

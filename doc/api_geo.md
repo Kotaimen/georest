@@ -56,14 +56,14 @@ Note empty or invalid geometry is not allowed.
     POST /features/geometry
     PUT /features/:key/geometry
 
-`POST` will create a new feature with a random unique `key`, `PUT` will create new feature if it does not exist.
+`POST` will create a new feature with a random unique `key` with optional `prefix`, `PUT` will create new feature if it does not exist.
 
 #### Parameters
 
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the new geometry.
-
+`prefix`  | string  | Optional string to prepend to key when creating a new geometry.  If `:key` not is provied, default value is `geometry-`.
 
 #### Request
 
@@ -123,10 +123,17 @@ Use delete feature API.
 
 #### Endpoints
 
-`POST` will create a new feature with a random unique `key`, PUT will create new feature if it does not exist.
+`POST` will create a new feature with a random unique `key` with optional `prefix`, PUT will create new feature if it does not exist.
 
     POST /features
     PUT /features/:key
+
+#### Parameters
+
+Name      | Type    | Description
+----------|---------|--------------------
+`:key`    | string  | Key of the new feature.
+`prefix`  | string  | Optional string to prepend to key when creating a new feature.  If `:key` not is provied, default value is `feature-`.
 
 #### Request
 

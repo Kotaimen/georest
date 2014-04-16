@@ -2,6 +2,8 @@
 
 Restful geospatial feature storage/query/operation interface.
 
+> WARNING: API is subject to change until 1.0.0 release
+
 [TOC]
 
 

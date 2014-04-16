@@ -10,13 +10,11 @@
 __author__ = 'kotaimen'
 __date__ = '3/21/14'
 
-import json
-
-from flask import make_response, request
+from flask import request
 from flask.ext.restful import marshal_with, abort
 
 from .base import BaseResource, make_header_from_feature, \
-    make_response_from_geometry, GeometryRequestParser
+    PrefixParser
 from .fields import FEATURE_FIELDS
 
 __all__ = ['FeaturesResource', 'FeatureResource',
@@ -26,23 +24,30 @@ __all__ = ['FeaturesResource', 'FeatureResource',
 class FeaturesResource(BaseResource):
     """Post a new feature"""
 
+    parser = PrefixParser()
+
     def post(self):
+        args = self.parser.parse_args()
         data = request.data
-        feature = self.model.put_feature(data, key=None)
+        feature = self.model.put_feature(data, key=None, prefix=args.prefix)
         return {'key': feature.key, 'code': 201}, \
                201, make_header_from_feature(feature)
 
 
 class FeatureResource(BaseResource):
     """ Get&put&delete a feature"""
+
+    parser = PrefixParser()
+
     @marshal_with(FEATURE_FIELDS)
     def get(self, key):
         feature = self.model.get_feature(key)
         return feature, 200, make_header_from_feature(feature)
 
     def put(self, key):
+        args = self.parser.parse_args()
         data = request.data
-        feature = self.model.put_feature(data, key=key)
+        feature = self.model.put_feature(data, key=key, prefix=args.prefix)
         return {'key': feature.key, 'code': 201}, \
                201, make_header_from_feature(feature)
 

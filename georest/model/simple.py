@@ -25,18 +25,23 @@ class SimpleGeoModel(object):
     def describe_capabilities(self):
         raise NotImplementedError
 
-    def put_geometry(self, geometry_input, key=None):
-        feature = build_feature(geometry_input, srid=4326, key=key)
-        self.store.put_feature(feature, key=key)
+    def put_geometry(self, geometry_input, key=None, prefix=None):
+        if key is None and prefix is None:
+            prefix = 'geometry-'
+
+        feature = build_feature(geometry_input, srid=4326)
+        self.store.put_feature(feature, key=key, prefix=prefix)
         return feature
 
     def get_feature(self, key):
         feature = self.store.get_feature(key)
         return feature
 
-    def put_feature(self, feature_input, key=None):
-        feature = build_feature_from_geojson(feature_input, key=key)
-        self.store.put_feature(feature, key=key)
+    def put_feature(self, feature_input, key=None, prefix=None):
+        if key is None and prefix is None:
+            prefix = 'feature-'
+        feature = build_feature_from_geojson(feature_input)
+        self.store.put_feature(feature, key=key, prefix=prefix)
         return feature
 
     def delete_feature(self, key):

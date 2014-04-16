@@ -9,20 +9,22 @@
 __author__ = 'kotaimen'
 __date__ = '3/21/14'
 
-from flask import make_response, request
+from flask import request
 
 from .base import BaseResource, make_header_from_feature, \
-    make_response_from_geometry, GeometryRequestParser
+    make_response_from_geometry, GeometryRequestParser, PrefixParser
 
 __all__ = ['GeometriesResource', 'GeometryResource']
 
 
 class GeometriesResource(BaseResource):
     """Post a geometry"""
+    parser = PrefixParser()
 
     def post(self):
+        args = self.parser.parse_args()
         data = request.data
-        feature = self.model.put_geometry(data, key=None)
+        feature = self.model.put_geometry(data, key=None, prefix=args.prefix)
         return {'key': feature.key, 'code': 201}, \
                201, make_header_from_feature(feature)
 
@@ -30,10 +32,11 @@ class GeometriesResource(BaseResource):
 class GeometryResource(BaseResource):
     """Get&put a geometry"""
 
-    parser = GeometryRequestParser()
+    get_parser = GeometryRequestParser()
+    put_parser = PrefixParser()
 
     def get(self, key):
-        args = self.parser.parse_args()
+        args = self.get_parser.parse_args()
         feature = self.model.get_feature(key)
         headers = make_header_from_feature(feature)
         return make_response_from_geometry(feature.geometry,
@@ -42,7 +45,8 @@ class GeometryResource(BaseResource):
                                            headers)
 
     def put(self, key):
+        args = self.put_parser.parse_args()
         data = request.data
-        feature = self.model.put_geometry(data, key=key)
-        return {'key': feature.id, 'code': 201}, \
+        feature = self.model.put_geometry(data, key=key, prefix=args.prefix)
+        return {'key': feature.key, 'code': 201}, \
                201, make_header_from_feature(feature)

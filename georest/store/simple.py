@@ -6,17 +6,46 @@ __date__ = '3/19/14'
 import pickle
 import threading
 import re
+import collections
 
 from .exception import InvalidKey, GeometryAlreadyExists, GeometryDoesNotExist
 
 
 def is_key_valid(key):
-    return re.match(r'^[a-zA-Z][a-zA-Z0-9_-]+$', key) is not None
+    if key in ['geometry', 'properties']:
+        return False
+    else:
+        m = re.match(r'^[a-zA-Z][a-zA-Z0-9_\-\.]+$', key)
+        return m is not None
+
+
+class Capability(collections.OrderedDict):
+    def __init__(self, **kwargs):
+        super(Capability, self).__init__(
+            efficient_key_lookup=False,
+            in_memory_cache=False,
+            presistence=False,
+
+            prefix_query=False,
+            property_query=False,
+            spatial_query=False,
+            full_text_search=False,
+
+            versioning=False,
+            changeset=False,
+        )
+        self.update(**kwargs)
 
 
 class SimpleGeoStore(object):
-    """ Store features in a python dict, thread safe via locking, for test only
+    """ Store features in a python dict, thread safe via
+    locking, designed for unittest only.
     """
+
+    CAPABILITY = Capability(
+        efficient_key_lookup=True,
+        in_memory_cache=True,
+    )
 
     def __init__(self):
         self._lock = threading.Lock()
@@ -24,33 +53,32 @@ class SimpleGeoStore(object):
 
     def describe(self):
         return {
-            'backend': 'Magic',
-            'capabilities': dict(presistence=False,
-                                 efficient_lookup=True,
-                                 key_namepace=False,
-                                 in_memory=True,
-                                 distributed=False,
-                                 versioning=False,
-                                 changeset=False,
-                                 property_query=False,
-                                 spatial_query=False,
-                                 full_text_search=False, )
+            'backend': 'Simple',
+            'capabilities': self.CAPABILITY
         }
 
-    def put_feature(self, feature, key=None):
-        if key is not None and not is_key_valid(key):
-            raise InvalidKey('Invalid key: "%s"' % key)
+    def put_feature(self, feature, key=None, prefix=None):
 
         with self._lock:
+            # Put prefix and key together
             if key is None:
-                key = 'feature-%d' % len(self._features)
+                assert prefix is not None
+                key = '%s%d' % (prefix, len(self._features))
+            elif prefix is not None:
+                key = '%s%s' % (prefix, key)
+
+            # Check key
+            if not is_key_valid(key):
+                raise InvalidKey('Invalid key: "%s"' % key)
 
             if key in self._features:
                 raise GeometryAlreadyExists(
                     'Geometry already exists: "%s"' % key)
 
-            feature.id = key
-            # Simulate storage by pickling the feature object
+            # Overwrite random key generated in the feature
+            feature.key = key
+
+            # Simulate storage behaviour by pickling the feature object
             self._features[key] = pickle.dumps(feature)
 
     def get_feature(self, key):
