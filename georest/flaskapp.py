@@ -11,8 +11,6 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-import os
-
 from werkzeug.security import safe_join
 
 from flask import Flask, render_template, redirect

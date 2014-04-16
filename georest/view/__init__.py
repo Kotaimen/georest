@@ -10,30 +10,24 @@
 __author__ = 'kotaimen'
 __date__ = '3/19/14'
 
+from flask.ext.restful import Resource
+
+
 from .geometries import *
 from .operations import *
 from .features import *
 
-from flask import current_app
-from flask.ext.restful import Resource
-from ..geo.engine import describe
 
+from ..geo.engine import describe
+from .. import __version__
 
 class Describe(Resource):
+
     def get(self):
         return {
+            'version': __version__,
             'engine': describe(),
-            'store': current_app.model.store.describe(),
-            'resources': {
-                'feature': {'methods': ['GET', ]},
-                'geometry': {'methods': ['GET', 'POST', 'DELETE']},
-                'property': {'methods': []},
-            },
-            'operations': {
-                'unary': sorted(UNARY_OPERATIONS),
-                'binary': sorted(BINARY_OPERATIONS),
-            }
         }
 
 
-del current_app, Resource, describe
+del Resource

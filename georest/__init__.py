@@ -9,6 +9,7 @@
 
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
-__version__ = '0.0.1 prototype'
+
+__version__ = '0.0.2'
 
 from flaskapp import GeoRestApp
