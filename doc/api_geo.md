@@ -67,20 +67,18 @@ Name      | Type    | Description
 
 #### Request
 
-Allowed geometry formats: 
+    Data: 
+        <geometry>
+    Headers:
+        Content-type: application/json            
 
-    geojson
+`geometry` can be one of following format:
+
+    geojson geometry
     wkt
     ewkt
     hexwkb
     hexewkb
-    
-
-Request:
-
-    Data: geometry
-    Headers:
-        Content-type: application/json            
 
 #### Response
 
@@ -112,10 +110,17 @@ Name      | Type    | Description
 `:key`    | string  | Key of the geometry
 `format`  | string  | Format of the return geometry, one of `json`, `ewkt`, `ewkb`.  Default is `json`
 `srid`    | integer | SRID of the geometry, default is `0` (which means "as is")
-    
-### Delete a Geometry
 
-Use delete feature API.
+#### Response
+
+Returns requested geometry.  Content type depends on requested format:
+
+Format    | Content Type
+----------|---------------
+`json`    | `application/json`
+`ewkt`    | `text/plain`
+`exkb`    | `application/oct-stream`
+
 
 ## Features
 
@@ -139,7 +144,8 @@ Name      | Type    | Description
 
 Feature data must be a GeoJson `Feature` object.
 
-    Data: GeoJson Feature
+    Data: 
+        <GeoJson Feature>
     Headers:
         Content-type: application/json            
 
@@ -221,10 +227,14 @@ Name      | Type    | Description
 
 Access special feature attributes.
 
+#### Geohash
+
 Get `geohash` of the feature as a string:
 
     GET /features/:key/geohash
     
+#### BBOX
+
 Get bounding box (envelope) of the feature as a point list:   
 
     GET /features/:key/bbox    
@@ -234,14 +244,56 @@ Get bounding box (envelope) of the feature as a point list:
 
 Access properties part of a feature object.
 
-    POST /features/:key/properties    
+> Not implemented yet.
+
+### Update Properties
+
+Update properties dictionary (existing properties got replaced).
+
+#### Endpoint
+
+    POST /features/:key/properties
+
+#### Request
+
+    Data:
+        <properties>
+    Content-Type:
+        application/json
+
+`properties` must be a json dictionary.
+
+#### Response
+
+    201 Created    
+    
+### Get Properties
+
+#### Endpoint
+    
     GET /features/:key/properties
+    
+### Delete All Properties
+
+#### Endpoint
+
     DELETE /features/:key/properties
+
+### Get a Property
+
+#### Endpoint
         
     GET /features/:key/properties/:name
+
+### Replace a Property    
+
+#### Endpoint
+
     PUT /features/:key/properties/:name    
+    
+### Delete a Property
+
+#### Endpoint
+    
     DELETE /features/:key/properties/:name   
     
-    
-> Not implemented.
-

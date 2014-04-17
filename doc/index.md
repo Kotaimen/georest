@@ -4,7 +4,11 @@ Restful geospatial feature storage/query/operation interface.
 
 > WARNING: API is subject to change until 1.0.0 release
 
-[TOC]
+## API
+
+- [Geospatial Features](api_geo.md)  
+- [Geometry Operations](api_ops.md)
+
 
 
 ## Spatial Data
@@ -90,9 +94,4 @@ GET   | Used for retrieving resources.
 POST  | Used for creating resources, or performing custom actions.
 PUT	  | Used for replacing resources or collections.
 DELETE | Used for deleting resources.
-
-## Endpoints
-
-- [Geospatial Features](api_geo.md)  
-- [Geometry Operations](api_ops.md)
 
