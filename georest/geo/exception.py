@@ -38,3 +38,7 @@ class InvalidCRS(GeoException):
 class InvalidFeature(GeoException):
     pass
 
+
+class InvalidProperty(GeoException):
+    pass
+

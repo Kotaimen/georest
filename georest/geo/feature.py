@@ -16,11 +16,12 @@ import datetime
 import uuid
 import json
 
+import six
 import geohash
 
 from .engine import geos
 from .geometry import build_geometry
-from .exception import InvalidFeature
+from .exception import InvalidFeature, InvalidProperty
 
 
 class Feature(object):
@@ -207,6 +208,22 @@ def build_feature(geoinput,
     return feature
 
 
+def check_properties(props):
+    if not isinstance(props, dict):
+        raise InvalidProperty('Properties must be a dictionary')
+
+    for name, value in props.iteritems():
+        if not isinstance(name, six.string_types):
+            raise InvalidProperty(
+                'Property name must be a string, got "%s"' % type(
+                    name).__name__)
+
+        try:
+            json.dumps(value)
+        except TypeError:
+            raise InvalidProperty('Property value must be json serializable')
+
+
 def build_feature_from_geojson(geojsoninput,
                                key=None,
                                srid=4326,
@@ -224,6 +241,7 @@ def build_feature_from_geojson(geojsoninput,
         props = {}
     else:
         props = input['properties']
+        check_properties(props)
 
     return build_feature(geoinput,
                          props,

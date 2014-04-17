@@ -29,8 +29,7 @@ class ResourceTestBase(object):
         self.feature1._modified = timestamp
 
         self.feature2 = build_feature(
-            'LINESTRING (0.00015 -0.00015, 0.00016 -0.00017)',
-            {'name': 'feature2'})
+            'LINESTRING (0.00015 -0.00015, 0.00016 -0.00017)',)
 
         feature3 = build_feature(
             'POLYGON ((0 0, 1 0, 1 1, 0.5 1, 0.5 0.5, 0 0.5, 0 0))'
