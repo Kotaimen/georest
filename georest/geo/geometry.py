@@ -154,7 +154,7 @@ ALLOWED_GEOMETRY_TYPES = frozenset(['Point',
                                     'GeometryCollection'])
 
 
-def build_geometry(geoinput, srid=None):
+def build_geometry(geoinput, srid=4326):
     """
 
     :param geoinput: geometry data, can be one of:

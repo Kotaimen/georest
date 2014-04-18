@@ -24,7 +24,7 @@ class TestGeometryBuilding(unittest.TestCase):
 
     def test_build_geojson_geometry(self):
         geom = build_geometry(
-            '{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }', srid=4326)
+            '{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }')
         self.assertEqual(
             'POINT (1.0000000000000000 2.0000000000000000)',
             geom.wkt)

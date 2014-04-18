@@ -128,9 +128,10 @@ class GeometryRequestParser(reqparse.RequestParser):
                           dest='srid',
                           action='store',
                           location='args',
-                          type=str,
+                          type=int,
                           default=0,
                           required=False)
+
         self.add_argument('prefix',
                           dest='prefix',
                           action='store',
@@ -170,6 +171,6 @@ class OperationRequestParser(reqparse.RequestParser):
                           dest='srid',
                           action='store',
                           location='args',
-                          type=str,
+                          type=int,
                           default=0,
                           required=False)
