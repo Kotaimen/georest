@@ -35,6 +35,16 @@ class TestFeatureGet(ResourceTestBase, unittest.TestCase):
         self.assertIn('bbox', result)
         self.assertIn('crs', result)
 
+    def test_get_feature_with_prefix(self):
+        key = '1'
+
+        response = self.client.get(
+            path='/features/%s' % key,
+            query_string={'prefix': 'point'},
+        )
+
+        result = self.checkResponse(response, 200)
+
     def test_get_feature_geohash(self):
         key = 'point1'
 

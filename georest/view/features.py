@@ -41,7 +41,8 @@ class FeatureResource(BaseResource):
 
     @marshal_with(FEATURE_FIELDS)
     def get(self, key):
-        feature = self.model.get_feature(key)
+        args = self.parser.parse_args()
+        feature = self.model.get_feature(key, prefix=args.prefix)
         return feature, 200, make_header_from_feature(feature)
 
     def put(self, key):
@@ -52,19 +53,25 @@ class FeatureResource(BaseResource):
                201, make_header_from_feature(feature)
 
     def delete(self, key):
-        self.model.delete_feature(key)
+        args = self.parser.parse_args()
+        data = request.data
+        self.model.delete_feature(key, prefix=args.prefix)
         return None, 204
 
 
 class FeatureResourceGeoHash(BaseResource):
-    def get(self, key):
-        feature = self.model.get_feature(key)
+    parser = PrefixParser()
 
+    def get(self, key):
+        args = self.parser.parse_args()
+        feature = self.model.get_feature(key, args.prefix)
         return {'result': feature.geohash}
 
 
 class FeatureResourceBBox(BaseResource):
-    def get(self, key):
-        feature = self.model.get_feature(key)
+    parser = PrefixParser()
 
+    def get(self, key):
+        args = self.parser.parse_args()
+        feature = self.model.get_feature(key, args.prefix)
         return {'result': feature.bbox}

@@ -137,7 +137,7 @@ Format    | Content Type
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the new feature.
-`prefix`  | string  | Optional string to prepend to key when creating a new feature.  If `:key` not is provied, default value is `feature-`.
+`prefix`  | string  | Optional string to prepend to key when creating a new feature.  If `:key` not is provided, default value is `feature-`.
 
 #### Request
 
@@ -169,6 +169,7 @@ Feature data must be a GeoJson `Feature` object.
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the geometry    
+`prefix`  | string  | Optional string to prepend to key
     
 #### Response
 
@@ -217,6 +218,7 @@ Name      | Type    | Description
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the feature    
+`prefix`  | string  | Optional string to prepend to key
 
 #### Response
     
