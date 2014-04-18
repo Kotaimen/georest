@@ -10,11 +10,11 @@ class GeoStoreError(GeoException):
     pass
 
 
-class GeometryAlreadyExists(GeoStoreError):
+class FeatureAlreadyExists(GeoStoreError):
     pass
 
 
-class GeometryDoesNotExist(GeoStoreError):
+class FeatureDoesNotExist(GeoStoreError):
     pass
 
 

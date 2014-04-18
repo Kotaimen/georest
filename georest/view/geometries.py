@@ -23,8 +23,9 @@ class GeometriesResource(BaseResource):
 
     def post(self):
         args = self.parser.parse_args()
-        data = request.data
-        feature = self.model.put_geometry(data, key=None, prefix=args.prefix)
+        geometry_input = request.data
+        feature = self.model.update_geometry(geometry_input, key=None,
+                                             prefix=args.prefix)
         return {'key': feature.key, 'code': 201}, \
                201, make_header_from_feature(feature)
 
@@ -37,7 +38,7 @@ class GeometryResource(BaseResource):
 
     def get(self, key):
         args = self.get_parser.parse_args()
-        feature = self.model.get_feature(key)
+        feature = self.model.get_feature(key, prefix=args.prefix)
         headers = make_header_from_feature(feature)
         return make_response_from_geometry(feature.geometry,
                                            args.format,
@@ -46,7 +47,8 @@ class GeometryResource(BaseResource):
 
     def put(self, key):
         args = self.put_parser.parse_args()
-        data = request.data
-        feature = self.model.put_geometry(data, key=key, prefix=args.prefix)
+        geometry_input = request.data
+        feature = self.model.update_geometry(geometry_input, key,
+                                             prefix=args.prefix)
         return {'key': feature.key, 'code': 201}, \
                201, make_header_from_feature(feature)

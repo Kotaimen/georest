@@ -16,7 +16,7 @@ from ..geo import build_geometry
 from ..geo.exception import InvalidGeometry
 
 from .base import BaseResource, make_response_from_geometry, \
-    GeometryRequestParser
+    OperationRequestParser
 
 from .exception import InvalidGeometryOperator, IdentialGeometryError
 
@@ -32,9 +32,9 @@ def make_predicate_result(ret):
 #
 # Parsers
 #
-default_parser = GeometryRequestParser()
+default_parser = OperationRequestParser()
 
-buffer_parser = GeometryRequestParser()
+buffer_parser = OperationRequestParser()
 buffer_parser.add_argument('width',
                            dest='width',
                            action='store',
@@ -49,7 +49,7 @@ buffer_parser.add_argument('quadsegs',
                            default=8,
                            required=False)
 
-simplify_parser = GeometryRequestParser()
+simplify_parser = OperationRequestParser()
 simplify_parser.add_argument('tolerance',
                              dest='tolerance',
                              action='store',

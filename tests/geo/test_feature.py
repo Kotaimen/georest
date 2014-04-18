@@ -9,7 +9,7 @@ import json
 from georest.geo.engine import geos
 
 from georest.geo import build_feature, build_feature_from_geojson, \
-    check_properties
+    check_properties, build_geometry
 from georest.geo.exception import GeoException
 from georest.geo.feature import calc_etag, calc_bbox, calc_geohash
 
@@ -48,12 +48,26 @@ class TestFeatureHelpers(unittest.TestCase):
 
 
 class TestFeature(unittest.TestCase):
-    def test_build(self):
+    def test_build_from_geoinput(self):
         feat1 = build_feature('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)',
                               properties={'hello': 'world'}, )
         self.assertEqual(feat1.geometry.srid, 4326)
         self.assertEqual(feat1.properties['hello'], 'world')
 
+    def test_build_from_geometry(self):
+        geom = build_geometry('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)', 4326)
+        feat1 = build_feature(geom,
+                              properties={'hello': 'world'}, )
+        self.assertEqual(feat1.geometry.srid, 4326)
+        self.assertEqual(feat1.properties['hello'], 'world')
+
+
+    def test_build_from_geos_geometry(self):
+        geom = geos.GEOSGeometry('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)', 4326)
+        feat1 = build_feature(geom,
+                              properties={'hello': 'world'}, )
+        self.assertEqual(feat1.geometry.srid, 4326)
+        self.assertEqual(feat1.properties['hello'], 'world')
 
     def test_build_from_geojson(self):
         feat1 = build_feature_from_geojson(json.dumps(

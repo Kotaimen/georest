@@ -62,28 +62,50 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         self.assertEqual('application/oct-stream', response.content_type)
         self.assertEqual(response.data, str(self.feature1.geometry.ewkb))
 
+    def test_get_geometry_with_prefix(self):
+        key = '1'
+
+        response = self.client.get(
+            path='/features/%s/geometry' % key,
+            query_string={'prefix': 'point'},
+        )
+
+        self.assertEqual(response.status_code, 200)
+
 
 class TestGeometryPut(ResourceTestBase, unittest.TestCase):
     def test_put_geometry(self):
-        key = 'geometry'
+        key = 'point1'
         data = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
         response = self.client.put(
             path='/features/%s/geometry' % key,
             data=data,
-            query_string={'prefix': 'a_'},
             content_type='application/json',
         )
 
         result = self.checkResponse(response, 201)
-
-        self.assertEqual(result['key'], 'a_geometry')
 
         self.assertEqual(201, result['code'])
         self.assertIn('Etag', response.headers)
         self.assertIsInstance(response.date, datetime.datetime)
         self.assertIsInstance(response.last_modified, datetime.datetime)
         self.assertIsInstance(response.expires, datetime.datetime)
+
+    def test_put_geometry_with_prefix(self):
+        key = 'earth'
+        data = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
+
+        response = self.client.put(
+            path='/features/%s/geometry' % key,
+            data=data,
+            query_string={'prefix': 'planet.'},
+            content_type='application/json',
+        )
+
+        result = self.checkResponse(response, 201)
+        self.assertEqual(result['key'], 'planet.earth')
+        self.assertEqual(201, result['code'])
 
     def test_put_geometry_bad_key(self):
         key = 'very bad key'
@@ -116,21 +138,32 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         self.assertIn('message', result)
         self.assertEqual(result['exception'], 'InvalidGeometry')
 
-    def test_put_geometry_key_duplicate(self):
+    def test_replace_geometry(self):
         key = 'point1'
-        payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
+        response = self.client.get(
+            path='/features/%s/geometry' % key,
+            content_type='application/json',
+        )
+        original = self.checkResponse(response, 200)
+
+
+        payload = {'type': 'Point', 'coordinates': [2, 3]}
 
         response = self.client.put(
             path='/features/%s/geometry' % key,
-            data=payload,
+            data=json.dumps(payload),
             content_type='application/json',
         )
+        result = self.checkResponse(response, 201)
 
-        result = self.checkResponse(response, 409)
+        response = self.client.get(
+            path='/features/%s/geometry' % key,
+            content_type='application/json',
+        )
+        result = self.checkResponse(response, 200)
 
-        self.assertIn('message', result)
-        self.assertEqual(result['exception'], 'GeometryAlreadyExists')
-
+        self.assertEqual(payload, result)
+        self.assertNotEqual(original, result)
 
 class TestGeometryPost(ResourceTestBase, unittest.TestCase):
     def test_post_geometry_invalid(self):
@@ -145,7 +178,24 @@ class TestGeometryPost(ResourceTestBase, unittest.TestCase):
 
         self.checkResponse(response, 405)
 
+
     def test_post_geometry_without_key(self):
+        payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
+
+        response = self.client.post(
+            path='/features/geometry',
+            data=payload,
+            content_type='application/json',
+        )
+
+        result = self.checkResponse(response, 201)
+        self.assertIn('key', result)
+        self.assertIsNotNone(result['key'])
+        self.assert_(result['key'].startswith('feature.'))
+        self.assertEqual(result['code'], 201)
+
+
+    def test_post_geometry_without_key_but_with_prefix(self):
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
         response = self.client.post(

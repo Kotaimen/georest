@@ -20,7 +20,7 @@ import six
 import geohash
 
 from .engine import geos
-from .geometry import build_geometry
+from .geometry import build_geometry, Geometry
 from .exception import InvalidFeature, InvalidProperty
 
 
@@ -71,11 +71,6 @@ class Feature(object):
     def geometry(self):
         return self._geometry
 
-    @geometry.setter
-    def geometry(self, new_geometry):
-        self._geometry = new_geometry
-        self.recalculate()
-
     @property
     def properties(self):
         return self._properties
@@ -99,6 +94,14 @@ class Feature(object):
     @property
     def crs(self):
         return self._geometry.crs
+
+    def update_geometry(self, geom):
+        self._geometry = geom
+        self.recalculate()
+
+    def update_properties(self, props):
+        self._properties.update(props)
+        self.recalculate()
 
     def recalculate(self):
         # XXX: Add a hooker to recalculate these after changed major properties
@@ -196,7 +199,12 @@ def build_feature(geoinput,
     if key is None:
         key = uuid.uuid4().hex
 
-    geometry = build_geometry(geoinput, srid)
+    if isinstance(geoinput, Geometry):
+        geometry = geoinput
+    elif isinstance(geoinput, geos.GEOSGeometry):
+        geometry = Geometry(geoinput)
+    else:
+        geometry = build_geometry(geoinput, srid)
 
     feature = Feature(key=key, etag=None,
                       created=created, modified=modified,
@@ -209,6 +217,8 @@ def build_feature(geoinput,
 
 
 def check_properties(props):
+    """ Check whether given properties is valid
+    """
     if not isinstance(props, dict):
         raise InvalidProperty('Properties must be a dictionary')
 
@@ -229,21 +239,21 @@ def build_feature_from_geojson(geojsoninput,
                                srid=4326,
                                created=None,
                                modified=None):
-    input = json.loads(geojsoninput)
+    input_ = json.loads(geojsoninput)
 
-    if 'type' not in input or input['type'] != 'Feature' \
-            or 'geometry' not in input:
+    if 'type' not in input_ or input_['type'] != 'Feature' \
+            or 'geometry' not in input_:
         raise InvalidFeature('Must be a GeoJson Feature object')
 
-    geoinput = json.dumps(input['geometry'])
+    geo_input = json.dumps(input_['geometry'])
 
-    if 'properties' not in input:
+    if 'properties' not in input_:
         props = {}
     else:
-        props = input['properties']
+        props = input_['properties']
         check_properties(props)
 
-    return build_feature(geoinput,
+    return build_feature(geo_input,
                          props,
                          key=key,
                          srid=srid,

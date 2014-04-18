@@ -33,8 +33,6 @@ These keys are reserved:
 
 Access geometry part of a feature object.  
 
-> Geometry of a feature is considered immutable thus cannot be changed after creation.
-
 ### Create a New Geometry
 
 Create a new feature with given geometry, with empty properties.  
@@ -56,14 +54,14 @@ Note empty or invalid geometry is not allowed.
     POST /features/geometry
     PUT /features/:key/geometry
 
-`POST` will create a new feature with a random unique `key` with optional `prefix`, `PUT` will create new feature if it does not exist.
+`POST` will create a new feature with a random unique `key` with optional `prefix`, `PUT` will create new feature if it does not exist, otherwise replaces the existing one.
 
 #### Parameters
 
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the new geometry.
-`prefix`  | string  | Optional string to prepend to key when creating a new geometry.  If `:key` not is provied, default value is `geometry-`.
+`prefix`  | string  | Optional string to prepend to key when creating a new geometry.  If `:key` not is provided, default value is `feature.`.
 
 #### Request
 
@@ -110,6 +108,7 @@ Name      | Type    | Description
 `:key`    | string  | Key of the geometry
 `format`  | string  | Format of the return geometry, one of `json`, `ewkt`, `ewkb`.  Default is `json`
 `srid`    | integer | SRID of the geometry, default is `0` (which means "as is")
+`prefix`  | string  | Optional string to prepend to key
 
 #### Response
 

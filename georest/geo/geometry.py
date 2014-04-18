@@ -156,20 +156,19 @@ ALLOWED_GEOMETRY_TYPES = frozenset(['Point',
 
 def build_geometry(geoinput, srid=None):
     """
-        Build a geometry
 
-        @param geoinput geometry data, can be one of:
+    :param geoinput: geometry data, can be one of:
          * strings:
             - WKT
             - HEXEWKB (a PostGIS-specific canonical form)
             - GeoJSON (requires GDAL)
          * buffer:
             - WKB
-        @param srid SRID of the geometry
-        @return geometry
+    :param srid: SRID of the geometry
+    :return: created geometry
     """
 
-    # XXX: Wrapping GEOS Geometry here, which does not support CRS, just SRID
+    # NOTE: Wrapping GEOS Geometry here, which does not support CRS, just SRID
     if srid is not None and not isinstance(srid, int):
         raise InvalidCRS('CRS Must be SRID integer')
 

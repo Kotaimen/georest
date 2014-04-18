@@ -18,8 +18,8 @@ from ..geo import Geometry
 
 from ..geo.exception import GeoException, InvalidGeometry, \
     InvalidCRS
-from ..store.exception import GeometryAlreadyExists, InvalidKey, \
-    GeometryDoesNotExist
+from ..store.exception import FeatureAlreadyExists, InvalidKey, \
+    FeatureDoesNotExist
 from .exception import InvalidGeometryOperator, IdentialGeometryError
 
 #
@@ -81,9 +81,9 @@ def throws_geo_exceptions(f):
                            IdentialGeometryError,
                            InvalidKey,)):
                 code = 400
-            elif isinstance(e, GeometryDoesNotExist):
+            elif isinstance(e, FeatureDoesNotExist):
                 code = 404
-            elif isinstance(e, GeometryAlreadyExists):
+            elif isinstance(e, FeatureAlreadyExists):
                 code = 409
             elif isinstance(e, GeoException):
                 code = 500
@@ -131,6 +131,13 @@ class GeometryRequestParser(reqparse.RequestParser):
                           type=str,
                           default=0,
                           required=False)
+        self.add_argument('prefix',
+                          dest='prefix',
+                          action='store',
+                          location='args',
+                          type=str,
+                          default=None,
+                          required=False)
 
 
 class PrefixParser(reqparse.RequestParser):
@@ -143,4 +150,26 @@ class PrefixParser(reqparse.RequestParser):
                           location='args',
                           type=str,
                           default=None,
+                          required=False)
+
+
+class OperationRequestParser(reqparse.RequestParser):
+    def __init__(self):
+        super(OperationRequestParser, self).__init__()
+
+        self.add_argument('format',
+                          dest='format',
+                          action='store',
+                          location='args',
+                          type=str,
+                          choices=['json', 'ewkt', 'ewkb'],
+                          default='json',
+                          required=False)
+
+        self.add_argument('srid',
+                          dest='srid',
+                          action='store',
+                          location='args',
+                          type=str,
+                          default=0,
                           required=False)
