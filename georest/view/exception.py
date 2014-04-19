@@ -12,12 +12,12 @@ from ..geo.exception import GeoException
 
 
 class InvalidGeometryOperator(GeoException):
-    pass
+    HTTP_STATUS_CODE = 400
 
 
 class BadGeometryOperation(GeoException):
-    pass
+    HTTP_STATUS_CODE = 400
 
 
 class IdentialGeometryError(GeoException):
-    pass
+    HTTP_STATUS_CODE = 409

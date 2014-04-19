@@ -11,13 +11,13 @@ class GeoStoreError(GeoException):
 
 
 class FeatureAlreadyExists(GeoStoreError):
-    pass
+    HTTP_STATUS_CODE = 409
 
 
 class FeatureDoesNotExist(GeoStoreError):
-    pass
+    HTTP_STATUS_CODE = 404
 
 
 class InvalidKey(GeoStoreError):
-    pass
+    HTTP_STATUS_CODE = 400
 

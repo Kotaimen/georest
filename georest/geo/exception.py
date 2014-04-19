@@ -11,9 +11,9 @@ import sys
 
 
 class GeoException(Exception):
-    """
-        Try to emulate python3 exception chain
-    """
+    """Try to emulate python3 exception chain"""
+
+    HTTP_STATUS_CODE = 500
 
     def __init__(self, message=None, e=None):
         self.tb = sys.exc_info()[2]
@@ -28,17 +28,14 @@ class GeoException(Exception):
 
 
 class InvalidGeometry(GeoException):
-    pass
-
+    HTTP_STATUS_CODE = 400
 
 class InvalidCRS(GeoException):
-    pass
-
+    HTTP_STATUS_CODE = 400
 
 class InvalidFeature(GeoException):
-    pass
-
+    HTTP_STATUS_CODE = 400
 
 class InvalidProperty(GeoException):
-    pass
+    HTTP_STATUS_CODE = 400
 

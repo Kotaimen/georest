@@ -74,19 +74,8 @@ def throws_geo_exceptions(f):
         try:
             return f(*args, **kwargs)
         except Exception as e:
-            code = 200
-            if isinstance(e,
-                          (InvalidGeometry, InvalidCRS,
-                           InvalidGeometryOperator,
-                           IdentialGeometryError,
-                           InvalidKey,)):
-                code = 400
-            elif isinstance(e, FeatureDoesNotExist):
-                code = 404
-            elif isinstance(e, FeatureAlreadyExists):
-                code = 409
-            elif isinstance(e, GeoException):
-                code = 500
+            if isinstance(e, GeoException):
+                code = e.HTTP_STATUS_CODE
             else:
                 raise
 
@@ -95,7 +84,7 @@ def throws_geo_exceptions(f):
                   message=e.message,
                   exception=e.__class__.__name__,
                   # traceback=traceback.format_tb(e.tb)
-            )
+                  )
 
     return decorator
 
