@@ -19,6 +19,12 @@ class TestUnaryGeometryProperties(ResourceTestBase, unittest.TestCase):
         self.assertIn('result', result)
         return result['result']
 
+    def test_invalid_operation(self):
+        response = self.client.get(
+            path='/operations/invalid/blah'
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_get_type(self):
         self.assertEqual('Point', self.checkOp('point1', 'type'))
         self.assertEqual('LineString', self.checkOp('linestring1', 'type'))
@@ -68,7 +74,6 @@ class TestUnaryTopologicalProperties(ResourceTestBase, unittest.TestCase):
         self.assertListEqual(result['coordinates'],
                              [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.5, 1.0],
                               [0.5, 0.5], [0.0, 0.5], [0.0, 0.0]])
-
 
     def test_centroid(self):
         result = self.checkOp('polygon1', 'centroid')
@@ -129,15 +134,25 @@ class TestUnaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
 class TestBinaryGeometryPredicates(ResourceTestBase, unittest.TestCase):
     def checkOp(self, this, operation, other, query=None):
         response = self.client.get(
-            path='/operations/%s/%s/%s' % (operation,this, other),
+            path='/operations/%s/%s/%s' % (operation, this, other),
             query_string=query
         )
         result = self.checkResponse(response)
         return result['result']
 
+    def test_invalid_operation(self):
+        response = self.client.get(
+            path='/operations/invalid/foo/bar'
+        )
+        self.assertEqual(response.status_code, 400)
+
     def test_contains(self):
         self.assertTrue(self.checkOp('polygon1', 'contains', 'point1'))
         self.assertFalse(self.checkOp('point1', 'contains', 'polygon1'))
+        self.assertTrue(self.checkOp('polygon1', 'contains', 'point1',
+                                     query={'srid': 3857}))
+        self.assertFalse(self.checkOp('point1', 'contains', 'polygon1',
+                                      query={'srid': 3857}))
 
     def test_crosses(self):
         self.assertFalse(self.checkOp('polygon1', 'crosses', 'point1'))
@@ -161,7 +176,7 @@ class TestBinaryGeometryPredicates(ResourceTestBase, unittest.TestCase):
 class TestBinaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
     def checkOp(self, this, operation, other, query=None):
         response = self.client.get(
-            path='/operations/%s/%s/%s' % (operation,this, other),
+            path='/operations/%s/%s/%s' % (operation, this, other),
             query_string=query
         )
         result = self.checkResponse(response)

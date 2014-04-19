@@ -47,15 +47,17 @@ class TestFeatureHelpers(unittest.TestCase):
         self.assertEqual('sq093jd0', hash2)
 
 
-class TestFeature(unittest.TestCase):
+class TestBuildFeature(unittest.TestCase):
     def test_build_from_geoinput(self):
         feat1 = build_feature('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)',
                               properties={'hello': 'world'}, )
         self.assertEqual(feat1.geometry.srid, 4326)
         self.assertEqual(feat1.properties['hello'], 'world')
 
+
     def test_build_from_geometry(self):
-        geom = build_geometry('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)', 4326)
+        geom = build_geometry('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)',
+                              4326)
         feat1 = build_feature(geom,
                               properties={'hello': 'world'}, )
         self.assertEqual(feat1.geometry.srid, 4326)
@@ -63,7 +65,8 @@ class TestFeature(unittest.TestCase):
 
 
     def test_build_from_geos_geometry(self):
-        geom = geos.GEOSGeometry('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)', 4326)
+        geom = geos.GEOSGeometry('LINESTRING(0.03 0.04, 0.04 0.05, 0.06 0.07)',
+                                 4326)
         feat1 = build_feature(geom,
                               properties={'hello': 'world'}, )
         self.assertEqual(feat1.geometry.srid, 4326)

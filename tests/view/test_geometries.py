@@ -11,7 +11,7 @@ from pprint import pprint
 from tests.view import ResourceTestBase
 
 
-class TestGeometryGet(ResourceTestBase, unittest.TestCase):
+class TestGetGeometryAPI(ResourceTestBase, unittest.TestCase):
     def test_get_geometry(self):
         key = 'point1'
 
@@ -31,7 +31,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         self.assertEqual(result,
                          json.loads(self.feature1.geometry.json))
 
-    def test_get_geometry_not_found(self):
+    def test_get_geometry_404(self):
         key = 'never_found'
 
         response = self.client.get(
@@ -41,7 +41,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
 
         self.checkResponse(response, 404)
 
-    def test_get_geometry_ewkt(self):
+    def test_get_geometry_with_ewkt_format(self):
         key = 'point1'
 
         response = self.client.get(
@@ -52,7 +52,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         self.assertNotEqual(response.data,
                             self.feature1.geometry.ewkt)
 
-    def test_get_geometry_ewkb(self):
+    def test_get_geometry_with_ewkb_format(self):
         key = 'point1'
 
         response = self.client.get(
@@ -73,7 +73,7 @@ class TestGeometryGet(ResourceTestBase, unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class TestGeometryPut(ResourceTestBase, unittest.TestCase):
+class TestPutGeometryAPI(ResourceTestBase, unittest.TestCase):
     def test_put_geometry(self):
         key = 'point1'
         data = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
@@ -107,7 +107,7 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         self.assertEqual(result['key'], 'planet.earth')
         self.assertEqual(201, result['code'])
 
-    def test_put_geometry_bad_key(self):
+    def test_put_geometry_with_bad_key(self):
         key = 'very bad key'
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
@@ -122,7 +122,7 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         self.assertIn('message', result)
         self.assertEqual(result['exception'], 'InvalidKey')
 
-    def test_put_geometry_bad_geometry(self):
+    def test_put_geometry_with_bad_geometry(self):
         key = 'bad_geometry'
         payload = json.dumps(
             {'type': 'what ever', 'coordinates': 'where am i?'})
@@ -146,7 +146,6 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         )
         original = self.checkResponse(response, 200)
 
-
         payload = {'type': 'Point', 'coordinates': [2, 3]}
 
         response = self.client.put(
@@ -165,8 +164,9 @@ class TestGeometryPut(ResourceTestBase, unittest.TestCase):
         self.assertEqual(payload, result)
         self.assertNotEqual(original, result)
 
-class TestGeometryPost(ResourceTestBase, unittest.TestCase):
-    def test_post_geometry_invalid(self):
+
+class TestPostGeometryAPI(ResourceTestBase, unittest.TestCase):
+    def test_post_geometry_with_bad_geometry(self):
         key = 'point1'
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
 
@@ -177,7 +177,6 @@ class TestGeometryPost(ResourceTestBase, unittest.TestCase):
         )
 
         self.checkResponse(response, 405)
-
 
     def test_post_geometry_without_key(self):
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})
@@ -193,7 +192,6 @@ class TestGeometryPost(ResourceTestBase, unittest.TestCase):
         self.assertIsNotNone(result['key'])
         self.assert_(result['key'].startswith('feature.'))
         self.assertEqual(result['code'], 201)
-
 
     def test_post_geometry_without_key_but_with_prefix(self):
         payload = json.dumps({'type': 'Point', 'coordinates': [1, 2]})

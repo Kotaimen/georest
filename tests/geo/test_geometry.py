@@ -11,7 +11,7 @@ from georest.geo import Geometry, build_geometry, build_srs
 from georest.geo.exception import GeoException
 
 
-class TestGeometryBuilding(unittest.TestCase):
+class TestBuildGeometry(unittest.TestCase):
     def test_build_failure(self):
         self.assertRaises(GeoException, build_geometry, 'bad')
         self.assertRaises(GeoException, build_geometry, 'POINT(1 2, x)')
@@ -40,7 +40,6 @@ class TestGeometryBuilding(unittest.TestCase):
             'SRID=3857;POINT (1.0000000000000000 2.0000000000000000)',
             geom.ewkt)
 
-
     def test_geometry_methods(self):
         geom1 = build_geometry('POINT(1 2)', srid=4326)
         geom2 = build_geometry('POINT(3 4)', srid=4326)
@@ -53,7 +52,7 @@ class TestGeometryBuilding(unittest.TestCase):
         self.assertIsInstance(geom1.buffer(0), Geometry)
 
 
-class TestGeoJsonGeometryBuilding(unittest.TestCase):
+class TestBuildGeometryWithGeoJson(unittest.TestCase):
     def setUp(self):
         # Sample geometry taken from
         #   http://geojson.org/geojson-spec.html#appendix-a-geometry-examples
@@ -136,7 +135,7 @@ class TestGeoJsonGeometryBuilding(unittest.TestCase):
                           srid=4326)
 
 
-class TestGeometryPickle(unittest.TestCase):
+class TestGeometryPickling(unittest.TestCase):
     def test_pickle(self):
         geom1 = build_geometry('POINT(1 2)', 4326)
         pk = pickle.dumps(geom1)

@@ -91,7 +91,18 @@ class TestFeaturePut(ResourceTestBase, unittest.TestCase):
             path='/features',
             data=payload
         )
-        self.assertEqual(response.status_code, 201)
+        self.checkResponse(response, 201)
+
+    def test_post_feature_with_prefix(self):
+        payload = self.payload
+
+        response = self.client.post(
+            path='/features',
+            data=payload,
+            query_string={'prefix': 'point'},
+        )
+
+        self.checkResponse(response, 201)
 
     def test_put_feature(self):
         payload = self.payload
@@ -100,7 +111,18 @@ class TestFeaturePut(ResourceTestBase, unittest.TestCase):
             path='/features/blah',
             data=payload
         )
-        self.assertEqual(response.status_code, 201)
+        self.checkResponse(response, 201)
+
+    def test_put_feature_with_prefix(self):
+        payload = self.payload
+
+        response = self.client.put(
+            path='/features/blah',
+            data=payload,
+            query_string={'prefix': 'foo.'},
+        )
+
+        self.checkResponse(response, 201)
 
 
 class TestFeatureDelete(ResourceTestBase, unittest.TestCase):
