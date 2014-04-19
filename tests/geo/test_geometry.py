@@ -19,6 +19,7 @@ class TestGeometryBuilding(unittest.TestCase):
                           srid=123456)
         self.assertRaises(GeoException, build_geometry, 'POINT(1 2)',
                           srid='blah')
+        self.assertRaises(GeoException, build_geometry, 'GEOMETRYCOLLECTION EMPTY')
         self.assertRaises(GeoException, build_geometry,
                           'POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', )
 

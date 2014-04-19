@@ -13,7 +13,7 @@ __date__ = '3/18/14'
 
 from werkzeug.security import safe_join
 
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template, redirect, abort
 from flask.ext.markdown import Markdown
 
 from . import default_settings
@@ -25,10 +25,13 @@ from .restapi import GeoRestApi
 
 
 def render_markdown(md_file, title):
-    with open(md_file) as fp:
-        markdown = fp.read()
-        return render_template('markdown.html', title=title,
+    try:
+        with open(md_file) as fp:
+            markdown = fp.read()
+            return render_template('markdown.html', title=title,
                                markdown=markdown)
+    except IOError as e:
+        abort(404)
 
 
 class GeoRestApp(Flask):

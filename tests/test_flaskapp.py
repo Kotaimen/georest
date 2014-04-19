@@ -23,6 +23,13 @@ class TestGeoRestApp(unittest.TestCase):
         rv = self.client.get('/doc/helloworld.md')
         self.assertEqual(200, rv.status_code)
 
+    def test_rediect(self):
+        rv = self.client.get('/')
+        self.assertEqual(302, rv.status_code)
+
+    def test_doc_index(self):
+        rv = self.client.get('/doc/')
+        self.assertEqual(404, rv.status_code)
 
 if __name__ == '__main__':
     unittest.main()
