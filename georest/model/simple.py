@@ -10,8 +10,11 @@
 __author__ = 'kotaimen'
 __date__ = '3/22/14'
 
-from ..geo import build_geometry, build_feature_from_geojson, check_properties
+import json
 
+from ..geo import build_geometry, build_feature_from_geojson, \
+    build_properties_from_json
+from ..geo.exception import InvalidProperty
 from ..store.simple import SimpleGeoStore
 
 
@@ -72,13 +75,17 @@ class SimpleGeoModel(object):
         geometry = build_geometry(geometry_input, srid=4326)
         return self.store.update_geometry(geometry, key, prefix=prefix)
 
-    def update_properties(self, properties, key, prefix=None):
+    def update_properties(self, props_input, key, prefix=None):
         """ Update properties of the feature
 
-        :param properties:
+        :param props_input:
         :param key: key of the feature
         :param prefix: prefix of the key
         :return: updated feature
         """
-        check_properties(properties)
+        properties = build_properties_from_json(props_input)
         return self.store.update_properties(properties, key, prefix=prefix)
+
+    def delete_properties(self, names, key, prefix=None):
+
+        return self.store.delete_properties(names, key, prefix=prefix)

@@ -2,13 +2,14 @@
 
 Restful geospatial feature storage/query/operation interface.
 
+## API
+
 > WARNING: API is subject to change until 1.0.0 release
 
-## API
+Check current API version: [`GET /describe`](../describe)
 
 - [Geospatial Features](api_geo.md)  
 - [Geometry Operations](api_ops.md)
-
 
 
 ## Spatial Data
@@ -20,11 +21,13 @@ Besides GeoJson, `ewkt` and `ewkb` are also supported when getting or storing  g
 
 Note `ewkt`/`ewkb` does not support `GeometryCollection`.
 
-By default, all feature's geometry are 2d and in epsg:4326 CRS.
+By default, all feature's geometry are 2d with CRS `epsg:4326`.  Empty geometries are not allowed, though operations may return a empty geometry as result.
 
 ### CRS
 
-Coordinate Reference System (CRS), or Spatial Reference System (SRS) is an optional parameter of GeoJson standard.  If no CRS is specified, defualt CRS is `WGS84`, or `SRID4326`.  However, EWKT and EWKB supports arbitrary projections.
+Coordinate Reference System (CRS), or Spatial Reference System (SRS) is an optional parameter of GeoJson standard.  
+
+If no CRS is specified, defualt CRS is `WGS84`(`epsg:4326`).  However, EWKT and EWKB supports arbitrary projections.
 
 ### Dimension
 
@@ -69,6 +72,17 @@ Standard error response:
 ```json
 {
     "result": "blah"
+}
+```
+
+### Properties
+
+```json
+{
+    "name1": 1,
+    "name2": "value",
+    "name3": true,
+    "name4": [1, 2]    
 }
 ```
 

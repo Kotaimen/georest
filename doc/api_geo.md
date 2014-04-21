@@ -37,31 +37,21 @@ Access geometry part of a feature object.
 
 Create a new feature with given geometry, with empty properties.  
 
-Allowed geometry types: 
-    
-    Point
-    Linestring
-    Polygon
-    MultiPoint
-    MultiLinestring
-    MultiPolygon
-    GeometryCollection
-
-Note empty or invalid geometry is not allowed.
-
 #### Endpoints
 
     POST /features/geometry
     PUT /features/:key/geometry
 
-`POST` will create a new feature with a random unique `key` with optional `prefix`, `PUT` will create new feature if it does not exist, otherwise replaces the existing one.
+`POST` create a new feature with a random unique `key` with optional `prefix`.
+
+`PUT` will create a new feature if it does not exist, otherwise it replaces the existing geometry.
 
 #### Parameters
 
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the new geometry.
-`prefix`  | string  | Optional string to prepend to key when creating a new geometry.  If `:key` not is provided, default value is `feature.`.
+`prefix`  | string  | Optional string prepend to key when creating a new geometry.  If `:key` not is provided, default value is `feature.`.
 
 #### Request
 
@@ -77,6 +67,19 @@ Name      | Type    | Description
     ewkt
     hexwkb
     hexewkb
+
+Allowed geometry types: 
+    
+    Point
+    Linestring
+    Polygon
+    MultiPoint
+    MultiLinestring
+    MultiPolygon
+    GeometryCollection
+
+Note empty or invalid geometry is not allowed.
+`GeoJson/WKT/WKB` default SRID=4326.
 
 #### Response
 
@@ -230,16 +233,35 @@ Access special feature attributes.
 
 #### Geohash
 
-Get `geohash` of the feature as a string:
+Get `geohash` of the feature as a string with precision is 12:
 
     GET /features/:key/geohash
     
-#### BBOX
+Response:
 
-Get bounding box (envelope) of the feature as a point list:   
+```json
+{
+    "result": "s012345"
+}
+```    
+#### Envelope
 
-    GET /features/:key/bbox    
+Get envelope (bounding box) of the feature as a point list:   
 
+    GET /features/:key/bbox
+
+Response:
+
+```json
+{
+    "result": [
+        1.0, 
+        1.0, 
+        2.0, 
+        2.0
+    ]
+}
+```
     
 ## Properties
 
@@ -249,52 +271,62 @@ Access properties part of a feature object.
 
 ### Update Properties
 
-Update properties dictionary (existing properties got replaced).
+Update properties dictionary.
 
-#### Endpoint
 
     POST /features/:key/properties
 
-#### Request
+Request:
 
     Data:
         <properties>
     Content-Type:
         application/json
 
-`properties` must be a json dictionary.
+`properties` must be a JSON dictionary.
 
-#### Response
+Response:
 
-    201 Created    
+    201 Created
     
-### Get Properties
+Return updated properties.
 
-#### Endpoint
+### Retrieve All Properties
+
+Endpoint:
     
     GET /features/:key/properties
+
+Response:
+    
+    200 OK
+    Data: Properties
     
 ### Delete All Properties
 
-#### Endpoint
+Endpoint:
 
     DELETE /features/:key/properties
 
-### Get a Property
+Response:
+    
+    204 No Data
 
-#### Endpoint
+### Retrieve a Property by Name
+
+Endpoint:
         
     GET /features/:key/properties/:name
 
-### Replace a Property    
+### Replace a Property by Name 
 
-#### Endpoint
+Endpoint:
 
     PUT /features/:key/properties/:name    
     
-### Delete a Property
+### Delete a Property by Name
 
-#### Endpoint
+Endpoint:
     
     DELETE /features/:key/properties/:name   
     

@@ -22,14 +22,14 @@ class TestGetGeometryAPI(ResourceTestBase, unittest.TestCase):
 
         result = self.checkResponse(response, 200)
 
-        self.assertEqual(response.headers['Etag'], self.feature1.etag)
-        self.assertEqual(response.date, self.feature1.created)
-        self.assertEqual(response.last_modified, self.feature1.modified)
-        expires = self.feature1.created + datetime.timedelta(
+        self.assertEqual(response.headers['Etag'], self.point1.etag)
+        self.assertEqual(response.date, self.point1.created)
+        self.assertEqual(response.last_modified, self.point1.modified)
+        expires = self.point1.created + datetime.timedelta(
             seconds=self.app.config['EXPIRES'])
         self.assertEqual(response.expires, expires)
         self.assertEqual(result,
-                         json.loads(self.feature1.geometry.json))
+                         json.loads(self.point1.geometry.json))
 
     def test_get_geometry_404(self):
         key = 'never_found'
@@ -50,7 +50,7 @@ class TestGetGeometryAPI(ResourceTestBase, unittest.TestCase):
         )
         self.assertEqual('text/plain', response.content_type)
         self.assertNotEqual(response.data,
-                            self.feature1.geometry.ewkt)
+                            self.point1.geometry.ewkt)
 
     def test_get_geometry_with_ewkb_format(self):
         key = 'point1'
@@ -60,7 +60,7 @@ class TestGetGeometryAPI(ResourceTestBase, unittest.TestCase):
             query_string={'format': 'ewkb'},
         )
         self.assertEqual('application/oct-stream', response.content_type)
-        self.assertEqual(response.data, str(self.feature1.geometry.ewkb))
+        self.assertEqual(response.data, str(self.point1.geometry.ewkb))
 
     def test_get_geometry_with_prefix(self):
         key = '1'

@@ -10,7 +10,7 @@ import json
 from tests.view import ResourceTestBase
 
 
-class TestFeatureGet(ResourceTestBase, unittest.TestCase):
+class TestGetFeatureAPI(ResourceTestBase, unittest.TestCase):
     def test_get_feature(self):
         key = 'point1'
 
@@ -20,15 +20,15 @@ class TestFeatureGet(ResourceTestBase, unittest.TestCase):
 
         result = self.checkResponse(response, 200)
 
-        self.assertEqual(response.headers['Etag'], self.feature1.etag)
-        self.assertEqual(response.date, self.feature1.created)
-        self.assertEqual(response.last_modified, self.feature1.modified)
-        expires = self.feature1.created + datetime.timedelta(
+        self.assertEqual(response.headers['Etag'], self.point1.etag)
+        self.assertEqual(response.date, self.point1.created)
+        self.assertEqual(response.last_modified, self.point1.modified)
+        expires = self.point1.created + datetime.timedelta(
             seconds=self.app.config['EXPIRES'])
         self.assertEqual(response.expires, expires)
 
         self.assertEqual(result['geometry'],
-                         json.loads(self.feature1.geometry.json))
+                         json.loads(self.point1.geometry.json))
         self.assertEqual(result['type'], 'Feature')
         self.assertIn('_key', result)
         self.assertIn('_geohash', result)
@@ -64,7 +64,7 @@ class TestFeatureGet(ResourceTestBase, unittest.TestCase):
         self.assertListEqual(result['result'], [0.0001, 0.0001, 0.0001, 0.0001])
 
 
-class TestFeaturePut(ResourceTestBase, unittest.TestCase):
+class PutTestFeatureAPI(ResourceTestBase, unittest.TestCase):
     def setUp(self):
         ResourceTestBase.setUp(self)
 
@@ -125,7 +125,7 @@ class TestFeaturePut(ResourceTestBase, unittest.TestCase):
         self.checkResponse(response, 201)
 
 
-class TestFeatureDelete(ResourceTestBase, unittest.TestCase):
+class TestDeleteFeatureAPI(ResourceTestBase, unittest.TestCase):
     def test_delete_feature(self):
         key = 'linestring1'
         path = '/features/%s' % key
@@ -133,6 +133,56 @@ class TestFeatureDelete(ResourceTestBase, unittest.TestCase):
         self.checkResponse(self.client.delete(path=path), 204)
         self.checkResponse(self.client.get(path=path), 404)
         self.checkResponse(self.client.delete(path=path), 404)
+
+
+class TestFeaturePropertiesAPI(ResourceTestBase, unittest.TestCase):
+    def test_get_properties(self):
+        old_props = self.point1.properties
+
+        response = self.client.get(
+            '/features/point1/properties'
+        )
+
+        result = self.checkResponse(response)
+        self.assertDictEqual(old_props, result)
+
+    def test_update_properties(self):
+        old_props = self.point1.properties
+        new_props = {'cheese': 'shop', 'answer': None}
+
+        response = self.client.post(
+            '/features/point1/properties',
+            data=json.dumps(new_props)
+        )
+
+        result = self.checkResponse(response, 201)
+        old_props.update(new_props)
+        self.assertDictEqual(result, old_props)
+
+
+    def test_delete_properties(self):
+        response = self.client.delete(
+            '/features/point1/properties',
+        )
+        result = self.checkResponse(response, 204)
+
+        response = self.client.get(
+            '/features/point1/properties'
+        )
+
+        result = self.checkResponse(response)
+        self.assertDictEqual({}, result)
+
+
+    def test_update_properties_invalid_key(self):
+        new_props = {'cheese': 'shop'}
+
+        response = self.client.post(
+            '/features/invalid/properties',
+            data=json.dumps(new_props)
+        )
+
+        self.checkResponse(response, 404)
 
 
 if __name__ == '__main__':

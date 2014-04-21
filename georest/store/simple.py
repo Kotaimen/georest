@@ -9,7 +9,8 @@ import re
 import collections
 
 from ..geo import build_feature
-from .exception import InvalidKey, FeatureAlreadyExists, FeatureDoesNotExist
+from .exception import InvalidKey, FeatureAlreadyExists, FeatureDoesNotExist, \
+    PropertyDoesNotExist
 
 
 def is_key_valid(key):
@@ -78,14 +79,7 @@ class SimpleGeoStore(object):
             return feature
 
     def get_feature(self, key, prefix=None):
-        key = self._make_key(key, prefix)
-
-        with self._lock:
-            try:
-                return pickle.loads(self._features[key])
-            except KeyError as e:
-                raise FeatureDoesNotExist(
-                    'Feature does not exist: "%s"' % key)
+        return self._load_feature(key, prefix)
 
     def delete_feature(self, key, prefix=None):
         key = self._make_key(key, prefix)
@@ -116,14 +110,28 @@ class SimpleGeoStore(object):
             return feature
 
     def update_properties(self, properties, key, prefix=None):
-        if prefix is not None:
-            key = prefix + key
-
         with self._lock:
-            feature = pickle.loads(self._features[key])
-            feature.update(properties)
-            self._features[key] = pickle.dumps(feature)
+            feature = self._load_feature(key, prefix)
 
+            feature.update_properties(properties)
+            self._features[key] = pickle.dumps(feature)
+            return feature
+
+    def delete_properties(self, names, key, prefix=None):
+        with self._lock:
+            feature = self._load_feature(key, prefix)
+            if names is None:
+                feature.properties.clear()
+            else:
+                for name in names:
+                    try:
+                        del feature.properties[name]
+                    except KeyError:
+                        raise PropertyDoesNotExist(name)
+            feature.recalculate()
+
+            self._features[key] = pickle.dumps(feature)
+            return feature.properties
 
     def _make_key(self, key, prefix):
         if key is None:
@@ -135,3 +143,12 @@ class SimpleGeoStore(object):
         if not is_key_valid(key):
             raise InvalidKey('Invalid key: "%s"' % key)
         return key
+
+    def _load_feature(self, key, prefix=None):
+        if prefix is not None:
+            key = prefix + key
+        try:
+            return pickle.loads(self._features[key])
+        except KeyError as e:
+            raise FeatureDoesNotExist(
+                'Feature does not exist: "%s"' % key)

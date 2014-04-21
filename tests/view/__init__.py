@@ -18,7 +18,7 @@ class ResourceTestBase(object):
         # Round timestamp since http header timestamp has 1 second resolution
         timestamp = datetime.datetime.utcnow().replace(microsecond=0)
 
-        self.feature1 = build_feature('POINT (0.0001 0.0001)',
+        self.point1 = build_feature('POINT (0.0001 0.0001)',
                                       {'question': 'meaning of life',
                                        'answer': 42},
                                       srid=4326,
@@ -26,9 +26,9 @@ class ResourceTestBase(object):
                                       created=timestamp)
 
         # Reset modified timestamp since build_feature recalculates it
-        self.feature1._modified = timestamp
+        self.point1._modified = timestamp
 
-        self.feature2 = build_feature(
+        self.linestring1 = build_feature(
             'LINESTRING (0.00015 -0.00015, 0.00016 -0.00017)', )
 
         feature3 = build_feature(
@@ -47,8 +47,8 @@ class ResourceTestBase(object):
         self.client = self.app.test_client()
 
         # Preload test features into store
-        self.app.model.store.put_feature(self.feature1, 'point1')
-        self.app.model.store.put_feature(self.feature2, 'linestring1')
+        self.app.model.store.put_feature(self.point1, 'point1')
+        self.app.model.store.put_feature(self.linestring1, 'linestring1')
         self.app.model.store.put_feature(feature3, 'polygon1')
 
     def tearDown(self):

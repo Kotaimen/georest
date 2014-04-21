@@ -13,4 +13,4 @@ __date__ = '3/18/14'
 
 from .geometry import Geometry, build_geometry, build_srs
 from .feature import Feature, build_feature, build_feature_from_geojson, \
-    check_properties
+    check_properties, build_properties_from_json

@@ -103,6 +103,14 @@ class Feature(object):
         self._properties.update(props)
         self.recalculate()
 
+    def delete_properties(self, names=None):
+        if names is None:
+            self._properties.clear()
+        else:
+            for name in names:
+                del self._properties[name]
+        self.recalculate()
+
     def recalculate(self):
         # XXX: Add a hooker to recalculate these after changed major properties
 
@@ -239,7 +247,10 @@ def build_feature_from_geojson(geojsoninput,
                                srid=4326,
                                created=None,
                                modified=None):
-    input_ = json.loads(geojsoninput)
+    try:
+        input_ = json.loads(geojsoninput)
+    except (TypeError, ValueError) as e:
+        raise InvalidProperty(e)
 
     if 'type' not in input_ or input_['type'] != 'Feature' \
             or 'geometry' not in input_:
@@ -260,3 +271,13 @@ def build_feature_from_geojson(geojsoninput,
                          created=created,
                          modified=modified)
 
+
+def build_properties_from_json(jsoninput):
+    try:
+        props = json.loads(jsoninput)
+    except (TypeError, ValueError) as e:
+        raise InvalidProperty(e)
+
+    check_properties(props)
+
+    return props
