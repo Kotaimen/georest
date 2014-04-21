@@ -314,17 +314,23 @@ Response:
 
 ### Retrieve a Property by Name
 
+> Not implemented
+
 Endpoint:
         
     GET /features/:key/properties/:name
 
 ### Replace a Property by Name 
 
+> Not implemented
+
 Endpoint:
 
     PUT /features/:key/properties/:name    
     
 ### Delete a Property by Name
+
+> Not implemented
 
 Endpoint:
     

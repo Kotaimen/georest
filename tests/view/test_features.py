@@ -184,6 +184,14 @@ class TestFeaturePropertiesAPI(ResourceTestBase, unittest.TestCase):
 
         self.checkResponse(response, 404)
 
+    def test_get_property_by_name(self):
+        response = self.client.get(
+            '/features/point1/properties/answer'
+        )
+
+        result = self.checkResponse(response)
+        self.assertDictEqual(result, {'answer': 42})
+
 
 if __name__ == '__main__':
     unittest.main()

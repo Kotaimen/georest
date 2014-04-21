@@ -109,8 +109,15 @@ class PropertyByNameResource(BaseResource):
     parser = PrefixParser()
 
     def get(self, key, name):
-        raise NotImplementedError
-
+        args = self.parser.parse_args()
+        feature = self.model.get_feature(key, args.prefix)
+        try:
+            value=feature.properties[name]
+        except KeyError:
+            pass
+        result = {name: value}
+        return result, 200, \
+               make_header_from_feature(feature)
 
     def post(self, key, name):
         raise NotImplementedError
