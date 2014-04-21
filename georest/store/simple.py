@@ -39,19 +39,13 @@ class SimpleGeoStore(object):
 
     def put_feature(self, feature, key=None, prefix=None):
         with self._lock:
-            # Put prefix and key together
-            null = self._make_key(key, prefix)
+            key = self._make_key(key, prefix)
 
             if key in self._features:
                 raise FeatureAlreadyExists(
                     'Geometry already exists: "%s"' % key)
 
-            # Overwrite random key generated in the feature
-            feature.key = key
-
-            # Simulate storage behaviour by pickling the feature object
-            self._features[key] = pickle.dumps(feature)
-
+            self._write_feature(feature, key)
             return feature
 
     def get_feature(self, key, prefix=None):
@@ -79,10 +73,7 @@ class SimpleGeoStore(object):
                 # Otherwise, create the new feature
                 feature = build_feature(geometry)
 
-            # Overwrite random key generated in the feature
-            feature.key = key
-            self._features[key] = pickle.dumps(feature)
-
+            self._write_feature(feature, key)
             return feature
 
     def update_properties(self, properties, key, prefix=None):
@@ -147,4 +138,5 @@ class SimpleGeoStore(object):
     def _write_feature(self, feature, key, prefix=None):
         if prefix is not None:
             key = prefix + key
+        feature.key = key
         self._features[key] = pickle.dumps(feature)
