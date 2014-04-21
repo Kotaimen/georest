@@ -86,6 +86,11 @@ class SimpleGeoModel(object):
         properties = build_properties_from_json(props_input)
         return self.store.update_properties(properties, key, prefix=prefix)
 
-    def delete_properties(self, names, key, prefix=None):
+    def delete_properties(self, key, prefix=None):
+        return self.store.delete_properties(key, prefix=prefix)
 
-        return self.store.delete_properties(names, key, prefix=prefix)
+    def get_property(self, name, key, prefix=None):
+        return self.store.get_property(name, key, prefix)
+
+    def delete_property(self, name, key, prefix=None):
+        return self.store.delete_property(name, key, prefix)

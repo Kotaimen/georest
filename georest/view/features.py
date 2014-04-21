@@ -101,7 +101,7 @@ class PropertiesResource(BaseResource):
     def delete(self, key):
         args = self.parser.parse_args()
         data = request.data
-        feature = self.model.delete_properties(None, key, args.prefix)
+        feature = self.model.delete_properties(key, args.prefix)
         return None, 204
 
 
@@ -110,19 +110,15 @@ class PropertyByNameResource(BaseResource):
 
     def get(self, key, name):
         args = self.parser.parse_args()
-        feature = self.model.get_feature(key, args.prefix)
-        try:
-            value=feature.properties[name]
-        except KeyError:
-            pass
+        value = self.model.get_property(name, key, args.prefix)
         result = {name: value}
-        return result, 200, \
-               make_header_from_feature(feature)
+        return result, 200
 
     def post(self, key, name):
         raise NotImplementedError
 
 
     def delete(self, key, name):
-        raise NotImplementedError
-
+        args = self.parser.parse_args()
+        value = self.model.delete_property(name, key, args.prefix)
+        return None, 204

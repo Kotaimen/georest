@@ -12,31 +12,7 @@ from ..geo import build_feature
 from .exception import InvalidKey, FeatureAlreadyExists, FeatureDoesNotExist, \
     PropertyDoesNotExist
 
-
-def is_key_valid(key):
-    if key in ['geometry', 'properties']:
-        return False
-    else:
-        m = re.match(r'^[a-zA-Z][a-zA-Z0-9_\-\.]+$', key)
-        return m is not None
-
-
-class Capability(collections.OrderedDict):
-    def __init__(self, **kwargs):
-        super(Capability, self).__init__(
-            efficient_key_lookup=False,
-            in_memory_cache=False,
-            presistence=False,
-
-            prefix_query=False,
-            property_query=False,
-            spatial_query=False,
-            full_text_search=False,
-
-            versioning=False,
-            changeset=False,
-        )
-        self.update(**kwargs)
+from .base import is_key_valid, Capability
 
 
 class SimpleGeoStore(object):
@@ -112,26 +88,41 @@ class SimpleGeoStore(object):
     def update_properties(self, properties, key, prefix=None):
         with self._lock:
             feature = self._load_feature(key, prefix)
-
             feature.update_properties(properties)
-            self._features[key] = pickle.dumps(feature)
+            self._write_feature(feature, key, prefix)
             return feature
 
-    def delete_properties(self, names, key, prefix=None):
+    def delete_properties(self, key, prefix=None):
         with self._lock:
             feature = self._load_feature(key, prefix)
-            if names is None:
-                feature.properties.clear()
-            else:
-                for name in names:
-                    try:
-                        del feature.properties[name]
-                    except KeyError:
-                        raise PropertyDoesNotExist(name)
+            feature.properties.clear()
             feature.recalculate()
+            self._write_feature(feature, key, prefix)
 
-            self._features[key] = pickle.dumps(feature)
-            return feature.properties
+    def get_property(self, name, key, prefix=None):
+        with self._lock:
+            feature = self._load_feature(key, prefix)
+            try:
+                return feature.properties[name]
+            except KeyError:
+                raise PropertyDoesNotExist(name)
+
+    def delete_property(self, name, key, prefix=None):
+        with self._lock:
+            feature = self._load_feature(key, prefix)
+            try:
+                del feature.properties[name]
+            except KeyError:
+                raise PropertyDoesNotExist(name)
+            feature.recalculate()
+            self._write_feature(feature, key, prefix)
+
+    def update_property(self, name, value, key, prefix=None):
+        with self._lock:
+            feature = self._load_feature(key, prefix)
+            feature[name] = value
+            feature.recalculate()
+            self._write_feature(feature, key, prefix)
 
     def _make_key(self, key, prefix):
         if key is None:
@@ -152,3 +143,8 @@ class SimpleGeoStore(object):
         except KeyError as e:
             raise FeatureDoesNotExist(
                 'Feature does not exist: "%s"' % key)
+
+    def _write_feature(self, feature, key, prefix=None):
+        if prefix is not None:
+            key = prefix + key
+        self._features[key] = pickle.dumps(feature)

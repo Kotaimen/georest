@@ -164,7 +164,7 @@ class TestFeaturePropertiesAPI(ResourceTestBase, unittest.TestCase):
         response = self.client.delete(
             '/features/point1/properties',
         )
-        result = self.checkResponse(response, 204)
+        self.checkResponse(response, 204)
 
         response = self.client.get(
             '/features/point1/properties'
@@ -191,6 +191,22 @@ class TestFeaturePropertiesAPI(ResourceTestBase, unittest.TestCase):
 
         result = self.checkResponse(response)
         self.assertDictEqual(result, {'answer': 42})
+
+    def test_delete_property_by_name(self):
+        old_props = self.point1.properties
+        del old_props['answer']
+        response = self.client.delete(
+            '/features/point1/properties/answer'
+        )
+
+        self.checkResponse(response, 204)
+
+        response = self.client.get(
+            '/features/point1/properties'
+        )
+
+        result = self.checkResponse(response)
+        self.assertDictEqual(old_props, result)
 
 
 if __name__ == '__main__':
