@@ -111,7 +111,7 @@ class SimpleGeoStore(object):
     def update_property(self, name, value, key, prefix=None):
         with self._lock:
             feature = self._load_feature(key, prefix)
-            feature[name] = value
+            feature.properties[name] = value
             feature.recalculate()
             self._write_feature(feature, key, prefix)
 
@@ -127,8 +127,7 @@ class SimpleGeoStore(object):
         return key
 
     def _load_feature(self, key, prefix=None):
-        if prefix is not None:
-            key = prefix + key
+        key = self._make_key(key, prefix)
         try:
             return pickle.loads(self._features[key])
         except KeyError as e:
@@ -136,7 +135,6 @@ class SimpleGeoStore(object):
                 'Feature does not exist: "%s"' % key)
 
     def _write_feature(self, feature, key, prefix=None):
-        if prefix is not None:
-            key = prefix + key
+        key = self._make_key(key, prefix)
         feature.key = key
         self._features[key] = pickle.dumps(feature)
