@@ -9,7 +9,7 @@
 __author__ = 'kotaimen'
 __date__ = '3/21/14'
 
-import json
+from ..geo import jsonhelper as json
 from werkzeug.http import http_date
 
 from flask import current_app

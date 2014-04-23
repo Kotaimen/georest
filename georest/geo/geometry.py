@@ -73,7 +73,11 @@ class SpatialReference(object):
         self._the_srs = srs
 
     @property
-    def the_srs(self):
+    def srs(self):
+        return self._the_srs
+
+    @property
+    def crs(self):
         return self._the_srs
 
     def __getattr__(self, name):

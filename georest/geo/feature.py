@@ -14,16 +14,19 @@ __date__ = '3/19/14'
 import hashlib
 import datetime
 import uuid
-import json
 
 import six
 import geohash
+
+import jsonhelper as json
 
 from .engine import geos
 from .geometry import build_geometry, Geometry
 from .exception import InvalidFeature, InvalidProperty
 
-
+#
+# Feature
+#
 class Feature(object):
     """GeoFeature with more GeoJson friendly properties.
 
@@ -122,8 +125,82 @@ class Feature(object):
     def __repr__(self):
         return 'Feature(%r,%s)' % (self._geometry, self._properties)
 
+    def __eq__(self, other):
+        if not isinstance(other, Feature):
+            return False
+        return self._geometry.ewkt == other._geometry.ewkt and \
+               self._properties == other._properties and \
+               self._key == other._key and \
+               self._etag == other._etag and \
+               self._created == other._created and \
+               self._modified == other._modified and \
+               self._bbox == other._bbox and \
+               self._geohash == other._geohash
+
 
 #
+# JSON Serialization
+#
+
+def make_crs(crs):
+    if not crs.srid:
+        return "null"
+    else:
+        return json.dumps({'type': 'name',
+                           'properties': {
+                               'name': 'EPSG:%d' % crs.srid
+                           }})
+
+
+def load_iso_datetime(utc_datetime):
+    return datetime.datetime.strptime(utc_datetime, '%Y-%m-%dT%H:%M:%S.%f')
+
+
+def feature2json(feature, binary=False):
+    return '''{
+    "type":"feature",
+    "geometry": %(geom)s,
+    "properties": %(props)s,
+    "bbox": %(bbox)s,
+    "crs": %(crs)s,
+    "_format": "%(fmt)s",
+    "_srid": %(srid)d,
+    "_key": "%(key)s",
+    "_etag":"%(etag)s",
+    "_geohash":"%(geohash)s",
+    "_created":"%(created)s",
+    "_modified":"%(modified)s"
+}
+''' % dict(
+        geom=feature.geometry.geojson if not binary else '"%s"' % feature.geometry.hexewkb,
+        props=json.dumps(feature.properties),
+        bbox=feature.bbox,
+        crs=make_crs(feature.crs.crs),
+        srid=feature.crs.srid,
+        fmt="geojson" if not binary else "hexewkb",
+        key=feature.key,
+        etag=feature.etag,
+        geohash=feature.geohash,
+        created=feature.created.isoformat(),
+        modified=feature.modified.isoformat(),
+    )
+
+
+def json2feature(json_input):
+    data = json.loads(json_input)
+    if data['_format'] == 'geojson':
+        geometry = build_geometry(json.dumps(data['geometry']),
+                                  srid=data['_srid'])
+    else:
+        geometry = build_geometry(data['geometry'],
+                                  srid=data['_srid'])
+    return Feature(data['_key'], data['_etag'],
+                   load_iso_datetime(data['_created']),
+                   load_iso_datetime(data['_modified']),
+                   geometry, data['properties'],
+                   data['bbox'], data['_geohash'])
+
+
 # Feature factory
 #
 
@@ -239,7 +316,8 @@ def check_properties(props):
         try:
             json.dumps(value)
         except TypeError:
-            raise InvalidProperty('Property value must be json serializable')
+            raise InvalidProperty(
+                'Property value must be json serializable')
 
 
 def build_feature_from_geojson(geojsoninput,

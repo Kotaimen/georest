@@ -10,11 +10,8 @@
 __author__ = 'kotaimen'
 __date__ = '3/22/14'
 
-import json
-
 from ..geo import build_geometry, build_feature_from_geojson, \
     build_properties_from_json
-from ..geo.exception import InvalidProperty
 from ..store.simple import SimpleGeoStore
 
 

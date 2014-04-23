@@ -5,13 +5,12 @@ __date__ = '3/20/14'
 
 import unittest
 import json
+import datetime
 
 from georest.geo.engine import geos
 
-from georest.geo import build_feature, build_feature_from_geojson, \
-    check_properties, build_geometry
 from georest.geo.exception import GeoException
-from georest.geo.feature import calc_etag, calc_bbox, calc_geohash
+from georest.geo.feature import *
 
 
 class TestFeatureHelpers(unittest.TestCase):
@@ -96,6 +95,28 @@ class TestFeatureProperties(unittest.TestCase):
     def test_check_properties(self):
         self.assertRaises(GeoException, check_properties, {1: 'one'})
         self.assertRaises(GeoException, check_properties, {'obj': object()})
+        self.assertRaises(GeoException, check_properties,
+                          {'foo': 'bar', 'obj': object()})
+
+
+class TestFeatureJsonSerialization(unittest.TestCase):
+    def test_feature_to_json(self):
+        feature = build_feature('POINT(1 1)', {'foo': 'bar'}, srid=3857)
+        json_output = feature2json(feature)
+        feature2 = json2feature(json_output)
+
+        self.assertEqual(feature, feature2)
+
+    def test_feature_to_json_hexewkt(self):
+        feature = build_feature('POINT(1 1)', {'foo': 'bar'})
+        json_output = feature2json(feature, binary=True)
+        feature2 = json2feature(json_output)
+
+        self.assertEqual(feature, feature2)
+
+    def test_load_isodatetime(self):
+        d = datetime.datetime.utcnow()
+        self.assertEqual(d, load_iso_datetime(d.isoformat()))
 
 
 if __name__ == '__main__':

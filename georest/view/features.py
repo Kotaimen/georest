@@ -10,8 +10,6 @@
 __author__ = 'kotaimen'
 __date__ = '3/21/14'
 
-import json
-
 from flask import request
 from flask.ext.restful import marshal_with, abort
 
