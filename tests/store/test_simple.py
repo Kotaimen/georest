@@ -7,20 +7,20 @@ import unittest
 
 from georest.geo import build_feature, build_geometry, Feature
 from georest.store import build_store
-from georest.store.simple import SimpleGeoStore
+from georest.store.memory import SimpleGeoStore
 from georest.store.exception import *
 
 
 class SimpleStoreTestBase(object):
     def setUp(self):
-        self.store = build_store('simple')
+        self.store = build_store('memory')
         assert isinstance(self.store, SimpleGeoStore)
         self.feature = build_feature('POINT(1 1)', {'foo': 'bar', 'answer': 42})
 
 
 class TestSimpleStoreFeature(unittest.TestCase, SimpleStoreTestBase):
     def setUp(self):
-        self.store = build_store('simple')
+        self.store = build_store('memory')
         assert isinstance(self.store, SimpleGeoStore)
         self.feature = build_feature('POINT(1 1)', {'foo': 'bar', 'answer': 42})
         self.geomerty = build_geometry('LINESTRING(0 0, 1 1)')
@@ -70,7 +70,7 @@ class TestSimpleStoreFeature(unittest.TestCase, SimpleStoreTestBase):
 
 class TestSimpleStoreGeometry(unittest.TestCase, SimpleStoreTestBase):
     def setUp(self):
-        self.store = build_store('simple')
+        self.store = build_store('memory')
         assert isinstance(self.store, SimpleGeoStore)
         self.feature = build_feature('POINT(1 1)', {'foo': 'bar', 'answer': 42})
         self.geomerty = build_geometry('LINESTRING(0 0, 1 1)')
@@ -87,7 +87,7 @@ class TestSimpleStoreGeometry(unittest.TestCase, SimpleStoreTestBase):
 
 class TestSimpleStoreProperty(unittest.TestCase, SimpleStoreTestBase):
     def setUp(self):
-        self.store = build_store('simple')
+        self.store = build_store('memory')
         assert isinstance(self.store, SimpleGeoStore)
         self.feature = build_feature('POINT(1 1)', {'foo': 'bar', 'answer': 42})
         self.store.put_feature(self.feature, 'blah')

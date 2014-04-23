@@ -12,7 +12,7 @@ __date__ = '3/22/14'
 
 from ..geo import build_geometry, build_feature_from_geojson, \
     build_properties_from_json
-from ..store.simple import SimpleGeoStore
+from ..store.memory import SimpleGeoStore
 
 
 class SimpleGeoModel(object):

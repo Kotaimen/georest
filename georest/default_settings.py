@@ -11,7 +11,7 @@
 EXPIRES = 10
 
 GEOREST_GEOSTORE_CONFIG = {
-    'type': 'simple'
+    'type': 'memory'
 }
 
 GEOREST_GEOMODEL_CONFIG = {

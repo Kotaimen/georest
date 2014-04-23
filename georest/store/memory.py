@@ -5,22 +5,21 @@ __date__ = '3/19/14'
 
 import pickle
 import threading
-import re
-import collections
 
 from ..geo import build_feature
 from .exception import InvalidKey, FeatureAlreadyExists, FeatureDoesNotExist, \
     PropertyDoesNotExist
 
-from .base import is_key_valid, Capability
+from .base import is_key_valid, Capability, SimpleGeoStore
 
 
-class SimpleGeoStore(object):
+class MemoryGeoStore(SimpleGeoStore):
     """ Simple storage uses a python dict
 
     For test only, thread safe via explicit locking.
     """
 
+    NAME = 'simple'
     CAPABILITY = Capability(
         efficient_key_lookup=True,
         in_memory_cache=True,
@@ -33,7 +32,7 @@ class SimpleGeoStore(object):
 
     def describe(self):
         return {
-            'backend': 'Simple',
+            'backend': 'Memory',
             'capabilities': self.CAPABILITY
         }
 
@@ -138,3 +137,4 @@ class SimpleGeoStore(object):
         key = self._make_key(key, prefix)
         feature.key = key
         self._features[key] = pickle.dumps(feature)
+

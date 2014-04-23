@@ -37,7 +37,7 @@ class ResourceTestBase(object):
 
         # Load test settings
         settings = {
-            'GEOREST_GEOSTORE_CONFIG': {'type': 'simple'},
+            'GEOREST_GEOSTORE_CONFIG': {'type': 'memory'},
             'GEOREST_GEOMODEL_CONFIG': {'type': 'simple'},
         }
 

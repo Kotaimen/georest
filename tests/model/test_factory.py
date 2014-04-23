@@ -10,7 +10,7 @@ import unittest
 
 class TestBuildModel(unittest.TestCase):
     def setUp(self):
-        self.store = build_store('simple')
+        self.store = build_store('memory')
 
     def test_simple(self):
         model = build_model(self.store, 'simple')

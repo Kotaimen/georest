@@ -41,3 +41,40 @@ class Capability(collections.OrderedDict):
         )
         self.update(**kwargs)
 
+
+class SimpleGeoStore(object):
+    NAME = None
+    CAPABILITY = None
+
+    def describe(self):
+        return {
+            'backend': self.NAME,
+            'capabilities': self.CAPABILITY
+        }
+
+    def put_feature(self, feature, key=None, prefix=None):
+        raise NotImplementedError
+
+    def get_feature(self, key, prefix=None):
+        raise NotImplementedError
+
+    def delete_feature(self, key, prefix=None):
+        raise NotImplementedError
+
+    def update_geometry(self, geometry, key, prefix=None):
+        raise NotImplementedError
+
+    def update_properties(self, properties, key, prefix=None):
+        raise NotImplementedError
+
+    def delete_properties(self, key, prefix=None):
+        raise NotImplementedError
+
+    def get_property(self, name, key, prefix=None):
+        raise NotImplementedError
+
+    def delete_property(self, name, key, prefix=None):
+        raise NotImplementedError
+
+    def update_property(self, name, value, key, prefix=None):
+        raise NotImplementedError

@@ -9,13 +9,13 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-from .simple import SimpleGeoStore
+from .memory import MemoryGeoStore
 
 #
 # Factory
 #
-def build_store(type='simple', **argv):
-    if type == 'simple':
-        return SimpleGeoStore()
+def build_store(type='memory', **argv):
+    if type == 'memory':
+        return MemoryGeoStore()
     else:
         raise RuntimeError('Invalid feature store type "%s"' % type)

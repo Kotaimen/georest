@@ -9,7 +9,7 @@ import unittest
 
 class TestBuildStore(unittest.TestCase):
     def test_simple(self):
-        store = build_store('simple')
+        store = build_store('memory')
         self.assertIsNotNone(store)
 
     def test_failure(self):
