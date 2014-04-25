@@ -19,7 +19,7 @@ class MemoryGeoStore(SimpleGeoStore):
     For test only, thread safe via explicit locking.
     """
 
-    NAME = 'simple'
+    NAME = 'dict'
     CAPABILITY = Capability(
         efficient_key_lookup=True,
         in_memory_cache=True,
@@ -30,12 +30,6 @@ class MemoryGeoStore(SimpleGeoStore):
         self._features = dict()
         self._counter = 0
 
-    def describe(self):
-        return {
-            'backend': 'Memory',
-            'capabilities': self.CAPABILITY
-        }
-
     def put_feature(self, feature, key=None, prefix=None):
         with self._lock:
             key = self._make_key(key, prefix)
@@ -44,8 +38,7 @@ class MemoryGeoStore(SimpleGeoStore):
                 raise FeatureAlreadyExists(
                     'Geometry already exists: "%s"' % key)
 
-            self._write_feature(feature, key)
-            return feature
+            return self._write_feature(feature, key)
 
     def get_feature(self, key, prefix=None):
         return self._load_feature(key, prefix)
@@ -72,15 +65,13 @@ class MemoryGeoStore(SimpleGeoStore):
                 # Otherwise, create the new feature
                 feature = build_feature(geometry)
 
-            self._write_feature(feature, key)
-            return feature
+            return self._write_feature(feature, key)
 
     def update_properties(self, properties, key, prefix=None):
         with self._lock:
             feature = self._load_feature(key, prefix)
             feature.update_properties(properties)
-            self._write_feature(feature, key, prefix)
-            return feature
+            return self._write_feature(feature, key, prefix)
 
     def delete_properties(self, key, prefix=None):
         with self._lock:
@@ -137,4 +128,5 @@ class MemoryGeoStore(SimpleGeoStore):
         key = self._make_key(key, prefix)
         feature.key = key
         self._features[key] = pickle.dumps(feature)
+        return feature
 

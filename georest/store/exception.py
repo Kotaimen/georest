@@ -21,5 +21,10 @@ class FeatureDoesNotExist(GeoStoreError):
 class InvalidKey(GeoStoreError):
     HTTP_STATUS_CODE = 400
 
+
 class PropertyDoesNotExist(GeoStoreError):
     HTTP_STATUS_CODE = 404
+
+
+class CASConflicit(GeoStoreError):
+    HTTP_STATUS_CODE = 409
