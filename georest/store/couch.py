@@ -48,7 +48,7 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
     def describe(self):
         description = super(SimpleCouchbaseGeoStore, self).describe()
         if self._conn.connected:
-            description['stats']=self._conn.stats()
+            description['stats'] = self._conn.stats()
         return description
 
     def put_feature(self, feature, key=None, prefix=None):
@@ -87,6 +87,7 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
             ret = self._conn.get(key)
         except couchbase.exceptions.NotFoundError as e:
             feature = build_feature(geometry)
+            feature.key = key
             self._conn.set(key, feature2literal(feature))
         else:
             feature = literial2feature(ret.value)
