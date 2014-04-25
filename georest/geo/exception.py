@@ -8,6 +8,7 @@ __author__ = 'kotaimen'
 __date__ = '3/19/14'
 
 import sys
+import six
 
 
 class GeoException(Exception):
@@ -16,6 +17,9 @@ class GeoException(Exception):
     HTTP_STATUS_CODE = 500
 
     def __init__(self, message=None, e=None):
+
+        assert message is None or isinstance(message, six.string_types)
+
         self.tb = sys.exc_info()[2]
         if message is None and e is not None:
             super(GeoException, self).__init__(e.message)
@@ -30,11 +34,14 @@ class GeoException(Exception):
 class InvalidGeometry(GeoException):
     HTTP_STATUS_CODE = 400
 
+
 class InvalidCRS(GeoException):
     HTTP_STATUS_CODE = 400
 
+
 class InvalidFeature(GeoException):
     HTTP_STATUS_CODE = 400
+
 
 class InvalidProperty(GeoException):
     HTTP_STATUS_CODE = 400

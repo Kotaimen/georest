@@ -38,6 +38,17 @@ class Feature(object):
                  created, modified,
                  geometry, properties,
                  bbox, geohash):
+        """ To create a new feature, use factory methods below.
+
+        :param string key: key of the feature
+        :param string etag: etag of the feature
+        :param datetime.datetime created: timestamp when feature is created
+        :param datetime.datetime modified: timestamp when feature is last modified
+        :param Geometry geometry: geometry object
+        :param dict properties: feature properties
+        :param list bbox: bounding box of the geometry
+        :param string geohash: geohash of the geometry
+        """
         self._key = key
         self._etag = etag
 
@@ -115,8 +126,7 @@ class Feature(object):
         self.recalculate()
 
     def recalculate(self):
-        # XXX: Add a hooker to recalculate these after changed major properties
-
+        # XXX: Add a hooker to recalculate after setter call?
         self._modified = datetime.datetime.utcnow()
         self._etag = calc_etag(self._geometry.the_geom, self._properties)
         self._geohash = calc_geohash(self._geometry.the_geom)
@@ -128,14 +138,14 @@ class Feature(object):
     def __eq__(self, other):
         if not isinstance(other, Feature):
             return False
-        return self._geometry.ewkt == other._geometry.ewkt and \
-               self._properties == other._properties and \
-               self._key == other._key and \
-               self._etag == other._etag and \
-               self._created == other._created and \
-               self._modified == other._modified and \
-               self._bbox == other._bbox and \
-               self._geohash == other._geohash
+        return self._geometry.ewkt == other._geometry.ewkt \
+                   and self._properties == other._properties \
+                   and self._key == other._key \
+                   and self._etag == other._etag \
+                   and self._created == other._created \
+                   and self._modified == other._modified \
+                   and self._bbox == other._bbox \
+            and self._geohash == other._geohash
 
 
 #
@@ -144,50 +154,44 @@ class Feature(object):
 
 def make_crs(crs):
     if not crs.srid:
-        return "null"
+        return None
     else:
-        return json.dumps({'type': 'name',
-                           'properties': {
-                               'name': 'EPSG:%d' % crs.srid
-                           }})
+        return {'type': 'name',
+                'properties': {
+                    'name': 'EPSG:%d' % crs.srid
+                }}
 
 
 def load_iso_datetime(utc_datetime):
     return datetime.datetime.strptime(utc_datetime, '%Y-%m-%dT%H:%M:%S.%f')
 
 
-def feature2json(feature, binary=False):
-    return '''{
-    "type":"feature",
-    "geometry": %(geom)s,
-    "properties": %(props)s,
-    "bbox": %(bbox)s,
-    "crs": %(crs)s,
-    "_format": "%(fmt)s",
-    "_srid": %(srid)d,
-    "_key": "%(key)s",
-    "_etag":"%(etag)s",
-    "_geohash":"%(geohash)s",
-    "_created":"%(created)s",
-    "_modified":"%(modified)s"
-}
-''' % dict(
-        geom=feature.geometry.geojson if not binary else '"%s"' % feature.geometry.hexewkb,
-        props=json.dumps(feature.properties),
+def feature2literal(feature, binary=False):
+    """ Dump a Feature object to a literal dict
+    :param Feature feature: Feature
+    :param bool binary: Whether dump geometry into HEXEWKB format
+    :return: literal dict
+    """
+    return dict(
+        type="Feature",
+        geometry=json.loads(
+            feature.geometry.geojson) if not binary else feature.geometry.hexewkb,
+        properties=feature.properties,
         bbox=feature.bbox,
         crs=make_crs(feature.crs.crs),
-        srid=feature.crs.srid,
-        fmt="geojson" if not binary else "hexewkb",
-        key=feature.key,
-        etag=feature.etag,
-        geohash=feature.geohash,
-        created=feature.created.isoformat(),
-        modified=feature.modified.isoformat(),
+        _srid=feature.crs.srid,
+        _format='geojson' if not binary else 'hexewkb',
+        _key=feature.key,
+        _etag=feature.etag,
+        _geohash=feature.geohash,
+        _created=feature.created.isoformat(),
+        _modified=feature.modified.isoformat(),
     )
 
 
-def json2feature(json_input):
-    data = json.loads(json_input)
+def literial2feature(data):
+    """ Build a Feature object from python dict"""
+    assert data['type'] == 'Feature'
     if data['_format'] == 'geojson':
         geometry = build_geometry(json.dumps(data['geometry']),
                                   srid=data['_srid'])
@@ -201,6 +205,21 @@ def json2feature(json_input):
                    data['bbox'], data['_geohash'])
 
 
+def feature2json(feature, binary=False):
+    """ Dump a Feature object as geojson """
+
+    return json.dumps(feature2literal(feature, binary))
+
+
+def json2feature(json_input):
+    """ Load a Feature object form geojson string.
+
+    This function does not validate the input!
+    """
+    return literial2feature(json.loads(json_input))
+
+
+#
 # Feature factory
 #
 
@@ -325,10 +344,11 @@ def build_feature_from_geojson(geojsoninput,
                                srid=4326,
                                created=None,
                                modified=None):
+    """ Build a feature from geojson input. """
     try:
         input_ = json.loads(geojsoninput)
     except (TypeError, ValueError) as e:
-        raise InvalidProperty(e)
+        raise InvalidFeature('Invalid Feature geojson input', e)
 
     if 'type' not in input_ or input_['type'] != 'Feature' \
             or 'geometry' not in input_:
@@ -351,6 +371,10 @@ def build_feature_from_geojson(geojsoninput,
 
 
 def build_properties_from_json(jsoninput):
+    """ Build a properties from json input and do validation
+    :param string jsoninput: json input
+    :return: properties
+    """
     try:
         props = json.loads(jsoninput)
     except (TypeError, ValueError) as e:

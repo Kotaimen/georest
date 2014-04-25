@@ -41,8 +41,7 @@ class Geometry(object):
 
     def __getattr__(self, name):
         """Pretend to be a geos.Geometry instance without much coding"""
-        # XXX: Violates DIP but much less coding
-        # XXX: I like dynamic languages
+        # Violates DIP but much less typing (I like dynamic languages)
         try:
             ret = getattr(self._the_geom, name)
         except Delegation.ENGINE_EXCEPTIONS as e:
