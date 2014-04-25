@@ -109,7 +109,7 @@ Retrieve geometry object of given feature with specified format and SRID.
 Name      | Type    | Description
 ----------|---------|--------------------
 `:key`    | string  | Key of the geometry
-`format`  | string  | Format of the return geometry, one of `json`, `ewkt`, `ewkb`.  Default is `json`
+`format`  | string  | Format of the return geometry, one of `json`, `ewkt`, `wkt`, `ewkb`.  Default is `json`
 `srid`    | integer | SRID of the geometry, default is `0` (which means "as is")
 `prefix`  | string  | Optional string to prepend to key
 
@@ -121,6 +121,7 @@ Format    | Content Type
 ----------|---------------
 `json`    | `application/json`
 `ewkt`    | `text/plain`
+`wkt`    | `text/plain`
 `exkb`    | `application/oct-stream`
 
 

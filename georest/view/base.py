@@ -52,6 +52,9 @@ def make_response_from_geometry(geometry, format_='json', srid=0, headers=None):
     if format_ == 'ewkt':
         response_data = geometry.ewkt
         content_type = 'text/plain'
+    if format_ == 'wkt':
+        response_data = geometry.wkt
+        content_type = 'text/plain'
     elif format_ == 'ewkb':
         response_data = str(geometry.ewkb)
         content_type = 'application/oct-stream'
@@ -109,7 +112,7 @@ class GeometryRequestParser(reqparse.RequestParser):
                           action='store',
                           location='args',
                           type=str,
-                          choices=['json', 'ewkt', 'ewkb'],
+                          choices=['json', 'ewkt', 'ewkb', 'wkt'],
                           default='json',
                           required=False)
 
@@ -152,7 +155,7 @@ class OperationRequestParser(reqparse.RequestParser):
                           action='store',
                           location='args',
                           type=str,
-                          choices=['json', 'ewkt', 'ewkb'],
+                          choices=['json', 'ewkt', 'ewkb', 'wkt'],
                           default='json',
                           required=False)
 

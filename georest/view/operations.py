@@ -151,7 +151,7 @@ class GeometryOperationBase(object):
                 other.transform(args.srid)
 
         # XXX: This is so so ugly...
-        # NOTE: Select a geometry attribute or bounded method call from given
+        # Ideas: Select a geometry attribute or bounded method call from given
         # operation string.  Argument list, arg parsing, result are all
         # different and depends on the operation selected.  Maybe Command
         # patten fits here?
