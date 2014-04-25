@@ -28,7 +28,7 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
 
     )
 
-    COUNTER = '__features'
+    COUNTER = '__feature_counter'
 
     def __init__(self,
                  bucket=None,
@@ -200,7 +200,7 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
             assert prefix is not None
             # Increase random feature counter and retrieve current value
             ret = self._conn.incr(self.COUNTER)
-            count = ret.value
+            count = ret.value + 1
             key = '%s%d' % (prefix, count)
         elif prefix is not None:
             key = '%s%s' % (prefix, key)
