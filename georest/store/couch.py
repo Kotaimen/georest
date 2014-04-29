@@ -43,7 +43,6 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
                                                  password=password,
                                                  timeout=timeout)
         assert self._conn.connected
-        self._conn.incr(self.COUNTER, initial=0)
 
     def describe(self):
         description = super(SimpleCouchbaseGeoStore, self).describe()
@@ -200,11 +199,12 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
         if key is None:
             assert prefix is not None
             # Increase random feature counter and retrieve current value
-            ret = self._conn.incr(self.COUNTER)
-            count = ret.value + 1
+            ret = self._conn.incr(self.COUNTER, initial=0)
+            count = ret.value
             key = '%s%d' % (prefix, count)
         elif prefix is not None:
             key = '%s%s' % (prefix, key)
+
         if not is_key_valid(key):
             raise InvalidKey('Invalid key: "%s"' % key)
 
