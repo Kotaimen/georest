@@ -48,18 +48,21 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
         description = super(SimpleCouchbaseGeoStore, self).describe()
         if self._conn.connected:
             description['stats'] = self._conn.stats()
+            description['libcouchbase'] = self._conn.lcb_version()
         return description
 
     def put_feature(self, feature, key=None, prefix=None):
         key = self._make_key(key, prefix)
         feature.key = key
         try:
-            result = self._conn.add(key, feature2literal(feature))
+            self._conn.add(key, feature2literal(feature))
         except couchbase.exceptions.KeyExistsError as e:
-            raise FeatureAlreadyExists(
-                message='Feature already exists: "%s"' % key, e=e)
-        else:
-            return feature
+            ret = self._conn.get(key)
+            # HACK: add() raises KeyExistsError when server is busy even if op is successful
+            if ret.value['_etag'] != feature.etag:
+                raise FeatureAlreadyExists(
+                    message='Feature already exists: "%s"' % key, e=e)
+        return feature
 
     def get_feature(self, key, prefix=None):
         key = self._make_key(key, prefix)
