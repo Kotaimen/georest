@@ -9,6 +9,7 @@ __author__ = 'kotaimen'
 __date__ = '3/21/14'
 
 import datetime
+import traceback
 
 from werkzeug.http import http_date
 from flask import current_app, make_response
@@ -18,9 +19,6 @@ from ..geo import Geometry
 
 from ..geo.exception import GeoException, InvalidGeometry, \
     InvalidCRS
-from ..store.exception import FeatureAlreadyExists, InvalidKey, \
-    FeatureDoesNotExist
-from .exception import InvalidGeometryOperator, IdentialGeometryError
 
 #
 # Response Helpers
@@ -78,16 +76,23 @@ def throws_geo_exceptions(f):
             return f(*args, **kwargs)
         except Exception as e:
             if isinstance(e, GeoException):
-                code = e.HTTP_STATUS_CODE
+                abort(e.HTTP_STATUS_CODE,
+                      code=e.HTTP_STATUS_CODE,
+                      message=e.message,
+                      exception=e.__class__.__name__,
+                      traceback=traceback.format_tb(e.tb)
+                )
             else:
-                raise
+                if not current_app.debug:
+                    abort(500,
+                          code=500,
+                          message='Unexpected error',
+                          exception=e.__class__.__name__,
+                          description=str(e),
+                    )
+                else:
+                    raise
 
-            abort(code,
-                  code=code,
-                  message=e.message,
-                  exception=e.__class__.__name__,
-                  # traceback=traceback.format_tb(e.tb)
-                  )
 
     return decorator
 
