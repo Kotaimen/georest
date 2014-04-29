@@ -21,7 +21,11 @@ try:
     def loads(s, **kw):
         return ujson.loads(s)
 
+    JSON_LIB_NAME = 'ujson'
+
 except ImportError:
 
     from json import dumps, loads
+
+    JSON_LIB_NAME = 'json'
 
