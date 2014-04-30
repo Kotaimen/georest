@@ -182,7 +182,8 @@ class GeometryOperationBase(object):
         elif operation in BINARY_GEOMETRY_METHODS:
             method_name = BINARY_GEOMETRY_METHODS[operation]
             bounded_method = getattr(this, method_name)
-            result = bounded_method(other)
+            # HACK: GEOSGeometry.distance() checks distance type explicitly
+            result = bounded_method(other.the_geom)
             return make_predicate_result(result)
 
         elif operation in BINARY_TOPOLOGICAL_METHODS:

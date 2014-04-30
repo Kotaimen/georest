@@ -186,6 +186,15 @@ class TestBinaryTopologicalMethods(ResourceTestBase, unittest.TestCase):
         result = self.checkOp('point1', 'union', 'linestring1')
         self.assertEqual(result['type'], 'GeometryCollection')
 
+    def test_intersection(self):
+        result = self.checkOp('point1', 'intersection', 'linestring1')
+
+    def test_difference(self):
+        result = self.checkOp('point1', 'difference', 'linestring1')
+
+    def test_distance(self):
+        result = self.checkOp('point1', 'distance', 'linestring1')
+
 
 #
 # Only check endpoints here, full api check is done above
