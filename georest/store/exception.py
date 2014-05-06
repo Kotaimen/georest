@@ -26,5 +26,5 @@ class PropertyDoesNotExist(GeoStoreError):
     HTTP_STATUS_CODE = 404
 
 
-class CASConflicit(GeoStoreError):
+class CASConflict(GeoStoreError):
     HTTP_STATUS_CODE = 409

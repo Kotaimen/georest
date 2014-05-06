@@ -3,13 +3,15 @@
 __author__ = 'kotaimen'
 __date__ = '4/3/14'
 
+import time
+
 import couchbase
 import couchbase.exceptions
 
 from ..geo import Feature, build_feature, feature2literal, literial2feature
 from .base import is_key_valid, SimpleGeoStore, Capability
 from .exception import InvalidKey, FeatureAlreadyExists, FeatureDoesNotExist, \
-    PropertyDoesNotExist, CASConflicit
+    PropertyDoesNotExist, CASConflict
 
 
 class SimpleCouchbaseGeoStore(SimpleGeoStore):
@@ -35,14 +37,18 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
                  host='localhost',
                  port=8091,
                  password=None,
-                 timeout=2.5):
-        # TODO: Provide all connect parameters in the CTOR
+                 timeout=2.5,
+                 retries=3):
         self._conn = couchbase.Couchbase.connect(bucket=bucket,
                                                  host=host,
                                                  port=port,
                                                  password=password,
-                                                 timeout=timeout)
+                                                 timeout=timeout, )
         assert self._conn.connected
+
+        # Make a (backoff, retry) list
+        self._retry = zip([0.01 * 2 ** n for n in range(retries)],
+                          range(retries - 1, -1, -1))
 
     def describe(self):
         description = super(SimpleCouchbaseGeoStore, self).describe()
@@ -83,72 +89,37 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
                 message='Feature does not exist: "%s"' % key, e=e)
 
     def update_geometry(self, geometry, key, prefix=None):
-        # XXX: Is it possible to use CAS value as ETAG?
-        key = self._make_key(key, prefix)
-        try:
-            ret = self._conn.get(key)
-        except couchbase.exceptions.NotFoundError as e:
-            feature = build_feature(geometry)
-            feature.key = key
-            self._conn.set(key, feature2literal(feature))
-        else:
-            feature = literial2feature(ret.value)
+
+        def updater(feature):
             feature.update_geometry(geometry)
-            try:
-                self._conn.set(key, feature2literal(feature), cas=ret.cas)
-            except couchbase.exceptions.KeyExistsError as e:
-                raise CASConflicit(
-                    message='CAS Conflict: "%s"' % key, e=e)
-        return feature
+            return feature
+
+        return self._update_document(key, prefix, updater)
 
     def update_properties(self, properties, key, prefix=None):
-        # XXX: Update property without converting to Feature object?
-        key = self._make_key(key, prefix)
-        try:
-            ret = self._conn.get(key)
-        except couchbase.exceptions.NotFoundError as e:
-            raise FeatureDoesNotExist(
-                message='Feature does not exist: "%s"' % key, e=e)
-        else:
-            feature = literial2feature(ret.value)
+        def updater(feature):
             feature.update_properties(properties)
-            try:
-                self._conn.set(key, feature2literal(feature), cas=ret.cas)
-            except couchbase.exceptions.KeyExistsError as e:
-                raise CASConflicit(
-                    message='CAS Conflict: "%s"' % key, e=e)
             return feature
 
-    def delete_properties(self, properties, key, prefix=None):
-        # XXX: Update property without converting to Feature object?
+        return self._update_document(key, prefix, updater)
 
-        key = self._make_key(key, prefix)
-        try:
-            ret = self._conn.get(key)
-        except couchbase.exceptions.NotFoundError as e:
-            raise FeatureDoesNotExist(
-                message='Feature does not exist: "%s"' % key, e=e)
-        else:
-            feature = literial2feature(ret.value)
+    def delete_properties(self, key, prefix=None):
+        def updater(feature):
             feature.properties.clear()
             feature.recalculate()
-            try:
-                self._conn.set(key, feature2literal(feature), cas=ret.cas)
-            except couchbase.exceptions.KeyExistsError as e:
-                raise CASConflicit(
-                    message='CAS Conflict: "%s"' % key, e=e)
             return feature
+
+        return self._update_document(key, prefix, updater)
 
     def get_property(self, name, key, prefix=None):
         # XXX: Update property without converting to Feature object?
-        # XXX: Use couchbase  Item API?
 
         key = self._make_key(key, prefix)
-        try:
-            ret = self._conn.get(key)
-        except couchbase.exceptions.NotFoundError as e:
+
+        ret = self._conn.get(key, quiet=True)
+        if ret.value is None:
             raise FeatureDoesNotExist(
-                message='Feature does not exist: "%s"' % key, e=e)
+                message='Feature does not exist: "%s"' % key)
         try:
             feature = literial2feature(ret.value)
             return feature.properties[name]
@@ -156,52 +127,56 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
             raise PropertyDoesNotExist(name)
 
     def delete_property(self, name, key, prefix=None):
-        # XXX: Update property without converting to Feature object?
-
-        key = self._make_key(key, prefix)
-        try:
-            ret = self._conn.get(key)
-        except couchbase.exceptions.NotFoundError as e:
-            raise FeatureDoesNotExist(
-                message='Feature does not exist: "%s"' % key, e=e)
-        else:
-            feature = literial2feature(ret.value)
+        def updater(feature):
             try:
                 del feature.properties[name]
             except KeyError:
                 raise PropertyDoesNotExist(name)
             feature.recalculate()
-            try:
-                self._conn.set(key, feature2literal(feature), cas=ret.cas)
-            except couchbase.exceptions.KeyExistsError as e:
-                raise CASConflicit(
-                    message='CAS Conflict: "%s"' % key, e=e)
             return feature
+
+        return self._update_document(key, prefix, updater)
+
 
     def update_property(self, name, value, key, prefix=None):
-        # XXX: Update property without converting to Feature object?
-
-        key = self._make_key(key, prefix)
-        try:
-            ret = self._conn.get(key)
-        except couchbase.exceptions.NotFoundError as e:
-            raise FeatureDoesNotExist(
-                message='Feature does not exist: "%s"' % key, e=e)
-        else:
-            feature = literial2feature(ret.value)
+        def updater(feature):
             feature.properties[name] = value
             feature.recalculate()
+            return feature
+
+        return self._update_document(key, prefix, updater)
+
+    def _update_document(self, key, prefix, updater):
+        """ Update a object using CAS """
+        key = self._make_key(key, prefix)
+
+        for back_off, retry in self._retry:
+            ret = self._conn.get(key, quiet=True)
+            if ret.value is None:
+                raise FeatureDoesNotExist(
+                    message='Feature does not exist: "%s"' % key)
+
+            feature = literial2feature(ret.value)
+            feature = updater(feature)
+            feature.recalculate()
+
             try:
                 self._conn.set(key, feature2literal(feature), cas=ret.cas)
             except couchbase.exceptions.KeyExistsError as e:
-                raise CASConflicit(
-                    message='CAS Conflict: "%s"' % key, e=e)
-            return feature
+                if retry >= 0:
+                    time.sleep(back_off)
+                else:
+                    raise CASConflict(message='Conflict: "%s"' % key, e=e)
+            else:
+                return feature
+
 
     def _make_key(self, key, prefix):
+        """ Make a key with prefix """
         if key is None:
             assert prefix is not None
-            # Increase random feature counter and retrieve current value
+            # Increase atomic feature counter and retrieve current value
+            # XXX: Error processing...
             ret = self._conn.incr(self.COUNTER, initial=0)
             count = ret.value
             key = '%s%d' % (prefix, count)
