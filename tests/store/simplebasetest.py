@@ -13,6 +13,8 @@ from georest.store.exception import *
 class SimpleStoreTestBase(object):
     def setUp(self):
         self.feature = build_feature('POINT(1 1)', {'foo': 'bar', 'answer': 42})
+        self.other_feature = build_feature('POINT(1 2)',{})
+
         self.geometry = build_geometry('LINESTRING(0 0, 1 1)')
         self.store = self._build_store()
 
@@ -47,7 +49,7 @@ class TestSimpleStoreFeatureMixin(SimpleStoreTestBase):
         self.assertEqual(ret.geometry.wkt, self.feature.geometry.wkt)
 
         self.assertRaises(FeatureAlreadyExists, self.store.put_feature,
-                          self.feature, key='test-3')
+                          self.other_feature, key='test-3')
 
         ret = self.store.delete_feature('test-3')
         self.assertIsNone(ret)
