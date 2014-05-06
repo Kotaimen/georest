@@ -191,6 +191,7 @@ def feature2literal(feature, binary=False):
 
 def literial2feature(data):
     """ Build a Feature object from python dict"""
+    assert isinstance(data, dict)
     assert data['type'] == 'Feature'
     if data['_format'] == 'geojson':
         geometry = build_geometry(json.dumps(data['geometry']),
