@@ -45,7 +45,7 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
                                                  password=password,
                                                  timeout=timeout, )
         assert self._conn.connected
-
+        assert retries > 0
         # Make a (backoff, retry) list
         self._retry = zip([0.01 * 2 ** n for n in range(retries)],
                           range(retries - 1, -1, -1))
@@ -93,8 +93,13 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
         def updater(feature):
             feature.update_geometry(geometry)
             return feature
-
-        return self._update_document(key, prefix, updater)
+        try:
+            return self._update_document(key, prefix, updater)
+        except FeatureDoesNotExist:
+            feature = build_feature(geometry)
+            feature.key = key
+            self._conn.set(key, feature2literal(feature))
+            return feature
 
     def update_properties(self, properties, key, prefix=None):
         def updater(feature):
@@ -169,7 +174,6 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
                     raise CASConflict(message='Conflict: "%s"' % key, e=e)
             else:
                 return feature
-
 
     def _make_key(self, key, prefix):
         """ Make a key with prefix """
