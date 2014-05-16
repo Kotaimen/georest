@@ -96,6 +96,7 @@ class SimpleCouchbaseGeoStore(SimpleGeoStore):
         try:
             return self._update_document(key, prefix, updater)
         except FeatureDoesNotExist:
+            key = self._make_key(key, prefix)
             feature = build_feature(geometry)
             feature.key = key
             self._conn.set(key, feature2literal(feature))
