@@ -166,6 +166,14 @@ def load_iso_datetime(utc_datetime):
     return datetime.datetime.strptime(utc_datetime, '%Y-%m-%dT%H:%M:%S.%f')
 
 
+def dump_iso_datetime(datetime):
+    if datetime.microsecond == 0:
+        # isoformat() drops .mmmmmm when microsecond is 0
+        return datetime.isoformat() + '.000000'
+    else:
+        return datetime.isoformat()
+
+
 def feature2literal(feature, binary=False):
     """ Dump a Feature object to a literal dict
     :param Feature feature: Feature
@@ -184,8 +192,8 @@ def feature2literal(feature, binary=False):
         _key=feature.key,
         _etag=feature.etag,
         _geohash=feature.geohash,
-        _created=feature.created.isoformat(),
-        _modified=feature.modified.isoformat(),
+        _created=dump_iso_datetime(feature.created),
+        _modified=dump_iso_datetime(feature.modified),
     )
 
 
