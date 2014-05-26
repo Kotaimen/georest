@@ -26,6 +26,7 @@ pip-log.txt
 .coverage
 .tox
 nosetests.xml
+cover
 
 # Translations
 *.mo
@@ -34,3 +35,9 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# PyCharm
+.idea
+
+# setup.py
+build
