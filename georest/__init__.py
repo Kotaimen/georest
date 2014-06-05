@@ -12,4 +12,3 @@ __date__ = '3/18/14'
 
 __version__ = '0.0.5'
 
-from flaskapp import GeoRestApp

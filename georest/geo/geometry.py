@@ -1,198 +1,184 @@
 # -*- encoding: utf-8 -*-
 
+__author__ = 'kotaimen'
+__date__ = '6/4/14'
+
 """
     georest.geo.geometry
     ~~~~~~~~~~~~~~~~~~~~
+    Geometry IO
 
 """
-__author__ = 'kotaimen'
-__date__ = '3/19/14'
 
-import six
+import re
 
-from .engine import geos, gdal
-from .exception import GeoException, InvalidGeometry, \
-    InvalidCRS
+import shapely.speedups
+import shapely.geometry
+import shapely.geometry.base
+import shapely.wkt
+import shapely.wkb
 
+import geojson
+import geojson.base
+import geojson.mapping
+import ujson
 
-#
-# Geometry
-#
+from .exceptions import InvalidGeometry, InvalidGeoJsonInput
+from .spatialref import SpatialReference
+
+shapely.speedups.enable()
+
 
 class Geometry(object):
-    """ Wrapper for Geometry object
-
-    Contains geometry coordinate? data and coordinate reference system
-    """
-
-    def __init__(self, the_geom):
-        assert (isinstance(the_geom, geos.GEOSGeometry))
-        self._the_geom = the_geom
-
-    @property
-    def the_geom(self):
-        return self._the_geom
-
-    def __len__(self):
-        return len(self._the_geom)
-
-    def __getitem__(self, key):
-        return Delegation.type_guard(self._the_geom[key])
-
-    def __getattr__(self, name):
-        """Pretend to be a geos.Geometry instance without much coding"""
-        # Violates DIP but much less typing (I like dynamic languages)
-        try:
-            ret = getattr(self._the_geom, name)
-        except Delegation.ENGINE_EXCEPTIONS as e:
-            raise GeoException(e=e)
-
-        if six.callable(ret):
-            return Delegation(ret)
-        else:
-            return Delegation.type_guard(ret)
-
-    def __repr__(self):
-        return 'Geometry(%s)' % self._the_geom.ewkt
-
-    def __getstate__(self):
-        return bytes(self._the_geom.ewkb)
-
-    def __setstate__(self, state):
-        self._the_geom = geos.GEOSGeometry(buffer(state))
-
-
-class SpatialReference(object):
-    """
-        Wrapper for spatial reference system object
-    """
-
-    def __init__(self, srs):
-        assert isinstance(srs, gdal.SpatialReference)
-        self._the_srs = srs
-
-    @property
-    def srs(self):
-        return self._the_srs
-
-    @property
-    def crs(self):
-        return self._the_srs
-
-    def __getattr__(self, name):
-        try:
-            ret = getattr(self._the_srs, name)
-        except Delegation.ENGINE_EXCEPTIONS as e:
-            raise GeoException(e=e)
-
-        if six.callable(ret):
-            return Delegation(ret)
-        else:
-            return Delegation.type_guard(ret)
-
-    def __repr__(self):
-        return 'SpatialReference(%s)' % self._the_srs.name
-
-    def __getstate__(self):
-        return self._the_srs.wkt
-
-    def __setstate__(self, state):
-        self._the_srs = gdal.SpatialReference(state)
-
-
-class Delegation(object):
-    """
-        Delegate the callable and swap result GEOSGeometry back to Geometry
-        when necessary
-    """
-    ENGINE_EXCEPTIONS = (geos.GEOSException,
-                         gdal.OGRException,
-                         gdal.SRSException)
+    """Just a namespace containing static methods"""
 
     @staticmethod
-    def type_guard(ret):
-        if isinstance(ret, geos.GEOSGeometry):
-            return Geometry(ret)
-        elif isinstance(ret, gdal.OGRGeometry):
-            return Geometry(ret.ewkb)
-        elif isinstance(ret, gdal.SpatialReference):
-            return SpatialReference(ret)
-        else:
-            return ret
+    def make_geometry(geo_input, srid=4326):
+        """Make a shapely Geometry object from given geometry input and srid
 
-    def __init__(self, target):
-        self._target = target
-
-    def __call__(self, *args, **kwargs):
-        try:
-            ret = self._target(*args, **kwargs)
-        except self.ENGINE_EXCEPTIONS as e:
-            raise GeoException(e=e)
-
-        return self.type_guard(ret)
-
-
-#
-# Factory method
-#
-
-def build_srs(srsinput):
-    """
-        Build a spatial reference system
-    """
-    try:
-        srs = gdal.SpatialReference(srs_input=srsinput)
-    except (ValueError, gdal.SRSException, gdal.OGRException) as e:
-        raise InvalidCRS(e=e)
-
-    return SpatialReference(srs)
-
-
-ALLOWED_GEOMETRY_TYPES = frozenset(['Point',
-                                    'LineString',
-                                    'Polygon',
-                                    'MultiPoint',
-                                    'MultiLineString',
-                                    'MultiPolygon',
-                                    'GeometryCollection'])
-
-
-def build_geometry(geoinput, srid=4326):
-    """
-
-    :param geoinput: geometry data, can be one of:
-         * strings:
-            - WKT
-            - HEXEWKB (a PostGIS-specific canonical form)
-            - GeoJSON (requires GDAL)
-         * buffer:
+        `geo_input` can be one of the following format:
+        - str/unicode
+            - GeoJson geometry
+            - WKT/EWKT
+            - HEXWKB
+        - byte, buffer
             - WKB
-    :param srid: SRID of the geometry
-    :return: created geometry
-    """
+        - A subclass of shapely.geometry.base.BaseGeometry
 
-    # NOTE: Wrapping GEOS Geometry here, which does not support CRS, just SRID
-    if srid is not None and not isinstance(srid, int):
-        raise InvalidCRS('CRS Must be SRID integer')
+        A `SpatialReference` object will be created and assign to `_crs` member
+        of the created geometry object.
+
+        If `geo_input` already contains a bundled SRID (eg: EWKT) then `srid`
+        parameter is always ignored.
+
+        Idea copied from `django.contrib.geo.geos.geometry.__init__()`
+
+        NOTE: This is not really python3 compatible...
+        """
+
+        factories = [create_geometry_from_geometry,
+                     create_geometry_from_geojson,
+                     create_geometry_from_wkt,
+                     create_geometry_from_wkb, ]
+
+        for factory in factories:
+            try:
+                geometry, srid = factory(geo_input)
+            except NotMyType:
+                continue
+
+            if geometry._crs is None and srid is not None:
+                geometry._crs = SpatialReference(srid=srid)
+            return geometry
+
+        else:
+            raise InvalidGeometry('Unrecognized geometry input')
+
+    @staticmethod
+    def export_geojson(geometry):
+        return ujson.dumps(geojson.mapping.to_mapping(geometry))
+
+
+#
+# Magic regular expression
+#
+
+# XXX: Not really secure, are we allowing only GeoJSON input from API?
+HEX_REGEX = re.compile(r'^[0-9A-F]+$', re.I)
+
+WKT_REGEX = re.compile(r'''
+^(SRID=(?P<SRID>\-?\d+);)?
+ (?P<WKT>
+    (?P<TYPE>POINT|LINESTRING|LINEARRING|POLYGON|MULTIPOINT|
+             MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION)
+ [ACEGIMLONPSRUTYZ\d,\.\-\(\) ]+
+ )$''', re.I | re.X)
+
+JSON_REGEX = re.compile(r'^(\s+)?\{[\s\w,\[\]\{\}\-\."\':]+\}(\s+)?$')
+
+
+#
+# Geometry factory methods for each format, returns a (geometry, srid) tuple
+#
+class NotMyType(RuntimeError):
+    pass
+
+
+def create_geometry_from_geojson(geo_input, copy=False):
+    if not JSON_REGEX.match(geo_input):
+        raise NotMyType('GeoJson')
 
     try:
-        geom = geos.GEOSGeometry(geoinput, srid=srid)
-    except (TypeError, ValueError, geos.GEOSException, gdal.OGRException) as e:
+        # load json first
+        literal = json.loads(geo_input)
+    except (TypeError, ValueError) as e:
+        raise InvalidGeoJsonInput(message="Can't decode json input", e=e)
+    try:
+        # geojson validation
+        geojson_geometry = geojson.base.GeoJSON.to_instance(literal)
+    except (TypeError, ValueError) as e:
+        raise InvalidGeoJsonInput(message="Invalid GeoJson geometry", e=e)
+
+    try:
+        # whether to copy geometry coordinates from geojson geometry,
+        # which is slightly slower
+        builder = shapely.geometry.shape if copy else shapely.geometry.asShape
+
+        # create shapely geometry
+        geometry = builder(geojson_geometry)
+    except ValueError as e:
         raise InvalidGeometry(e=e)
 
-    if not geom.valid:
-        raise InvalidGeometry('Invalid geometry: %s' % geom.valid_reason)
-
-    if geom.empty:
-        raise InvalidGeometry('Empty geometry')
-
-    if geom.srid is not None and geom.crs is None:
-        raise InvalidCRS('Invalid srid "%s"' % geom.srid)
-
-    if geom.geom_type not in ALLOWED_GEOMETRY_TYPES:
-        raise InvalidGeometry('Invalid geometry type "%s"' % geom.geom_type)
-
-    return Geometry(geom)
+    # for GeoJson, SRID is always undefined
+    return geometry, None
 
 
+def create_geometry_from_wkt(geo_input):
+    wkt_m = WKT_REGEX.match(geo_input)
+    if not wkt_m:
+        raise NotMyType('WKT')
+
+    # try decode bundled geometry srid
+    if wkt_m.group('SRID'):
+        srid = int(wkt_m.group('SRID'))
+    else:
+        srid = None
+
+    # get wkt
+    wkt = wkt_m.group('WKT')
+
+    try:
+        geometry = shapely.wkt.loads(wkt)
+    except shapely.wkt.geos.ReadingError as e:
+        raise InvalidGeometry(e=e)
+
+    return geometry, srid
+
+
+def create_geometry_from_wkb(geo_input):
+    if isinstance(geo_input, (str, unicode)):
+        if HEX_REGEX.match(geo_input):
+            # HEX WKB
+            hex = True
+        else:
+            raise NotMyType('HEXWKB')
+    elif isinstance(geo_input, buffer):
+
+        hex = False
+    else:
+        raise NotMyType('WKB')
+
+    try:
+        geometry = shapely.wkb.loads(geo_input, hex=hex)
+    except shapely.wkt.geos.ReadingError as e:
+        raise InvalidGeometry(e=e)
+
+    return geometry, None
+
+
+def create_geometry_from_geometry(geo_input):
+    if isinstance(geo_input, shapely.geometry.base.BaseGeometry):
+        return geo_input
+    else:
+        raise NotMyType('Shapely Geometry')
 

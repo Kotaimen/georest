@@ -1,21 +1,41 @@
 # -*- encoding: utf-8 -*-
 
+__author__ = 'kotaimen'
+__date__ = '5/29/14'
+
 """
     georest.geo
     ~~~~~~~~~~~
 
-    Package contains spatial data model, geo engine.
+    This package provides GeoJSON a-like Feature data model.
+
+    Overall goal is fast json/wkb/wkt io without magical python code... there
+    are already too much pain in various python geo packages:
+
+    - Geometry Engine:
+        - shapely
+        - geos
+        - osgeo.ogr
+        - django.contrib.geos
+    - Coordinate Reference System:
+        - pyproj
+        - django.contrib.gdal
+        - osgeo.osr
+    - Geoson IO:
+        - json
+        - geojson
+        - ujson
+        - yajl
+    - Feature Abstraction:
+        - geojson.Feature
+        - osgeo.ogr.Feature
 
 """
 
-__author__ = 'kotaimen'
-__date__ = '3/18/14'
+from .exceptions import GeoException
 
-from .geometry import Geometry, build_geometry, build_srs
-from .feature import Feature, \
-    literial2feature, feature2literal, \
-    json2feature, feature2json, \
-    build_feature, build_feature_from_geojson, \
-    check_properties, build_properties_from_json
-
-import jsonhelper
+from .key import Key
+from .metadata import Metadata
+from .spatialref import SpatialReference
+from .geometry import Geometry
+from .feature import Feature
