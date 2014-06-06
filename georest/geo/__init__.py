@@ -16,12 +16,12 @@ __date__ = '5/29/14'
         - shapely
         - geos
         - osgeo.ogr
-        - django.contrib.geos
+        - django.contrib.gis.geos
     - Coordinate Reference System:
         - pyproj
-        - django.contrib.gdal
+        - django.contrib.gis.gdal
         - osgeo.osr
-    - Geoson IO:
+    - GeoJson IO:
         - json
         - geojson
         - ujson
@@ -29,7 +29,29 @@ __date__ = '5/29/14'
     - Feature Abstraction:
         - geojson.Feature
         - osgeo.ogr.Feature
-
+    
+    Note on packages (after a lot of painful research):
+    - shapely: good geometry abstraction, fast, much better API than the 
+               official python binding, no out-of-box CRS support.
+    - geos/osgeo.ogr/osgeo.osr: official binding of c++ interface, powerful,
+                                too complex, not pythonic at all, requires 
+                                convert `GEOSGeometry` to `OGRGeometry` to do
+                                coordinate transform, very slow GeoJson 
+                                serialization (load/dump json...).
+    - django.contrib.gis: very nice python bindings, still requires convert 
+                          geometry for transform, and it feels strange to use
+                          `django` in a `Flask` project ... (used in Mark1,
+                          for they don't require python-gdal)
+    - geojson: Feature abstraction is what we want but uses `simplejson` for
+               serialization which is slow.
+    - ujson: Fast, stable, not as much options as standard library `json`, and
+             does not preserve float point xxx (smaller dump result)
+    - yajl: Promising but crashes interpreter ...slower than `ujson` anyway.
+    - pyshape: Very slow (10x-20x) compared to `osgeo.ogr.DataSource`,
+               can't read a lot of shapefiles, implemented in pure python.
+    - pyproj: Very weird abstraction compared to `osgeo.osr`, don't require
+              `python-gdal` and `gdal`.
+    
 """
 
 from .exceptions import GeoException

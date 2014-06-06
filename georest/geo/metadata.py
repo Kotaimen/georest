@@ -13,7 +13,8 @@ import time
 
 import geohash
 import shapely.geometry.base
-import pyproj
+
+from .spatialref import SpatialReference
 
 
 class Metadata(dict):
@@ -62,7 +63,7 @@ class Metadata(dict):
     def bbox(self, bbox):
         self['bbox'] = bbox
 
-    # Precision geohash preserves (in decimal degrees)
+    # Precision geohash preserves
     GEOHASH_PRECISION = 12
 
     @staticmethod
@@ -78,10 +79,12 @@ class Metadata(dict):
             assert bbox is None
 
             bbox = calc_bbox(geometry)
-            if geometry._crs is not None:
+
+            crs = geometry._crs
+            if crs is not None:
                 assert geohash is None
-                assert isinstance(geometry._crs, )
-                if geometry._crs.proj.is_latlong():
+                assert isinstance(crs, SpatialReference)
+                if crs.proj.is_latlong():
                     # Geohash only supports lonlat coordinates
                     geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
 
@@ -96,8 +99,15 @@ def calc_bbox(geom):
 
 def calc_geohash(geom, precision=7):
     """Calculate geohash of th geometry, mimics behaviour of postgis st_geohash
+
+    `geom` must be a geometry with lonlat coordinates and `precision` is
+    length of returned hash string for Point geometry.
     """
     assert isinstance(geom, shapely.geometry.base.BaseGeometry)
+    if geom.is_empty:
+        return ''
+    assert isinstance(precision, int)
+    assert precision > 1  # useless if precision is too short
 
     if geom.geom_type == 'Point':
         assert isinstance(geom, shapely.geometry.Point)
@@ -110,12 +120,14 @@ def calc_geohash(geom, precision=7):
         hash1 = geohash.encode(bottom, left, precision)
         hash2 = geohash.encode(top, right, precision)
 
-        bounds_precision = list(x == y for x, y in zip(hash1, hash2)).index(
-            False)
-        if bounds_precision <= 0:
+        try:
+            bounds_precision = \
+                list(x == y for x, y in zip(hash1, hash2)).index(False)
+        except ValueError:
+            # list.index throws ValueError if value is not found
             bounds_precision = precision
 
-        # Calculate geohash using center point and precision
+        # Calculate geohash using center point and bounds precision
         return geohash.encode((top + bottom) / 2.,
                               (right + left) / 2.,
                               bounds_precision)
