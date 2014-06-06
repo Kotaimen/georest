@@ -57,7 +57,7 @@ class Feature(object):
         return self._metadata
 
     @property
-    def __python_geo_interface__(self):
+    def __geo_interface__(self):
         obj = dict(type='Feature',
                    geometry=self._geometry,
                    properties=self._properties,
@@ -68,7 +68,7 @@ class Feature(object):
 
     @property
     def geojson(self):
-        return ujson.dumps(self.__python_geo_interface__)
+        return ujson.dumps(self.__geo_interface__)
 
 
     @staticmethod

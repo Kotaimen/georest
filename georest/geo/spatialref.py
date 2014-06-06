@@ -12,6 +12,8 @@ __date__ = '6/5/14'
 
 import pyproj
 
+from .exceptions import InvalidSpatialReference
+
 
 class SpatialReference(object):
     """Spatial reference wrapper
@@ -24,16 +26,19 @@ class SpatialReference(object):
     osgro.ogr.OGRGeometry.
     """
 
-    def __init__(self, srid=0):
+    def __init__(self, srid=0, lazy_init=False):
         assert isinstance(srid, int)
         self._srid = srid
         self._proj = None
+        self.proj
 
     @property
     def proj(self):
         if self._srid != 0 and self._proj is None:
-            # Lazy creation
-            self._proj = pyproj.Proj(init='EPSG:%d' % self._srid)
+            try:
+                self._proj = pyproj.Proj(init='EPSG:%d' % self._srid)
+            except RuntimeError as e:
+                raise InvalidSpatialReference(e=e)
         return self._proj
 
     @property
@@ -49,5 +54,8 @@ class SpatialReference(object):
                     'properties': {
                         'name': 'EPSG:%d' % self._srid
                     }}
+
+    def equals(self, other):
+        return self._srid == other._srid
 
 # XXX: transform?

@@ -15,7 +15,7 @@ class TestMetadata(unittest.TestCase):
         geometry = shapely.geometry.Point(1, 1)
         geometry._crs = SpatialReference(srid=4326)
         metadata = Metadata.make_metadata(geometry=geometry)
-        pprint (metadata)
+        # pprint(metadata)
         self.assertIsInstance(metadata, Metadata)
         self.assertIsNotNone(metadata.created)
         self.assertIsNotNone(metadata.modified)
