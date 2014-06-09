@@ -9,7 +9,7 @@ __date__ = '5/29/14'
 
     This package provides GeoJSON a-like Feature data model.
 
-    Overall goal is fast json/wkb/wkt io without magical python code... there
+    Overall goal is fast json/wkb/wkt io *without* magical python code... there
     are already too much pain in various python geo packages:
 
     - Geometry Engine:
@@ -32,7 +32,8 @@ __date__ = '5/29/14'
     
     Note on packages (after a lot of painful research):
     - shapely: good geometry abstraction, fast, much better API than the 
-               official python binding, no out-of-box CRS support.
+               official python binding, no out-of-box CRS support,
+               GeometryCollection support not complete.
     - geos/osgeo.ogr/osgeo.osr: official binding of c++ interface, powerful,
                                 too complex, not pythonic at all, requires 
                                 convert `GEOSGeometry` to `OGRGeometry` to do
@@ -50,8 +51,9 @@ __date__ = '5/29/14'
     - pyshape: Very slow (10x-20x) compared to `osgeo.ogr.DataSource`,
                can't read a lot of shapefiles, implemented in pure python.
     - pyproj: Very weird abstraction compared to `osgeo.osr`, don't require
-              `python-gdal` and `gdal`.
-    
+              `python-gdal` and `gdal`, supports transform coordinates without
+              load geometry from geos into gdal.
+
 """
 
 from .exceptions import GeoException
