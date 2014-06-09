@@ -10,9 +10,12 @@ __date__ = '6/5/14'
 
 """
 
-import pyproj
+import functools
 
-from .exceptions import InvalidSpatialReference
+import pyproj
+import shapely.ops
+
+from .exceptions import InvalidSpatialReference, CoordinateTransformationError
 
 
 class SpatialReference(object):
@@ -26,19 +29,16 @@ class SpatialReference(object):
     osgro.ogr.OGRGeometry.
     """
 
-    def __init__(self, srid=0, lazy_init=False):
+    def __init__(self, srid=0):
         assert isinstance(srid, int)
         self._srid = srid
-        self._proj = None
-        self.proj
+        try:
+            self._proj = pyproj.Proj(init='EPSG:%d' % self._srid)
+        except RuntimeError as e:
+            raise InvalidSpatialReference(e=e)
 
     @property
     def proj(self):
-        if self._srid != 0 and self._proj is None:
-            try:
-                self._proj = pyproj.Proj(init='EPSG:%d' % self._srid)
-            except RuntimeError as e:
-                raise InvalidSpatialReference(e=e)
         return self._proj
 
     @property
@@ -58,4 +58,22 @@ class SpatialReference(object):
     def equals(self, other):
         return self._srid == other._srid
 
-# XXX: transform?
+
+class CoordinateTransform(object):
+    def __init__(self, crs1, crs2):
+        assert isinstance(crs1, SpatialReference)
+        assert isinstance(crs2, SpatialReference)
+        self._crs1 = crs1
+        self._crs2 = crs2
+        self._projection = functools.partial(pyproj.transform,
+                                             crs1.proj, crs2.proj)
+
+    def __call__(self, geometry):
+        if geometry.geom_type == 'GeometryCollection':
+            # XXX shapely don't support transform GeometryCollection"
+            raise CoordinateTransformationError(
+                message='GeometryCollection is not supported')
+        try:
+            return shapely.ops.transform(self._projection, geometry)
+        except RuntimeError as e:
+            raise CoordinateTransformationError(e=e)

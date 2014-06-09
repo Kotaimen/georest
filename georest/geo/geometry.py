@@ -35,8 +35,11 @@ shapely.speedups.enable()
 class Geometry(object):
     """Just a namespace containing static methods"""
 
+    def __init__(self):
+        raise NotImplementedError
+
     @staticmethod
-    def make_geometry(geo_input, srid=4326):
+    def make_geometry(geo_input, srid=4326, copy=False):
         """Make a shapely Geometry object from given geometry input and srid
 
         `geo_input` can be one of the following format:
@@ -48,18 +51,25 @@ class Geometry(object):
             - WKB
         - A subclass of shapely.geometry.base.BaseGeometry
 
-        A `SpatialReference` object will be created and assign to `_crs` member
-        of the created geometry object.
+        `srid` specifies spatial reference in EPSG, a `SpatialReference` object
+        will be created and assign to `_crs` member of the created geometry
+        object.  Available srid is determined by underlying projection library
+        (currently pyproj, note pyproj don't use same projection data files as
+        gdal, see documents).
 
         If `geo_input` already contains a bundled SRID (eg: EWKT) then `srid`
-        parameter is always ignored.
+        parameter is ignored.
 
-        Idea copied from `django.contrib.geo.geos.geometry.__init__()`
+        `copy` means coordinates are copied from GeoJson input to the created
+        geometry instead of using a coordinates value proxy.  Don't copy
+        coordinates means fast creation but can cause problems when doing
+        geometry operations.
 
         NOTE: This is not really python3 compatible...
         """
         assert isinstance(srid, int)
         assert srid != 0  # we don't support undefined coordinate system
+
         factories = [create_geometry_from_geometry,
                      create_geometry_from_geojson,
                      create_geometry_from_wkt,
@@ -68,7 +78,7 @@ class Geometry(object):
         for factory in factories:
             # find a suitable factory for given input
             try:
-                geometry, bundled_srid = factory(geo_input)
+                geometry, bundled_srid = factory(geo_input, copy=copy)
             except NotMyType:
                 continue
 
@@ -119,6 +129,7 @@ JSON_REGEX = re.compile(r'^(\s+)?\{[\s\w,\[\]\{\}\-\."\':]+\}(\s+)?$')
 # Geometry factory methods for each format, returns a (geometry, srid) tuple
 #
 class NotMyType(RuntimeError):
+    """Exception thrown when factory methods don't recognize the input"""
     pass
 
 
@@ -159,12 +170,11 @@ def create_geometry_from_geojson(geo_input, copy=False):
 
 
 def create_geometrycollection_from_geojson(geometry, buf=None):
-    """ shapley don't support create GeometryCollection from python geo
+    """shapley don't support create GeometryCollection from python geo
     interface, only from a GEOS Geometry is available, so we convert the
     collection object to WKT and load into shapely again.
     """
-    # TODO: Check whether this is fixed in shapely (current version is 1.4.0)
-
+    # XXX: https://github.com/Toblerity/Shapely/issues/115
     if buf is None:
         is_top = True
         buf = io.BytesIO()
@@ -189,7 +199,7 @@ def create_geometrycollection_from_geojson(geometry, buf=None):
         return shapely.wkt.loads(wkt)
 
 
-def create_geometry_from_wkt(geo_input):
+def create_geometry_from_wkt(geo_input, copy):
     wkt_m = WKT_REGEX.match(geo_input)
     if not wkt_m:
         raise NotMyType('WKT')
@@ -211,7 +221,7 @@ def create_geometry_from_wkt(geo_input):
     return geometry, srid
 
 
-def create_geometry_from_wkb(geo_input):
+def create_geometry_from_wkb(geo_input, copy):
     if isinstance(geo_input, (str, unicode)):
         if HEX_REGEX.match(geo_input):
             # HEX WKB
@@ -232,9 +242,12 @@ def create_geometry_from_wkb(geo_input):
     return geometry, None
 
 
-def create_geometry_from_geometry(geo_input):
+def create_geometry_from_geometry(geo_input, copy=False):
     if isinstance(geo_input, shapely.geometry.base.BaseGeometry):
-        return geo_input, None
+        if copy:
+            return geo_input, None
+        else:
+            return shapely.geometry.shape(geo_input), None
     else:
         raise NotMyType('Shapely Geometry')
 

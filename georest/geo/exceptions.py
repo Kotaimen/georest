@@ -55,3 +55,6 @@ class InvalidGeoJsonInput(InvalidGeometry):
 class InvalidSpatialReference(GeoException):
     HTTP_STATUS_CODE = 400
 
+
+class CoordinateTransformationError(GeoException):
+    HTTP_STATUS_CODE = 500
