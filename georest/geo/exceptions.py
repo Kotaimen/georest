@@ -48,7 +48,7 @@ class InvalidProperty(GeoException):
     HTTP_STATUS_CODE = 400
 
 
-class InvalidGeoJsonInput(InvalidGeometry):
+class InvalidGeoJsonInput(GeoException):
     HTTP_STATUS_CODE = 400
 
 

@@ -10,19 +10,19 @@ __date__ = '5/29/14'
 
 """
 
-import collections
-import pyproj
 import shapely.geometry.base
-import geojson
-import ujson
+import geojson.base
+import ujson as json
 
 from .key import Key
-from .geometry import SpatialReference, Geometry
+from .geometry import Geometry
+from .spatialref import SpatialReference
 from .metadata import Metadata
+from .exceptions import InvalidFeature, InvalidProperties, InvalidGeoJsonInput
 
 
 class Feature(object):
-    """ A Geometry with optional properties and SRS."""
+    """ A Geo Feature with optional properties and SRS."""
 
     def __init__(self, key, geometry, crs, properties, metadata):
         assert isinstance(key, Key)
@@ -58,25 +58,65 @@ class Feature(object):
 
     @property
     def __geo_interface__(self):
-        obj = dict(type='Feature',
-                   geometry=self._geometry,
-                   properties=self._properties,
-                   crs=self._crs.geojson,
-                   id=self._key)
-        obj.update(self._metadata)
-        return obj
+        return dict(type='Feature',
+                    geometry=shapely.geometry.mapping(self._geometry),
+                    properties=self._properties,
+                    crs=self._crs.geojson,
+                    id=self._key)
 
     @property
     def geojson(self):
-        return ujson.dumps(self.__geo_interface__)
-
-
-    @staticmethod
-    def build_from_geometry(geoinput, key=None, srid=4326):
-        raise NotImplementedError
+        return json.dumps(self.__geo_interface__)
 
     @staticmethod
-    def build_from_geojson(geoinput, key=None, srid=4326):
-        raise NotImplementedError
+    def make_from_geometry(geo_input, key=None, srid=4326, properties=None):
+        geometry = Geometry.make_geometry(geo_input, srid=srid)
+        metadata = Metadata.make_metadata(geometry=geometry)
 
+        if key is None:
+            key = Key.make_key()
+
+        if properties is None:
+            properties = dict()
+
+        crs = geometry._crs
+        assert crs is not None
+
+        return Feature(key, geometry, crs, properties, metadata)
+
+    @staticmethod
+    def make_from_geojson(geo_input, key=None, srid=4326):
+        if isinstance(geo_input, (str, unicode)):
+            try:
+                literal = json.loads(geo_input)
+            except (KeyError, ValueError) as e:
+                raise InvalidGeoJsonInput(e)
+        elif isinstance(geo_input, dict):
+            literal = geo_input
+
+        try:
+            geojson_feature = geojson.base.GeoJSON.to_instance(literal)
+        except (TypeError, ValueError) as e:
+            raise InvalidFeature(message="Invalid feature", e=e)
+
+        geometry = Geometry.make_geometry(geojson_feature['geometry'],
+                                          srid=srid)
+        metadata = Metadata.make_metadata(geometry=geometry)
+
+        if key is None:
+            key = Key.make_key()
+
+        crs = geometry._crs
+        assert crs is not None
+
+        return Feature(key, geometry, crs,
+                       geojson_feature['properties'], metadata)
+
+    def __repr__(self):
+        feature = self.__geo_interface__
+        feature.update(self.metadata)
+        return json.dumps(feature)
+
+    def __hash__(self):
+        return hash(self._key)
 

@@ -9,7 +9,8 @@ import geojson
 import shapely.geometry
 
 from georest.geo.spatialref import SpatialReference, CoordinateTransform
-from georest.geo.exceptions import InvalidSpatialReference
+from georest.geo.exceptions import InvalidSpatialReference, \
+    CoordinateTransformationError
 from georest.geo.geometry import Geometry
 
 from tests.geo.data import jsondata
@@ -26,6 +27,14 @@ class TestSpatialReference(unittest.TestCase):
 
     def test_create_fail(self):
         self.assertRaises(InvalidSpatialReference, SpatialReference, 12345)
+
+    def test_tojson(self):
+        crs1 = SpatialReference(4326)
+        self.assertDictEqual(crs1.geojson,
+                             {'type': 'name',
+                              'properties': {
+                                  'name': 'EPSG:4326'
+                              }})
 
 
 class TestCoordianteTransform(unittest.TestCase):
@@ -50,12 +59,14 @@ class TestCoordianteTransform(unittest.TestCase):
         backward = CoordinateTransform(crs2, crs1)
 
         for k, v in jsondata.iteritems():
-            if k == 'geometrycollection':
-                continue
             geom1 = Geometry.make_geometry(v, copy=True)
-            geom2 = forward(geom1)
-            geom3 = backward(geom2)
-            self.assertTrue(geom1.almost_equals(geom3))
+            if k == 'geometrycollection':
+                self.assertRaises(CoordinateTransformationError, forward, geom1)
+            else:
+
+                geom2 = forward(geom1)
+                geom3 = backward(geom2)
+                self.assertTrue(geom1.almost_equals(geom3))
 
 
 if __name__ == '__main__':

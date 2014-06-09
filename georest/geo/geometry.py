@@ -24,7 +24,7 @@ import shapely.wkb
 import geojson
 import geojson.base
 import geojson.mapping
-import ujson
+import ujson as json
 
 from .exceptions import InvalidGeometry, InvalidGeoJsonInput
 from .spatialref import SpatialReference
@@ -71,6 +71,7 @@ class Geometry(object):
         assert srid != 0  # we don't support undefined coordinate system
 
         factories = [create_geometry_from_geometry,
+                     create_geometry_from_literal,
                      create_geometry_from_geojson,
                      create_geometry_from_wkt,
                      create_geometry_from_wkb, ]
@@ -105,7 +106,7 @@ class Geometry(object):
 
     @staticmethod
     def export_geojson(geometry):
-        return ujson.dumps(geojson.mapping.to_mapping(geometry))
+        return json.dumps(geojson.mapping.to_mapping(geometry))
 
 
 #
@@ -139,14 +140,24 @@ def create_geometry_from_geojson(geo_input, copy=False):
 
     try:
         # load json first
-        literal = ujson.loads(geo_input)
+        literal = json.loads(geo_input)
     except (TypeError, ValueError) as e:
         raise InvalidGeoJsonInput(message="Can't decode json input", e=e)
+
+    return create_geometry_from_literal(literal, copy=copy)
+
+
+def create_geometry_from_literal(geo_input, copy=False):
+    if not isinstance(geo_input, dict):
+        raise NotMyType
+    if 'type' not in geo_input:
+        raise NotMyType
+
     try:
         # geojson validation
-        geojson_geometry = geojson.base.GeoJSON.to_instance(literal)
+        geojson_geometry = geojson.base.GeoJSON.to_instance(geo_input)
     except (TypeError, ValueError) as e:
-        raise InvalidGeoJsonInput(message="Invalid GeoJson geometry", e=e)
+        raise InvalidGeometry(message="Invalid GeoJson geometry", e=e)
 
     try:
         if geojson_geometry['type'] != 'GeometryCollection':
