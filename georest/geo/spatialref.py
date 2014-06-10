@@ -11,6 +11,7 @@ __date__ = '6/5/14'
 """
 
 import functools
+import re
 
 import pyproj
 import shapely.ops
@@ -23,10 +24,6 @@ class SpatialReference(object):
 
     In case we replace pyproj to use osgeo.osr.SpatialReference, but not
     simulating osgeo.osr.SpatialReference's mighty interface here....
-
-    Pyproj sucks... but apparently it doesn't require GDAL, and directly
-    supports shapely's transform interface without convert to geometry to
-    osgro.ogr.OGRGeometry.
     """
 
     def __init__(self, srid=0):
@@ -55,8 +52,34 @@ class SpatialReference(object):
                         'name': 'EPSG:%d' % self._srid
                     }}
 
+    @staticmethod
+    def build_from_geojson_crs(crs):
+        if crs is None:
+            return None
+
+        if not isinstance(crs, dict):
+            raise InvalidSpatialReference('Not a valid GeoJSON CRS')
+
+        try:
+            if crs['type'] != 'name':
+                raise InvalidSpatialReference(
+                    message='Only supports named CRS')
+            match = re.match(r'^EPSG:(?P<srid>\d+)$',
+                             crs['properties']['name'],
+                             re.I)
+        except KeyError:
+            raise InvalidSpatialReference('Not a valid GeoJSON CRS')
+
+        if match:
+            return SpatialReference(srid=int(match.group('srid')))
+        else:
+            raise InvalidSpatialReference('Only supports EPSG:SRID')
+
     def equals(self, other):
         return self._srid == other._srid
+
+    def __str__(self):
+        return 'SpatialReference(srid=%d)' % self._srid
 
 
 class CoordinateTransform(object):
@@ -70,7 +93,7 @@ class CoordinateTransform(object):
 
     def __call__(self, geometry):
         if geometry.geom_type == 'GeometryCollection':
-            # XXX shapely don't support transform GeometryCollection"
+            # XXX shapely don't support transform GeometryCollection
             raise CoordinateTransformationError(
                 message='GeometryCollection is not supported')
         try:

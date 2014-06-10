@@ -12,7 +12,13 @@ import shapely
 import shapely.geometry
 import shapely.wkt
 import shapely.ops
+import shapely.speedups
 import pyproj
+
+
+class TestShapelySpeedups(unittest.TestCase):
+    def test_speedups_enabled(self):
+        self.assertTrue(shapely.speedups.available)
 
 
 class TestGeometryCreation(unittest.TestCase):

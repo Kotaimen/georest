@@ -67,7 +67,7 @@ class Metadata(dict):
     GEOHASH_PRECISION = 12
 
     @staticmethod
-    def make_metadata(created=None, modified=None, etag=None,
+    def build_metadata(created=None, modified=None, etag=None,
                       geohash=None, bbox=None, geometry=None):
         if created is None:
             created = time.time()

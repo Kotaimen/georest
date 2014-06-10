@@ -17,7 +17,7 @@ from tests.geo.data import jsondata
 
 
 class TestSpatialReference(unittest.TestCase):
-    def test_create_spatialref(self):
+    def test_build_spatialref(self):
         crs1 = SpatialReference(4326)
         self.assertEqual(crs1.srid, 4326)
         self.assertTrue(crs1.proj.is_latlong())
@@ -25,10 +25,10 @@ class TestSpatialReference(unittest.TestCase):
         self.assertEqual(crs2.srid, 3857)
         self.assertFalse(crs2.proj.is_latlong())
 
-    def test_create_fail(self):
+    def test_build_failure(self):
         self.assertRaises(InvalidSpatialReference, SpatialReference, 12345)
 
-    def test_tojson(self):
+    def test_to_json(self):
         crs1 = SpatialReference(4326)
         self.assertDictEqual(crs1.geojson,
                              {'type': 'name',
@@ -36,8 +36,33 @@ class TestSpatialReference(unittest.TestCase):
                                   'name': 'EPSG:4326'
                               }})
 
+    def test_from_json(self):
+        self.assertEqual(
+            SpatialReference.build_from_geojson_crs({
+                'type': 'name',
+                'properties': {
+                    'name': 'EPSG:3857'
+                }}).srid,
+            3857)
+        self.assertRaises(InvalidSpatialReference,
+                          SpatialReference.build_from_geojson_crs,
+                          {
+                              'type': 'blah',
+                              'properties': {
+                                  'name': 'EPSG:3857'
+                              }
+                          })
+        self.assertRaises(InvalidSpatialReference,
+                          SpatialReference.build_from_geojson_crs,
+                          {
+                              'type': 'blah',
+                              'properties': {
+                                  'name': 'EPSG:123XXX'
+                              }
+                          })
 
-class TestCoordianteTransform(unittest.TestCase):
+
+class TestCoordinateTransform(unittest.TestCase):
     def test_transform(self):
         geom1 = shapely.geometry.Point(1, 1)
         crs1 = SpatialReference(4326)
@@ -59,7 +84,7 @@ class TestCoordianteTransform(unittest.TestCase):
         backward = CoordinateTransform(crs2, crs1)
 
         for k, v in jsondata.iteritems():
-            geom1 = Geometry.make_geometry(v, copy=True)
+            geom1 = Geometry.build_geometry(v, copy=True)
             if k == 'geometrycollection':
                 self.assertRaises(CoordinateTransformationError, forward, geom1)
             else:

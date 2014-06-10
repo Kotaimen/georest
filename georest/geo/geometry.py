@@ -29,8 +29,6 @@ import ujson as json
 from .exceptions import InvalidGeometry, InvalidGeoJsonInput
 from .spatialref import SpatialReference
 
-shapely.speedups.enable()
-
 
 class Geometry(object):
     """Just a namespace containing static methods"""
@@ -39,7 +37,7 @@ class Geometry(object):
         raise NotImplementedError
 
     @staticmethod
-    def make_geometry(geo_input, srid=4326, copy=False):
+    def build_geometry(geo_input, srid=4326, copy=False):
         """Make a shapely Geometry object from given geometry input and srid
 
         `geo_input` can be one of the following format:
@@ -50,6 +48,7 @@ class Geometry(object):
         - byte, buffer
             - WKB
         - A subclass of shapely.geometry.base.BaseGeometry
+        - A dict satisfies python geo interface
 
         `srid` specifies spatial reference in EPSG, a `SpatialReference` object
         will be created and assign to `_crs` member of the created geometry
@@ -70,6 +69,7 @@ class Geometry(object):
         assert isinstance(srid, int)
         assert srid != 0  # we don't support undefined coordinate system
 
+        # factory methods, ordered by attempt priority
         factories = [create_geometry_from_geometry,
                      create_geometry_from_literal,
                      create_geometry_from_geojson,
@@ -82,20 +82,24 @@ class Geometry(object):
                 geometry, bundled_srid = factory(geo_input, copy=copy)
             except NotMyType:
                 continue
+            try:
+                if not geometry.is_valid:
+                    reason = shapely.validation.explain_validity(geometry)
+                    raise InvalidGeometry(
+                        'Invalid geometry is not allowed: %s' % reason)
+            except Exception as e:
+                # delayed asShape geometry build causes error only surfaces
+                # when we read the geometry
+                raise InvalidGeometry('Invalid coordinates', e=e)
 
             if geometry.is_empty:
                 raise InvalidGeometry('Empty geometry is not allowed')
-
-            if not geometry.is_valid:
-                reason = shapely.validation.explain_validity(geometry)
-                raise InvalidGeometry(
-                    'Invalid geometry is not allowed: %s' % reason)
 
             # bundled srid always overwrites provided one
             if bundled_srid is not None:
                 srid = bundled_srid
 
-            # assign new
+            # assign new crs only if geometry don't have one
             if geometry._crs is None:
                 geometry._crs = SpatialReference(srid=srid)
 
@@ -142,7 +146,7 @@ def create_geometry_from_geojson(geo_input, copy=False):
         # load json first
         literal = json.loads(geo_input)
     except (TypeError, ValueError) as e:
-        raise InvalidGeoJsonInput(message="Can't decode json input", e=e)
+        raise InvalidGeoJsonInput("Can't decode json input", e=e)
 
     return create_geometry_from_literal(literal, copy=copy)
 
@@ -157,7 +161,7 @@ def create_geometry_from_literal(geo_input, copy=False):
         # geojson validation
         geojson_geometry = geojson.base.GeoJSON.to_instance(geo_input)
     except (TypeError, ValueError) as e:
-        raise InvalidGeometry(message="Invalid GeoJson geometry", e=e)
+        raise InvalidGeometry("Invalid GeoJson geometry", e=e)
 
     try:
         if geojson_geometry['type'] != 'GeometryCollection':
@@ -255,10 +259,16 @@ def create_geometry_from_wkb(geo_input, copy):
 
 def create_geometry_from_geometry(geo_input, copy=False):
     if isinstance(geo_input, shapely.geometry.base.BaseGeometry):
-        if copy:
-            return geo_input, None
+        # check whether geometry already has a crs
+        if geo_input._crs is not None:
+            bundled_srid = geo_input._crs
         else:
-            return shapely.geometry.shape(geo_input), None
+            bundled_srid = None
+
+        if not copy:
+            return geo_input, bundled_srid
+        else:
+            return shapely.geometry.shape(geo_input), bundled_srid
     else:
         raise NotMyType('Shapely Geometry')
 

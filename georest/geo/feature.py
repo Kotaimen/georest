@@ -13,12 +13,14 @@ __date__ = '5/29/14'
 import shapely.geometry.base
 import geojson.base
 import ujson as json
+import copy
 
 from .key import Key
 from .geometry import Geometry
 from .spatialref import SpatialReference
 from .metadata import Metadata
-from .exceptions import InvalidFeature, InvalidProperties, InvalidGeoJsonInput
+from .exceptions import InvalidFeature, InvalidGeometry, InvalidGeoJsonInput, \
+    InvalidProperties
 
 
 class Feature(object):
@@ -68,10 +70,32 @@ class Feature(object):
     def geojson(self):
         return json.dumps(self.__geo_interface__)
 
+    def equals(self, other):
+        assert isinstance(other, Feature)
+        return self._geometry.equals(other._geometry) and \
+               self._crs.equals(other._crs) and \
+               self._properties == other._properties
+
+    def almost_equals(self, other):
+        return self._geometry.almost_equals(other._geometry) and \
+               self._crs.equals(other._crs) and \
+               self._properties == other._properties
+
+    def duplicate(self):
+        srid = self._crs.srid
+        geometry = Geometry.build_geometry(self._geometry,
+                                           srid=srid,
+                                           copy=True)
+        properties = copy.deepcopy(self._properties)
+
+        return Feature.build_from_geometry(geometry,
+                                           key=self._key,
+                                           properties=properties)
+
     @staticmethod
-    def make_from_geometry(geo_input, key=None, srid=4326, properties=None):
-        geometry = Geometry.make_geometry(geo_input, srid=srid)
-        metadata = Metadata.make_metadata(geometry=geometry)
+    def build_from_geometry(geo_input, key=None, srid=4326, properties=None):
+        geometry = Geometry.build_geometry(geo_input, srid=srid)
+        metadata = Metadata.build_metadata(geometry=geometry)
 
         if key is None:
             key = Key.make_key()
@@ -85,38 +109,67 @@ class Feature(object):
         return Feature(key, geometry, crs, properties, metadata)
 
     @staticmethod
-    def make_from_geojson(geo_input, key=None, srid=4326):
+    def build_from_geojson(geo_input, key=None, srid=4326):
+        # load json as python literal if necessary
         if isinstance(geo_input, (str, unicode)):
             try:
                 literal = json.loads(geo_input)
             except (KeyError, ValueError) as e:
-                raise InvalidGeoJsonInput(e)
+                raise InvalidGeoJsonInput(e=e)
         elif isinstance(geo_input, dict):
             literal = geo_input
+        else:
+            raise InvalidGeoJsonInput('Not a GeoJson or a literal object')
 
+        # basic feature structural check
+        try:
+            if literal['type'] != 'Feature':
+                raise InvalidGeoJsonInput('Not a GeoFeature object')
+        except KeyError as e:
+            raise InvalidGeoJsonInput(e=e)
+        if 'geometry' not in literal:
+            raise InvalidGeoJsonInput('No geometry in the feature')
+
+        # load crs from geojson first
+        if 'crs' in literal and literal['crs']:
+            crs = SpatialReference.build_from_geojson_crs(literal['crs'])
+            srid = crs.srid
+        else:
+            crs = SpatialReference(srid)
+
+        # build geojson feature object
         try:
             geojson_feature = geojson.base.GeoJSON.to_instance(literal)
         except (TypeError, ValueError) as e:
-            raise InvalidFeature(message="Invalid feature", e=e)
+            raise InvalidFeature(e=e)
 
-        geometry = Geometry.make_geometry(geojson_feature['geometry'],
-                                          srid=srid)
-        metadata = Metadata.make_metadata(geometry=geometry)
+        if geojson_feature['geometry'] is None:
+            raise InvalidGeometry('Invalid geometry')
+
+        if geojson_feature['properties'] is None:
+            properties = dict()
+        else:
+            properties = geojson_feature['properties']
+
+        # assemble the Feature
+        geometry = Geometry.build_geometry(geojson_feature['geometry'],
+                                           srid=srid)
+        metadata = Metadata.build_metadata(geometry=geometry)
 
         if key is None:
             key = Key.make_key()
 
-        crs = geometry._crs
-        assert crs is not None
-
         return Feature(key, geometry, crs,
-                       geojson_feature['properties'], metadata)
+                       properties, metadata)
 
     def __repr__(self):
         feature = self.__geo_interface__
         feature.update(self.metadata)
-        return json.dumps(feature)
+        return 'Feature(%s)' % json.dumps(feature)
 
     def __hash__(self):
         return hash(self._key)
 
+    def __reduce__(self):
+        # XXX: pickle
+        raise NotImplementedError
