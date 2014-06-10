@@ -1,5 +1,7 @@
 # -*- encoding: utf-8 -*-
 
+__author__ = 'pp'
+
 """
     georest.view
     ~~~~~~~~~~~~~
@@ -16,6 +18,6 @@ from georest import __version__
 
 class Describe(MethodView):
     def get(self):
-        return jsonify({
-            'version': __version__,
-        })
+        return jsonify(
+            version=__version__,
+        )
