@@ -56,6 +56,7 @@ class Model(object):
 
     def create(self, obj, namespace=None):
         """
+        :arg namespace: storage namespace
         :returns: key, metadata
         :raises ModelInvalidData: invalid obj
         """
@@ -63,6 +64,9 @@ class Model(object):
 
     def put(self, obj, key, namespace=None, etag=None):
         """
+        :arg key: storage key
+        :arg namespace: storage namespace
+        :arg etag: check etag consistency if provided
         :returns: metadata
         :raises ModelInvalidData: invalid obj
         :raises ModelKeyExists: etag error
@@ -71,6 +75,8 @@ class Model(object):
 
     def get(self, key, namespace=None):
         """
+        :arg key: storage key
+        :arg namespace: storage namespace
         :returns: obj, metadata
         :raises ModelNotFound: no such obj
         """
