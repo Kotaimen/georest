@@ -29,8 +29,12 @@ class SpatialReference(object):
     def __init__(self, srid=0):
         assert isinstance(srid, int)
         self._srid = srid
+        self._proj = self._make_proj(srid)
+
+    @staticmethod
+    def _make_proj(srid):
         try:
-            self._proj = pyproj.Proj(init='EPSG:%d' % self._srid)
+            return pyproj.Proj(init='EPSG:%d' % srid)
         except RuntimeError as e:
             raise InvalidSpatialReference(e=e)
 
@@ -80,6 +84,14 @@ class SpatialReference(object):
 
     def __str__(self):
         return 'SpatialReference(srid=%d)' % self._srid
+
+    def __getstate__(self):
+        return self._srid
+
+    def __setstate__(self, state):
+        srid = state
+        self._srid = srid
+        self._proj = self._make_proj(srid)
 
 
 class CoordinateTransform(object):

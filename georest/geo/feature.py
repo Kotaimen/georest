@@ -170,6 +170,15 @@ class Feature(object):
     def __hash__(self):
         return hash(self._key)
 
-    def __reduce__(self):
-        # XXX: pickle
-        raise NotImplementedError
+    def __getstate__(self):
+        return (self._key, self._geometry.wkb, self._crs,
+                self._properties, self._metadata)
+
+    def __setstate__(self, state):
+        key, wkb, crs, properties, metadata = state
+        geometry = Geometry.build_geometry(wkb, srid=crs.srid)
+        self._key = key
+        self._geometry = geometry
+        self._crs = crs
+        self._properties = properties
+        self._metadata = metadata
