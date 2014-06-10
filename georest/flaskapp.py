@@ -18,8 +18,8 @@ from flask.ext.markdown import Markdown
 
 from . import default_settings
 
-from .model import build_model
-from .store import build_store
+# from .model import build_model
+# from .store import build_store
 
 from .restapi import GeoRestApi
 
@@ -51,8 +51,8 @@ class GeoRestApp(Flask):
                                          **kwargs)
         self.load_config(settings)
 
-        self.store = self.create_store()
-        self.model = self.create_model()
+        # self.store = self.create_store()
+        # self.model = self.create_model()
 
         self.init_plugins()
         self.init_views()
@@ -67,12 +67,12 @@ class GeoRestApp(Flask):
             # Load setting from instance config
             self.config.from_pyfile(settings, silent=True)
 
-    def create_store(self):
-        return build_store(**self.config['GEOREST_GEOSTORE_CONFIG'])
-
-    def create_model(self):
-        return build_model(store=self.store,
-                           **self.config['GEOREST_GEOMODEL_CONFIG'])
+    # def create_store(self):
+    #     return build_store(**self.config['GEOREST_GEOSTORE_CONFIG'])
+    #
+    # def create_model(self):
+    #     return build_model(store=self.store,
+    #                        **self.config['GEOREST_GEOMODEL_CONFIG'])
 
     def init_plugins(self):
         # Flask-Markdown
