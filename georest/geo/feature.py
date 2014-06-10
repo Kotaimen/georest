@@ -95,7 +95,7 @@ class Feature(object):
     @staticmethod
     def build_from_geometry(geo_input, key=None, srid=4326, properties=None):
         geometry = Geometry.build_geometry(geo_input, srid=srid)
-        metadata = Metadata.build_metadata(geometry=geometry)
+        metadata = Metadata.make_metadata(geometry=geometry)
 
         if key is None:
             key = Key.make_key()
@@ -154,7 +154,7 @@ class Feature(object):
         # assemble the Feature
         geometry = Geometry.build_geometry(geojson_feature['geometry'],
                                            srid=srid)
-        metadata = Metadata.build_metadata(geometry=geometry)
+        metadata = Metadata.make_metadata(geometry=geometry)
 
         if key is None:
             key = Key.make_key()

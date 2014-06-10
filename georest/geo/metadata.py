@@ -9,6 +9,7 @@ __date__ = '6/3/14'
     Metadata of a feature
 """
 
+import collections
 import time
 
 import geohash
@@ -17,78 +18,49 @@ import shapely.geometry.base
 from .spatialref import SpatialReference
 
 
-class Metadata(dict):
-    """ Metadata of a geometry feature """
+class Metadata(collections.namedtuple('Metadata',
+                                      '''created modified bbox geohash
+                                      cells''')):
+    """ Metadata of a geometry
 
-    def __init__(self, created, modified, etag, geohash, bbox):
-        super(Metadata, self).__init__(_created=created,
-                                       _modified=modified,
-                                       _etag=etag,
-                                       _geohash=geohash,
-                                       bbox=bbox)
+    - `created` `modified` float timestamp, time since epoch returned
+       by `time.time()`
+    - `geohash` geohash of the geometry used to do quick adhoc spatial search.
+      For point geometry, max precision is 12 chars, for other geometry, defined
+      by its bounding box.  Note geohash only works on geometry with lonlat
+      based coordinate reference systems.
+    - `bbox` bounding box of the geometry in (minx, miny, maxx, maxy)
+    - `cells` a list of integers describes S2CellID of the geometry, currently
+      not implemented.
+    """
 
-    @property
-    def created(self):
-        return self['_created']
-
-    @property
-    def modified(self):
-        return self['_modified']
-
-    @modified.setter
-    def modified(self, modified):
-        self['_modified'] = modified
-
-    @property
-    def etag(self):
-        return self['_etag']
-
-    @etag.setter
-    def etag(self, etag):
-        self['_etag'] = etag
-
-    @property
-    def geohash(self):
-        return self['_geohash']
-
-    @geohash.setter
-    def geohash(self, geohash):
-        self['_geohash'] = geohash
-
-    @property
-    def bbox(self):
-        return self['bbox']
-
-    @bbox.setter
-    def bbox(self, bbox):
-        self['bbox'] = bbox
-
-    # Precision geohash preserves
     GEOHASH_PRECISION = 12
 
     @staticmethod
-    def build_metadata(created=None, modified=None, etag=None,
-                      geohash=None, bbox=None, geometry=None):
+    def make_metadata(created=None, modified=None,
+                      geometry=None):
+
         if created is None:
             created = time.time()
 
         if modified is None:
             modified = time.time()
 
-        if geometry is not None:
-            assert bbox is None
+        bbox = calc_bbox(geometry)
 
-            bbox = calc_bbox(geometry)
+        geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
 
-            crs = geometry._crs
-            if crs is not None:
-                assert geohash is None
-                assert isinstance(crs, SpatialReference)
-                if crs.proj.is_latlong():
-                    # Geohash only supports lonlat coordinates
-                    geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
+        return Metadata(created, modified, bbox, geohash, [])
 
-        return Metadata(created, modified, etag, geohash, bbox)
+    def respawn(self, geometry=None):
+        modified = time.time()
+        bbox = calc_bbox(geometry)
+
+        geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
+
+        return self._replace(modified=modified,
+                             bbox=bbox,
+                             geohash=geohash)
 
 
 def calc_bbox(geom):
@@ -97,7 +69,7 @@ def calc_bbox(geom):
     return geom.bounds
 
 
-def calc_geohash(geom, precision=7):
+def calc_geohash(geom, precision=7, ignore_crs=False):
     """Calculate geohash of th geometry, mimics behaviour of postgis st_geohash
 
     `geom` must be a geometry with lonlat coordinates and `precision` is
@@ -106,6 +78,13 @@ def calc_geohash(geom, precision=7):
     assert isinstance(geom, shapely.geometry.base.BaseGeometry)
     if geom.is_empty:
         return ''
+
+    # only supports lonlat coordinates
+    if not ignore_crs:
+        crs = geom._crs
+        if crs is None or not crs.proj.is_latlong():
+            return ''
+
     assert isinstance(precision, int)
     assert precision > 1  # useless if precision is too short
 
@@ -131,3 +110,8 @@ def calc_geohash(geom, precision=7):
         return geohash.encode((top + bottom) / 2.,
                               (right + left) / 2.,
                               bounds_precision)
+
+
+def calc_cell_union(geom):
+    # not until we have implemented google.s2 extension
+    raise NotImplementedError
