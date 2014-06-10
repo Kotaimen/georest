@@ -20,6 +20,10 @@ class FeatureNotConsistent(DataSourceError):
     pass
 
 
+class FeatureDataSourceResult(object):
+    pass
+
+
 class FeatureDataSource(object):
     """Interface for Feature Data Source
 
@@ -27,7 +31,7 @@ class FeatureDataSource(object):
     which supports atomic and concurrent operations.
     """
 
-    def random_key(self, prefix='feature'):
+    def random_key(self):
         """Generate a unique random key
 
         :param str prefix: add prefix to the key
@@ -35,7 +39,7 @@ class FeatureDataSource(object):
         """
         raise NotImplementedError
 
-    def put_feature(self, key, feature, version=None):
+    def put_feature(self, feature, version=None):
         """Put the feature.
 
         Return the feature for the "key".
@@ -44,7 +48,6 @@ class FeatureDataSource(object):
         the latest version for the "key", which means the feature has not been
         modified since last get.
 
-        :param str key: key of the feature.
         :param `Feature` feature: the feature
         :param str version: version of the feature
         :rtype `Feature`
@@ -75,7 +78,7 @@ class FeatureDataSource(object):
         """
         raise NotImplementedError
 
-    def put_properties(self, key, properties, version=None):
+    def update_properties(self, key, properties, version=None):
         """Put the properties into the feature.
 
         Return the feature with new properties. Raise `FeatureNotFound` if not
@@ -99,7 +102,7 @@ class FeatureDataSource(object):
         """
         raise NotImplementedError
 
-    def put_geometry(self, key, geometry, version=None):
+    def update_geometry(self, key, geometry, version=None):
         """Put the geometry into the feature.
 
         :param str key: key of the feature
