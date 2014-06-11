@@ -13,4 +13,4 @@ __author__ = 'pp'
 from .base import Model
 from .feature import FeatureModel
 from .geometry import GeometryModel
-from .feature_prop import FeaturePropModel
+from .properties import FeaturePropModel
