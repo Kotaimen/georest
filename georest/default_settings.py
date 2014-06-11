@@ -8,16 +8,6 @@
 # Georest
 #
 
-EXPIRES = 10
-
-GEOREST_GEOSTORE_CONFIG = {
-    'type': 'memory'
-}
-
-GEOREST_GEOMODEL_CONFIG = {
-    'type': 'simple'
-}
-
 
 #
 # Flask-Markdown Plugin
