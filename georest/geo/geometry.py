@@ -261,7 +261,7 @@ def create_geometry_from_geometry(geo_input, copy=False):
     if isinstance(geo_input, shapely.geometry.base.BaseGeometry):
         # check whether geometry already has a crs
         if geo_input._crs is not None:
-            bundled_srid = geo_input._crs
+            bundled_srid = geo_input._crs.srid
         else:
             bundled_srid = None
 
