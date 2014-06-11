@@ -63,3 +63,30 @@ from .metadata import Metadata
 from .spatialref import SpatialReference
 from .geometry import Geometry
 from .feature import Feature
+
+
+def _describe():
+    import ujson
+    import shapely
+    import shapely.geos
+    import shapely.speedups
+    import shapely.geometry
+    import pyproj
+
+    return {
+        'json': 'ujson-%s' % ujson.__version__,
+        'geometry': 'shapely-%s' % shapely.__version__,
+        'geometry_engine': 'GEOS %s' % shapely.geos.geos_version_string,
+        'operation_speedups': shapely.speedups.available,
+        'proj': 'pyproj-%s' % pyproj.__version__,
+        'proj_data': '%s' % pyproj.pyproj_datadir,
+    }
+
+# cache the _describe call since data is static
+_description = _describe()
+del _describe
+
+
+def describe():
+    global _description
+    return _description
