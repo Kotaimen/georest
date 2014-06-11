@@ -11,14 +11,10 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-import platform
-
-from werkzeug.security import safe_join
-
 from flask import Flask, render_template, redirect, abort, jsonify
-from flask.ext.markdown import Markdown
 
-from . import default_settings, geo, __version__
+from . import default_settings
+from .restapi import GeoRestApi
 
 
 def render_markdown(md_file, title):
@@ -65,28 +61,9 @@ class GeoRestApp(Flask):
             self.config.from_pyfile(settings, silent=True)
 
     def init_plugins(self):
-        # Flask-Markdown
-        Markdown(self,
-                 extensions=self.config.get('MARKDOWN_EXTENSIONS'),
-                 extension_configs=self.config.get(
-                     'MARKDOWN_EXTENSION_CONFIGS'), )
+        api = GeoRestApi(self)
 
     def init_views(self):
         @self.route('/')
         def index():
             return redirect('/describe')
-
-
-        @self.route('/describe')
-        def describe():
-            return jsonify(
-                {
-                    'version': __version__,
-                    'platform': {'system': platform.platform(aliased=1),
-                                 'python': '%s-%s' % (
-                                     platform.python_implementation(),
-                                     platform.python_version()),
-                    },
-                    'engine': geo.describe(),
-                })
-

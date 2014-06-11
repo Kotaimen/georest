@@ -26,5 +26,5 @@ class GeoRestApi(object):
 
     def add_resources(self):
         """bind api urls to app"""
-        self.add_resource(view.Describe.as_view('describe'), '/describe',
+        self.add_resource(view.describe, '/describe',
                           endpoint='describe')
