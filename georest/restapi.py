@@ -7,11 +7,18 @@
     Rest API hub
 """
 
+import traceback
+
+import flask
+
+from georest import geo
 from georest import view
 from georest import model
 
+
 class GeoRestApi(object):
     """The API hub of georest"""
+
     def __init__(self, app):
         self.app = app
         self.init_models()
@@ -19,7 +26,7 @@ class GeoRestApi(object):
 
     def init_models(self):
         # XXX: the models are stored in app, this implies circular reference
-        #      but it's ... simple ...
+        # but it's ... simple ...
         self.app.feature_model = model.FeatureModel(self)
         self.app.feature_prop_model = model.FeaturePropModel(self)
         self.app.geometry_model = model.GeometryModel(self)
@@ -52,6 +59,20 @@ class GeoRestApi(object):
                           '/features/<long_key>/properties',
                           endpoint='properties')
 
+    def add_errorhandler(self):
+        self.app.errorhandler(geo.GeoException)(rest_error)
+
     @property
     def feature_storage(self):
         return self.app.feature_storage
+
+
+def rest_error(e):
+    code = getattr(e, 'HTTP_STATUS_CODE', 500)
+    response = flask.jsonify(dict(code=code,
+                                  message=str(e),
+                                  exception=e.__class__.__name__,
+                                  traceback=traceback.format_tb(e.tb)
+    ))
+    response.status = code
+    return response
