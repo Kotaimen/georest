@@ -24,10 +24,10 @@ import shapely.wkb
 import geojson
 import geojson.base
 import geojson.mapping
-import ujson as json
 
 from .exceptions import InvalidGeometry, InvalidGeoJsonInput
 from .spatialref import SpatialReference
+from .import jsonhelper as json
 
 
 class Geometry(object):

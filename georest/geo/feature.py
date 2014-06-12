@@ -12,8 +12,9 @@ __date__ = '5/29/14'
 
 import shapely.geometry.base
 import geojson.base
-import ujson as json
 import copy
+
+from .import jsonhelper as json
 
 from .key import Key
 from .geometry import Geometry
