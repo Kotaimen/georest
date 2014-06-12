@@ -12,15 +12,14 @@ __date__ = '6/3/14'
 from collections import namedtuple
 
 
-class FeatureDataSourceResult(
-    namedtuple('FeatureDataSourceResult', 'success feature version')):
+class FeatureStorageResult(namedtuple('Foo', 'success feature version')):
     pass
 
 
-class FeatureDataSource(object):
-    """Interface for Feature Data Source
+class FeatureStorage(object):
+    """Interface for Geo Feature Storage
 
-    A `FeatureDataSource` is a versioned, persistent storage for geo features,
+    A `FeatureStorage` is a versioned, persistent storage for geo features,
     which supports atomic and concurrent operations.
     """
 
