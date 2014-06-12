@@ -24,14 +24,6 @@ class FeatureDataSource(object):
     which supports atomic and concurrent operations.
     """
 
-    def random_key(self):
-        """Generate a unique random key
-
-        :param str prefix: add prefix to the key
-        :rtype: str
-        """
-        raise NotImplementedError
-
     def put_feature(self, feature, version=None):
         """Put the feature.
 
