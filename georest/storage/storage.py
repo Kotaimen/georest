@@ -34,7 +34,7 @@ class FeatureStorage(object):
 
         :param `Feature` feature: the feature
         :param str version: version of the feature
-        :rtype `Feature`
+        :rtype `FeatureStorageResult`
         """
         raise NotImplementedError
 
@@ -47,7 +47,7 @@ class FeatureStorage(object):
 
         :param str key: key of the feature
         :param str version: version of the feature
-        :rtype `Feature`
+        :rtype `FeatureStorageResult`
         """
         raise NotImplementedError
 
@@ -58,7 +58,7 @@ class FeatureStorage(object):
 
         :param str key: key of the feature
         :param str version: version of the feature
-        :rtype bool
+        :rtype FeatureStorageResult
         """
         raise NotImplementedError
 
@@ -71,7 +71,7 @@ class FeatureStorage(object):
         :param str key: key of the feature
         :param dict properties: properties of the feature
         :param str version: version of the feature
-        :rtype `Feature`
+        :rtype `FeatureStorageResult`
         """
         raise NotImplementedError
 
@@ -92,7 +92,7 @@ class FeatureStorage(object):
         :param str key: key of the feature
         :param `Geometry` geometry: geometry of the feature
         :param str version: version of the feature
-        :rtype `Feature`
+        :rtype `FeatureStorageResult`
         """
         raise NotImplementedError
 
