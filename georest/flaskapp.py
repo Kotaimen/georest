@@ -15,6 +15,7 @@ from flask import Flask, render_template, redirect, abort, jsonify
 
 from . import default_settings
 from .restapi import GeoRestApi
+from . import storage
 
 
 def render_markdown(md_file, title):
@@ -44,10 +45,9 @@ class GeoRestApp(Flask):
                                          **kwargs)
         self.load_config(settings)
 
-        # self.store = self.create_store()
-        # self.model = self.create_model()
-
-        self.init_plugins()
+        self.init_datasources()
+        # self.init_models()
+        self.init_api()
         self.init_views()
 
     def load_config(self, settings):
@@ -60,10 +60,17 @@ class GeoRestApp(Flask):
             # Load setting from instance config
             self.config.from_pyfile(settings, silent=True)
 
-    def init_plugins(self):
-        api = GeoRestApi(self)
+    def init_datasources(self):
+        self.feature_storage = storage.build_feature_storage()
+
+    # def init_models(self):
+    #     pass
 
     def init_views(self):
+        """initiate extra views"""
         @self.route('/')
         def index():
             return redirect('/describe')
+
+    def init_api(self):
+        api = GeoRestApi(self)  # avoid circular reference, dont store handler
