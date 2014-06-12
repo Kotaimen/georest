@@ -26,29 +26,15 @@ class Model(object):
     For now, this model is meant to be a thin-wrapper. All Exceptions are
     simply forwarded from georest.geo.exception and georest.store.exception
     """
-    def from_pod(self, pod):
-        """load obj from json-serializable python-old-data representation
+    def __init__(self, api):
+        self.api = api
 
-        :param primitive: primitive python obj
-        :returns: obj
-        :raises ModelInvalidData: invalid primitive
-        """
-        raise NotImplementedError
-
-    def from_json(self, serialized):
+    def from_json(self, s):
         """load obj from json representation
 
-        :param serialized: serialized obj
+        :param s: serialized obj
         :returns: obj
         :raises ModelInvalidData: invalid serialized
-        """
-        raise NotImplementedError
-
-    def as_pod(self, obj):
-        """json-serializable python object
-
-        :returns: literal-serialized obj
-        :raises ModelInvalidData: invalid obj
         """
         raise NotImplementedError
 
@@ -93,3 +79,10 @@ class Model(object):
 
     # def delete(self, key, namespace=None):
     #     raise NotImplementedError
+
+
+class FeatureStorageMixin(object):
+    """helper that have access to feature_storage"""
+    @property
+    def feature_storage(self):
+        return self.api.feature_storage
