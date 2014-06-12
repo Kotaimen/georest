@@ -40,11 +40,13 @@ def split_long_key(s):
 class StorageView(MethodView):
     """Basic view for handling georest.model persist operations
     """
-    def get(self, long_key):
+    def get(self, long_key=None):
+        if long_key is None:
+            flask.abort(404)
 
         bucket, key = split_long_key(long_key)
 
-        obj, metadata = self.model.get(self, key, bucket=bucket)
+        obj, metadata = self.model.get(key, bucket=bucket)
         data = self.model.as_json(obj)
 
         headers = {'Content-Type': 'application/json'}
@@ -73,7 +75,9 @@ class StorageView(MethodView):
         obj = self.model.from_json(data)
         return obj
 
-    def put(self, long_key):
+    def put(self, long_key=None):
+        if long_key is None:
+            flask.abort(404)
 
         bucket, key = split_long_key(long_key)
 
@@ -98,7 +102,10 @@ class StorageView(MethodView):
         response.headers.update(headers)
         return response
 
-    def post(self):
+    def post(self, long_key=None):
+        if not long_key is None:
+            flask.abort(404)
+
         bucket = request.args.get('bucket', None)
         if not check_namespace(bucket):
             raise InvalidRequest('bucket %s is invalid' % bucket)
@@ -117,3 +124,23 @@ class StorageView(MethodView):
         response = jsonify(code=201, key=long_key)
         response.headers.update(headers)
         return response
+
+
+class Features(StorageView):
+    @property
+    def model(self):
+        return current_app.feature_model
+
+
+class Geometry(StorageView):
+    @property
+    def model(self):
+        return current_app.geometry_model
+
+
+class Properties(StorageView):
+    post = None  # no create bare property
+
+    @property
+    def model(self):
+        return current_app.feature_prop_model
