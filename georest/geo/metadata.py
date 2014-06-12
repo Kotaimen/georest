@@ -29,7 +29,7 @@ class Metadata(collections.namedtuple('Metadata',
       For point geometry, max precision is 12 chars, for other geometry, defined
       by its bounding box.  Note geohash only works on geometry with lonlat
       based coordinate reference systems.
-    - `bbox` bounding box of the geometry in (minx, miny, maxx, maxy)
+    - `bbox` bounding box of the geometry as a list [minx, miny, maxx, maxy]
     - `cells` a list of integers describes S2CellID of the geometry, currently
       not implemented.
     """
@@ -66,7 +66,7 @@ class Metadata(collections.namedtuple('Metadata',
 def calc_bbox(geom):
     """Calculate bounding box of the geometry"""
     assert isinstance(geom, shapely.geometry.base.BaseGeometry)
-    return geom.bounds
+    return list(geom.bounds)
 
 
 def calc_geohash(geom, precision=7, ignore_crs=False):
