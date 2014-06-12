@@ -50,6 +50,11 @@ class Feature(object):
     def key(self):
         return self._key
 
+    @key.setter
+    def key(self, key):
+        assert isinstance(key, Key)
+        self._key = key
+
     @property
     def crs(self):
         return self._crs
@@ -57,6 +62,9 @@ class Feature(object):
     @property
     def metadata(self):
         return self._metadata
+
+    def refresh_metadata(self):
+        self._metadata = self._metadata.respawn(self._geometry)
 
     @property
     def __geo_interface__(self):
