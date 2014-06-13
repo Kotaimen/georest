@@ -4,6 +4,10 @@ __author__ = 'ray'
 __date__ = '6/12/14'
 
 from .storage import FeatureStorage, StorageResponse
+from .exceptions import (
+    StorageError, FeatureNotFound, ConflictVersion, InvalidFeature,
+    InvalidGeometry, InvalidProperties
+)
 from .pgstorage import PostgisFeatureStorage
 
 
