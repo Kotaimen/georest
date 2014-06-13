@@ -159,11 +159,11 @@ def benchmark_geojson_load(data, builder=shapely_geometry_builder):
     return features
 
 
-def benchmark_ujson_load(data):
+def benchmark_ujson_load(data, precise_float=False):
     features = list()
     tic = time.clock()
     for line in data.splitlines():
-        python_feature = ujson.loads(line)
+        python_feature = ujson.loads(line, precise_float=precise_float)
         geojson_feature = geojson.GeoJSON.to_instance(python_feature)
         feature = Feature(
             shapely_geometry_builder(geojson_feature.geometry, copy=False),
@@ -211,7 +211,11 @@ def main():
     # with open('geojson.txt', 'wb') as fp: fp.write(data)
 
     print 'Dump as GeoJson using ujson...',
-    data = benchmark_geojson_dump(all_features, writer=ujson.dump)
+    benchmark_geojson_dump(all_features, writer=ujson.dump)
+
+    print 'Dump as GeoJson using ujson (fixed double)...',
+    benchmark_geojson_dump(all_features, writer=functools.partial(ujson.dump,
+                                                                  double_precision=17))
 
     # NOTE: yajl crashes when writing to a stream, slower than ujson anyway
     # print 'Dump as GeoJson using yajl...',
@@ -229,6 +233,8 @@ def main():
                                                      copy=False))
     print 'Build Features from geojson using ujson ...',
     benchmark_ujson_load(data)
+    print 'Build Features from geojson using ujson (precise float) ...',
+    benchmark_ujson_load(data, precise_float=True)
 
 
 if __name__ == '__main__':

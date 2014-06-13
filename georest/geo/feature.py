@@ -14,7 +14,7 @@ import shapely.geometry.base
 import geojson.base
 import copy
 
-from .import jsonhelper as json
+from . import jsonhelper as json
 
 from .key import Key
 from .geometry import Geometry
@@ -77,7 +77,7 @@ class Feature(object):
 
     @property
     def geojson(self):
-        return json.dumps(self.__geo_interface__)
+        return json.dumps(self.__geo_interface__, double_precision=9)
 
     def equals(self, other):
         assert isinstance(other, Feature)
@@ -118,11 +118,11 @@ class Feature(object):
         return Feature(key, geometry, crs, properties, metadata)
 
     @staticmethod
-    def build_from_geojson(geo_input, key=None, srid=4326):
+    def build_from_geojson(geo_input, key=None, srid=4326, precise_float=True):
         # load json as python literal if necessary
         if isinstance(geo_input, (str, unicode)):
             try:
-                literal = json.loads(geo_input)
+                literal = json.loads(geo_input, precise_float=precise_float)
             except (KeyError, ValueError) as e:
                 raise InvalidGeoJsonInput(e=e)
         elif isinstance(geo_input, dict):
