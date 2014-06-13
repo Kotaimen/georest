@@ -45,7 +45,7 @@ class FeatureStorage(object):
         If version is provided, the feature of the specified version will
         be returned. Otherwise, it will be the top version of the feature.
 
-        :param str key: key of the feature
+        :param `Key` key: key of the feature
         :param str version: version of the feature
         :rtype `FeatureStorageResult`
         """
@@ -56,7 +56,7 @@ class FeatureStorage(object):
 
         Return True on success. It is not an error if "key" is not found.
 
-        :param str key: key of the feature
+        :param `Key` key: key of the feature
         :param str version: version of the feature
         :rtype FeatureStorageResult
         """
@@ -68,7 +68,7 @@ class FeatureStorage(object):
         Return the feature with new properties. Raise `FeatureNotFound` if not
         found.
 
-        :param str key: key of the feature
+        :param `Key` key: key of the feature
         :param dict properties: properties of the feature
         :param str version: version of the feature
         :rtype `FeatureStorageResult`
@@ -80,7 +80,7 @@ class FeatureStorage(object):
 
         Return the properties of the feature.
 
-        :param str key: key of the feature
+        :param `Key` key: key of the feature
         :param str version: version of the feature
         :rtype dict
         """
@@ -89,7 +89,7 @@ class FeatureStorage(object):
     def update_geometry(self, key, geometry, version=None):
         """Put the geometry into the feature.
 
-        :param str key: key of the feature
+        :param `Key` key: key of the feature
         :param `Geometry` geometry: geometry of the feature
         :param str version: version of the feature
         :rtype `FeatureStorageResult`
@@ -99,7 +99,7 @@ class FeatureStorage(object):
     def get_geometry(self, key, version=None):
         """Get the geometry of the feature.
 
-        :param str key: key of the feature
+        :param `Key` key: key of the feature
         :param str version: version of the feature
         :rtype `Geometry`
         """
