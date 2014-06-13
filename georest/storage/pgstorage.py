@@ -9,12 +9,13 @@ from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, ForeignKey, Sequence
 from sqlalchemy import BigInteger, String, DateTime
 from sqlalchemy.sql import select, func, bindparam, and_
+from sqlalchemy.pool import QueuePool
 from sqlalchemy.dialects.postgresql import JSON
 
 from ..geo import Key, Feature, SpatialReference, Geometry, Metadata
 
 from .exceptions import *
-from .storage import FeatureStorage, FeatureStorageResult
+from .storage import FeatureStorage, StorageResponse
 
 metadata = sqlalchemy.MetaData()
 
@@ -207,7 +208,8 @@ class PostgisFeatureStorage(FeatureStorage):
             'postgresql+psycopg2://%(username)s:%(password)s' \
             '@%(host)s:%(port)s/%(database)s' % conn_params
 
-        engine = create_engine(conn_string, echo=True)
+        engine = create_engine(conn_string, echo=True,
+                               poolclass=QueuePool, pool_size=10)
 
         if create_table:
             metadata.drop_all(bind=engine)
@@ -215,7 +217,7 @@ class PostgisFeatureStorage(FeatureStorage):
 
         self._db = engine
 
-    def put_feature(self, feature, version=None):
+    def put_feature(self, feature, revision=None, fetch=False):
         srid = feature.crs.srid
         if srid != 4326:
             raise InvalidFeature('srid=%s' % srid)
@@ -236,8 +238,8 @@ class PostgisFeatureStorage(FeatureStorage):
             if feature_entry:
                 top_version = feature_entry.top_version
 
-            if version and version != top_version:
-                raise VersionConflicted(version)
+            if revision and revision != top_version:
+                raise ConflictVersion(revision)
 
             properties_entry = proxy.insert_properties(mapper.properties)
             metadata_entry = proxy.insert_metadata(mapper.metadata)
@@ -258,7 +260,7 @@ class PostgisFeatureStorage(FeatureStorage):
                     version_entry.old_version
                 )
                 if feature_entry is None:
-                    raise ModificationConflicted()
+                    raise ConflictVersion()
             else:
                 feature_entry = proxy.insert_feature(
                     mapper.storage_key,
@@ -268,15 +270,15 @@ class PostgisFeatureStorage(FeatureStorage):
             if feature.key.name is None:
                 feature.key = Key.make_key(bucket=bucket, name=name)
 
-            result = FeatureStorageResult(
-                success=True,
-                feature=feature,
-                version=feature_entry.top_version
+            result = StorageResponse(
+                key=feature.key,
+                revision=feature_entry.top_version,
+                feature=feature if fetch else None
             )
 
             return result
 
-    def get_feature(self, key, version=None):
+    def get_feature(self, key, revision=None):
         with self._db.begin() as conn:
             proxy = _Proxy(conn)
 
@@ -284,17 +286,17 @@ class PostgisFeatureStorage(FeatureStorage):
 
             feature_entry = proxy.select_feature(storage_key)
             if feature_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
 
-            if version is None:
-                version = feature_entry.top_version
+            if revision is None:
+                revision = feature_entry.top_version
 
-            version_entry = proxy.select_version(version)
+            version_entry = proxy.select_version(revision)
             if version_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
 
             if version_entry.status == 'deleted':
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
 
             metadata_entry = proxy.select_metadata(version_entry.metadata_id)
             properties_entry = proxy.select_properties(
@@ -312,15 +314,15 @@ class PostgisFeatureStorage(FeatureStorage):
                 geometry=geometry,
             )
 
-            result = FeatureStorageResult(
-                success=True,
+            result = StorageResponse(
+                key=feature.key,
+                revision=revision,
                 feature=feature,
-                version=version
             )
 
             return result
 
-    def delete_feature(self, key, version=None):
+    def delete_feature(self, key, revision=None, fetch=False):
         with self._db.begin() as conn:
             proxy = _Proxy(conn)
 
@@ -328,10 +330,10 @@ class PostgisFeatureStorage(FeatureStorage):
 
             feature_entry = proxy.select_feature(storage_key)
             if feature_entry is None:
-                return FeatureStorageResult(success=True)
+                return StorageResponse(success=True)
 
-            if version and version != feature_entry.top_version:
-                raise VersionConflicted(version)
+            if revision and revision != feature_entry.top_version:
+                raise ConflictVersion(revision)
 
             old = proxy.select_version(feature_entry.top_version)
 
@@ -343,52 +345,10 @@ class PostgisFeatureStorage(FeatureStorage):
                                                  version_entry.new_version,
                                                  version_entry.old_version)
 
-            result = FeatureStorageResult(
-                success=True,
-                feature=None,
-                version=feature_entry.top_version
-            )
-            return result
-
-    def update_properties(self, key, properties, version=None):
-        with self._db.begin() as conn:
-            proxy = _Proxy(conn)
-
-            storage_key = self._make_storage_key(key.bucket, key.name)
-
-            feature_entry = proxy.select_feature(storage_key)
-            if feature_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
-
-            if version is None:
-                version = feature_entry.top_version
-
-            version_entry = proxy.select_version(version)
-            if version_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
-
-            if version_entry.status == 'deleted':
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
-
-            properties_entry = proxy.insert_properties(dict(properties))
             metadata_entry = proxy.select_metadata(version_entry.metadata_id)
+            properties_entry = proxy.select_properties(
+                version_entry.properties_id)
             geometry_entry = proxy.select_geometry(version_entry.geometry_id)
-
-            version_entry = proxy.insert_version(
-                version_entry.metadata_id,
-                properties_entry.id,
-                version_entry.geometry_id,
-                old_version=version,
-                status='available'
-            )
-
-            feature_entry = proxy.update_feature(
-                feature_entry.id,
-                version_entry.new_version,
-                version_entry.old_version
-            )
-            if feature_entry is None:
-                raise ModificationConflicted()
 
             crs = SpatialReference(srid=4326)
             geometry = Geometry.build_geometry(geometry_entry.geometry.data)
@@ -401,19 +361,14 @@ class PostgisFeatureStorage(FeatureStorage):
                 geometry=geometry,
             )
 
-            result = FeatureStorageResult(
-                success=True,
-                feature=feature,
-                version=feature_entry.top_version
+            result = StorageResponse(
+                key=feature.key,
+                revision=feature_entry.top_version,
+                feature=feature if fetch else None,
             )
-
             return result
 
-    def get_properties(self, key, version=None):
-        feature = self.get_feature(key, version).feature
-        return feature.properties
-
-    def update_geometry(self, key, geometry, version=None):
+    def update_properties(self, key, properties, revision=None, fetch=False):
         with self._db.begin() as conn:
             proxy = _Proxy(conn)
 
@@ -421,17 +376,77 @@ class PostgisFeatureStorage(FeatureStorage):
 
             feature_entry = proxy.select_feature(storage_key)
             if feature_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
 
-            if version is None:
-                version = feature_entry.top_version
+            if revision is None:
+                revision = feature_entry.top_version
 
-            version_entry = proxy.select_version(version)
+            version_entry = proxy.select_version(revision)
             if version_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
 
             if version_entry.status == 'deleted':
-                raise FeatureNotFound('key: %s, version: %s' % (key, version))
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
+
+            properties_entry = proxy.insert_properties(dict(properties))
+            metadata_entry = proxy.select_metadata(version_entry.metadata_id)
+            geometry_entry = proxy.select_geometry(version_entry.geometry_id)
+
+            version_entry = proxy.insert_version(
+                version_entry.metadata_id,
+                properties_entry.id,
+                version_entry.geometry_id,
+                old_version=revision,
+                status='available'
+            )
+
+            feature_entry = proxy.update_feature(
+                feature_entry.id,
+                version_entry.new_version,
+                version_entry.old_version
+            )
+            if feature_entry is None:
+                raise ConflictVersion()
+
+            crs = SpatialReference(srid=4326)
+            geometry = Geometry.build_geometry(geometry_entry.geometry.data)
+
+            feature = Feature(
+                key=key,
+                crs=crs,
+                metadata=Metadata(**metadata_entry.metadata),
+                properties=properties_entry.properties,
+                geometry=geometry,
+            )
+
+            result = StorageResponse(
+                key=feature.key,
+                revision=feature_entry.top_version,
+                feature=feature if fetch else None,
+            )
+
+            return result
+
+
+    def update_geometry(self, key, geometry, revision=None, fetch=False):
+        with self._db.begin() as conn:
+            proxy = _Proxy(conn)
+
+            storage_key = self._make_storage_key(key.bucket, key.name)
+
+            feature_entry = proxy.select_feature(storage_key)
+            if feature_entry is None:
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
+
+            if revision is None:
+                revision = feature_entry.top_version
+
+            version_entry = proxy.select_version(revision)
+            if version_entry is None:
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
+
+            if version_entry.status == 'deleted':
+                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
 
             properties_entry = proxy.select_properties(
                 version_entry.properties_id)
@@ -448,7 +463,7 @@ class PostgisFeatureStorage(FeatureStorage):
                 version_entry.metadata_id,
                 version_entry.properties_id,
                 geometry_entry.id,
-                old_version=version,
+                old_version=revision,
                 status='available'
             )
 
@@ -458,7 +473,7 @@ class PostgisFeatureStorage(FeatureStorage):
                 version_entry.old_version
             )
             if feature_entry is None:
-                raise ModificationConflicted()
+                raise ConflictVersion()
 
             crs = SpatialReference(srid=4326)
             geometry = Geometry.build_geometry(geometry_entry.geometry.data)
@@ -471,17 +486,13 @@ class PostgisFeatureStorage(FeatureStorage):
                 geometry=geometry,
             )
 
-            result = FeatureStorageResult(
-                success=True,
-                feature=feature,
-                version=feature_entry.top_version
+            result = StorageResponse(
+                key=feature.key,
+                revision=feature_entry.top_version,
+                feature=feature if fetch else None,
             )
 
             return result
-
-    def get_geometry(self, key, version=None):
-        feature = self.get_feature(key, version).feature
-        return feature.properties
 
     def _make_storage_key(self, bucket, name):
         return '%s.%s' % (bucket, name)

@@ -12,7 +12,7 @@ __date__ = '6/3/14'
 from collections import namedtuple
 
 
-class FeatureStorageResult(namedtuple('Foo', 'success feature version')):
+class StorageResponse(namedtuple('Foo', 'key revision feature')):
     pass
 
 
@@ -23,87 +23,81 @@ class FeatureStorage(object):
     which supports atomic and concurrent operations.
     """
 
-    def put_feature(self, feature, version=None):
+    def put_feature(self, feature, revision=None, fetch=False):
         """Put the feature.
 
-        Return the feature for the "key".
-        If version is not provided, a new version of the feature will be added.
-        Otherwise, the operation will success only if the version matches
-        the latest version for the "key", which means the feature has not been
-        modified since last get.
+        Return the key and revision of the feature
+        If revision is None, a new revision of the feature will be added.
+        Otherwise, a new feature will be added only if the feature has not
+        been modified since the revision. (the revision matches the latest one)
 
         :param `Feature` feature: the feature
-        :param str version: version of the feature
-        :rtype `FeatureStorageResult`
+        :param str revision: revision of the feature
+        :param bool fetch: output the feature in the result
+        :raise `ConflictVersion`
+        :rtype `StorageResponse`
         """
         raise NotImplementedError
 
-    def get_feature(self, key, version=None):
+    def get_feature(self, key, revision=None):
         """Get the feature.
 
         Return the feature for the "key". Raise `FeatureNotFound` if not found.
-        If version is provided, the feature of the specified version will
-        be returned. Otherwise, it will be the top version of the feature.
+        If revision is None, top version of the feature will be returned.
+        Otherwise, the feature of the specified revision will be returned.
 
         :param `Key` key: key of the feature
-        :param str version: version of the feature
-        :rtype `FeatureStorageResult`
+        :param str revision: revision of the feature
+        :raise `FeatureNotFound`
+        :rtype `StorageResponse`
         """
         raise NotImplementedError
 
-    def delete_feature(self, key, version=None):
+    def delete_feature(self, key, revision=None, fetch=False):
         """Remove the feature.
 
         Return True on success. It is not an error if "key" is not found.
+        If revision is None, top revision will be deleted. Otherwise, the
+        feature will be deleted only if the revision is the top revision
 
         :param `Key` key: key of the feature
-        :param str version: version of the feature
-        :rtype FeatureStorageResult
+        :param str revision: revision of the feature
+        :param bool fetch: output the deleted feature in the result
+        :raise `ConflictVersion`
+        :rtype `StorageResponse`
         """
         raise NotImplementedError
 
-    def update_properties(self, key, properties, version=None):
-        """Put the properties into the feature.
+    def update_properties(self, key, properties, revision=None, fetch=False):
+        """Update the properties of the feature.
 
-        Return the feature with new properties. Raise `FeatureNotFound` if not
-        found.
+        Return the new feature. Raise `FeatureNotFound` if not found.
 
         :param `Key` key: key of the feature
         :param dict properties: properties of the feature
-        :param str version: version of the feature
-        :rtype `FeatureStorageResult`
+        :param str revision: revision of the feature
+        :param bool fetch: output the feature in the result
+        :raise `FeatureNotFound`
+        :raise `ConflictVersion`
+        :rtype `StorageResponse`
         """
         raise NotImplementedError
 
-    def get_properties(self, key, version=None):
-        """Get the properties of the feature.
 
-        Return the properties of the feature.
+    def update_geometry(self, key, geometry, revision=None, fetch=False):
+        """Update the geometry of the feature.
 
-        :param `Key` key: key of the feature
-        :param str version: version of the feature
-        :rtype dict
-        """
-        raise NotImplementedError
-
-    def update_geometry(self, key, geometry, version=None):
-        """Put the geometry into the feature.
+        Return the new feature. Raise `FeatureNotFound` if not found.
 
         :param `Key` key: key of the feature
         :param `Geometry` geometry: geometry of the feature
-        :param str version: version of the feature
-        :rtype `FeatureStorageResult`
+        :param str revision: revision of the feature
+        :raise `FeatureNotFound`
+        :raise `ConflictVersion`
+        :rtype `StorageResponse`
         """
         raise NotImplementedError
 
-    def get_geometry(self, key, version=None):
-        """Get the geometry of the feature.
-
-        :param `Key` key: key of the feature
-        :param str version: version of the feature
-        :rtype `Geometry`
-        """
-        raise NotImplementedError
 
     def close(self):
         """Close the data source

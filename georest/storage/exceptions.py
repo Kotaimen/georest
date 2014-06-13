@@ -9,11 +9,16 @@ __date__ = '6/12/14'
     Geo Feature Storage Exceptions.
 """
 
+
 class StorageError(Exception):
     pass
 
 
 class FeatureNotFound(StorageError):
+    pass
+
+
+class ConflictVersion(StorageError):
     pass
 
 
@@ -28,10 +33,3 @@ class InvalidProperties(StorageError):
 class InvalidGeometry(StorageError):
     pass
 
-
-class VersionConflicted(StorageError):
-    pass
-
-
-class ModificationConflicted(StorageError):
-    pass

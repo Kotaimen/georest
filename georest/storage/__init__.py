@@ -3,7 +3,7 @@
 __author__ = 'ray'
 __date__ = '6/12/14'
 
-from .storage import FeatureStorage, FeatureStorageResult
+from .storage import FeatureStorage, StorageResponse
 from .pgstorage import PostgisFeatureStorage
 
 
