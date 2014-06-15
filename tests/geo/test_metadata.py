@@ -22,7 +22,7 @@ class TestMetadata(unittest.TestCase):
         self.assertIsNotNone(metadata.geohash)
         self.assertIsNotNone(metadata.bbox)
 
-        metadata2 = metadata.respawn(geometry=shapely.geometry.Point(1, 2))
+        metadata2 = metadata.spawn(geometry=shapely.geometry.Point(1, 2))
         self.assertNotEqual(metadata, metadata2)
 
 

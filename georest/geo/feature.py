@@ -10,12 +10,12 @@ __date__ = '5/29/14'
 
 """
 
-import shapely.geometry.base
-import geojson.base
 import copy
 
-from . import jsonhelper as json
+import shapely.geometry.base
+import geojson.base
 
+from . import jsonhelper as json
 from .key import Key
 from .geometry import Geometry
 from .spatialref import SpatialReference
@@ -65,19 +65,7 @@ class Feature(object):
         return self._metadata
 
     def refresh_metadata(self):
-        self._metadata = self._metadata.respawn(self._geometry)
-
-    @property
-    def __geo_interface__(self):
-        return dict(type='Feature',
-                    geometry=shapely.geometry.mapping(self._geometry),
-                    properties=self._properties,
-                    crs=self._crs.geojson,
-                    id=self._key)
-
-    @property
-    def geojson(self):
-        return json.dumps(self.__geo_interface__, double_precision=9)
+        self._metadata = self._metadata.spawn(self._geometry)
 
     def equals(self, other):
         assert isinstance(other, Feature)
@@ -101,8 +89,21 @@ class Feature(object):
                                            key=self._key,
                                            properties=properties)
 
-    @staticmethod
-    def build_from_geometry(geo_input, key=None, srid=4326, properties=None):
+    @property
+    def __geo_interface__(self):
+        return dict(type='Feature',
+                    geometry=shapely.geometry.mapping(self._geometry),
+                    properties=self._properties,
+                    crs=self._crs.geojson,
+                    id=self._key)
+
+    @property
+    def geojson(self):
+        return json.dumps(self.__geo_interface__, double_precision=7)
+
+    @classmethod
+    def build_from_geometry(cls, geo_input, key=None, srid=4326,
+                            properties=None):
         geometry = Geometry.build_geometry(geo_input, srid=srid)
         metadata = Metadata.make_metadata(geometry=geometry)
 
@@ -115,10 +116,11 @@ class Feature(object):
         crs = geometry._crs
         assert crs is not None
 
-        return Feature(key, geometry, crs, properties, metadata)
+        return cls(key, geometry, crs, properties, metadata)
 
-    @staticmethod
-    def build_from_geojson(geo_input, key=None, srid=4326, precise_float=True):
+    @classmethod
+    def build_from_geojson(cls, geo_input, key=None, srid=4326,
+                           precise_float=True):
         # load json as python literal if necessary
         if isinstance(geo_input, (str, unicode)):
             try:
@@ -168,8 +170,8 @@ class Feature(object):
         if key is None:
             key = Key.make_key()
 
-        return Feature(key, geometry, crs,
-                       properties, metadata)
+        return cls(key, geometry, crs,
+                   properties, metadata)
 
     def __repr__(self):
         feature = self.__geo_interface__

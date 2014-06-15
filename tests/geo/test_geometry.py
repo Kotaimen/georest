@@ -20,6 +20,8 @@ from tests.geo.data import jsondata, pydata
 
 class TestBuildGeometry(unittest.TestCase):
     def test_wkt(self):
+        self.assertRaises(NotImplementedError, Geometry)
+
         geom1 = Geometry.build_geometry('POINT(1 2)')
         self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
         self.assertTrue(geom1._crs.equals(SpatialReference(srid=4326)))
@@ -46,7 +48,8 @@ class TestBuildGeometry(unittest.TestCase):
         self.assertTrue(geom1._crs.equals(SpatialReference(srid=4326)))
 
         geom2 = Geometry.build_geometry(
-            b'\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@')
+            buffer(
+                '\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@'))
         self.assertTrue(geom2.equals(shapely.geometry.Point(1, 2)))
         self.assertTrue(geom2._crs.equals(SpatialReference(srid=4326)))
 
@@ -61,7 +64,24 @@ class TestBuildGeometry(unittest.TestCase):
         self.assertTrue(geom2.equals(shapely.geometry.Point(1, 2)))
         self.assertTrue(geom2._crs.equals(SpatialReference(srid=4326)))
 
+    def test_literal(self):
+        geom1 = Geometry.build_geometry(
+            {"type": "Point", "coordinates": [1.0, 2.0]})
+        self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
+        self.assertTrue(geom1._crs.equals(SpatialReference(srid=4326)))
+
+        geom2 = Geometry.build_geometry(
+            {"type": "Point", "coordinates": [1.0, 2.0],
+             "crs": {'type': 'name',
+                     'properties': {
+                         'name': 'EPSG:3857'
+                     }}})
+        self.assertTrue(geom2._crs.equals(SpatialReference(srid=3857)))
+
     def test_failure(self):
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          object())
         self.assertRaises(InvalidGeometry,
                           Geometry.build_geometry,
                           'bad')
@@ -89,7 +109,13 @@ class TestBuildGeometry(unittest.TestCase):
                           'POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', )
         self.assertRaises(InvalidGeoJsonInput,
                           Geometry.build_geometry,
-                          '{{{{{{{{{{{{{{{{{{{{{{{1}}}}}}}}}}}}}}}}}}}}}', )
+                          '{{1}', )
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          {'x': 1})
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          {'type': 'Point', 'coordinates': ['x']})
 
     def test_geometry(self):
         geom = shapely.geometry.Point(1, 2)

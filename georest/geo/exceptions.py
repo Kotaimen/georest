@@ -32,6 +32,10 @@ class GeoException(Exception):
         self.traceback = sys.exc_info()[2]
 
 
+class InvalidKey(GeoException):
+    HTTP_STATUS_CODE = 400
+
+
 class InvalidGeometry(GeoException):
     HTTP_STATUS_CODE = 400
 

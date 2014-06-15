@@ -52,7 +52,7 @@ class Metadata(collections.namedtuple('Metadata',
 
         return Metadata(created, modified, bbox, geohash, [])
 
-    def respawn(self, geometry=None):
+    def spawn(self, geometry=None):
         modified = time.time()
         bbox = calc_bbox(geometry)
 
@@ -68,7 +68,7 @@ def calc_bbox(geom):
     assert isinstance(geom, shapely.geometry.base.BaseGeometry)
     return list(geom.bounds)
 
-
+# TODO: rename precision to length
 def calc_geohash(geom, precision=7, ignore_crs=False):
     """Calculate geohash of th geometry, mimics behaviour of postgis st_geohash
 

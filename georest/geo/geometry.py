@@ -36,8 +36,8 @@ class Geometry(object):
     def __init__(self):
         raise NotImplementedError
 
-    @staticmethod
-    def build_geometry(geo_input, srid=4326, copy=False):
+    @classmethod
+    def build_geometry(cls, geo_input, srid=4326, copy=False):
         """Make a shapely Geometry object from given geometry input and srid
 
         `geo_input` can be one of the following format:
@@ -114,6 +114,11 @@ class Geometry(object):
                           double_precision=double_precision)
 
 
+    @staticmethod
+    def export_ewkt(geometry):
+        raise NotImplementedError
+
+
 #
 # Magic regular expression
 #
@@ -140,7 +145,7 @@ class NotMyType(RuntimeError):
 
 
 def create_geometry_from_geojson(geo_input, copy=False):
-    if not JSON_REGEX.match(geo_input):
+    if not isinstance(geo_input, basestring) or not JSON_REGEX.match(geo_input):
         raise NotMyType('GeoJson')
 
     try:
@@ -164,6 +169,12 @@ def create_geometry_from_literal(geo_input, copy=False):
     except (TypeError, ValueError) as e:
         raise InvalidGeometry("Invalid GeoJson geometry", e=e)
 
+    if 'crs' in geo_input and geo_input['crs']:
+        crs = SpatialReference.build_from_geojson_crs(geo_input['crs'])
+        srid = crs.srid
+    else:
+        srid = None
+
     try:
         if geojson_geometry['type'] != 'GeometryCollection':
 
@@ -182,7 +193,7 @@ def create_geometry_from_literal(geo_input, copy=False):
         raise InvalidGeometry(e=e)
 
     # for GeoJson, SRID is always undefined
-    return geometry, None
+    return geometry, srid
 
 
 def create_geometrycollection_from_geojson(geometry, buf=None):
@@ -216,6 +227,8 @@ def create_geometrycollection_from_geojson(geometry, buf=None):
 
 
 def create_geometry_from_wkt(geo_input, copy):
+    if not isinstance(geo_input, basestring):
+        raise NotMyType('WKT')
     wkt_m = WKT_REGEX.match(geo_input)
     if not wkt_m:
         raise NotMyType('WKT')
