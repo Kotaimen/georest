@@ -14,6 +14,7 @@ import flask
 from flask import current_app
 from flask.views import MethodView
 from flask.json import jsonify
+
 from georest import __version__, geo
 from .feature import Features, Geometry, Properties
 

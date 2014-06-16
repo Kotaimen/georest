@@ -11,21 +11,11 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-from flask import Flask, render_template, redirect, abort, jsonify
+from flask import Flask, redirect
 
 from . import default_settings
 from .restapi import GeoRestApi
 from . import storage
-
-
-def render_markdown(md_file, title):
-    try:
-        with open(md_file) as fp:
-            markdown = fp.read()
-            return render_template('markdown.html', title=title,
-                                   markdown=markdown)
-    except IOError as e:
-        abort(404)
 
 
 class GeoRestApp(Flask):
@@ -46,7 +36,6 @@ class GeoRestApp(Flask):
         self.load_config(settings)
 
         self.init_datasources()
-        # self.init_models()
         self.init_api()
         self.init_views()
 
@@ -62,9 +51,6 @@ class GeoRestApp(Flask):
 
     def init_datasources(self):
         self.feature_storage = storage.build_feature_storage()
-
-    # def init_models(self):
-    #     pass
 
     def init_views(self):
         """initiate extra views"""
