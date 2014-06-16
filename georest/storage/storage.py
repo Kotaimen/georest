@@ -23,7 +23,7 @@ class FeatureStorage(object):
     which supports atomic and concurrent operations.
     """
 
-    def put_feature(self, feature, revision=None, fetch=False):
+    def put_feature(self, key, feature, revision=None, fetch=False):
         """Put the feature.
 
         Return the key and revision of the feature
@@ -31,6 +31,7 @@ class FeatureStorage(object):
         Otherwise, a new feature will be added only if the feature has not
         been modified since the revision. (the revision matches the latest one)
 
+        :param `Key` key: key of the feature
         :param `Feature` feature: the feature
         :param str revision: revision of the feature
         :param bool fetch: output the feature in the result
@@ -103,9 +104,3 @@ class FeatureStorage(object):
         """Close the data source
         """
         pass
-
-    def __enter__(self):
-        yield self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
