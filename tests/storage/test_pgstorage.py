@@ -3,16 +3,27 @@
 __author__ = 'ray'
 __date__ = '6/3/14'
 
+import os
 import unittest
 from georest.geo.feature import Feature
 from georest.storage.pgstorage import *
 
 
 class TestPostGISDataSource(unittest.TestCase):
+    @unittest.skipIf(os.environ.get('GEOREST_PG_STORAGE_HOST') is None, '')
     def setUp(self):
+        host = os.environ.get('GEOREST_PG_STORAGE_HOST')
+        port = os.environ.get('GEOREST_PG_STORAGE_PORT', 5432)
+        username = os.environ.get('GEOREST_PG_STORAGE_USERNAME', 'username')
+        password = os.environ.get('GEOREST_PG_STORAGE_PASSWORD', 'password')
+        database = os.environ.get('GEOREST_PG_STORAGE_DATABASE', 'database')
+
         self.storage = PostgisFeatureStorage(
-            host='172.26.183.193',
-            database='georest-test',
+            host=host,
+            port=port,
+            username=username,
+            password=password,
+            database=database,
             create_table=True
         )
 
@@ -133,7 +144,8 @@ class TestPostGISDataSource(unittest.TestCase):
         key = response1.feature.key
 
         new_properties = dict(z=3)
-        response2 = self.storage.update_properties(key, new_properties, fetch=True)
+        response2 = self.storage.update_properties(key, new_properties,
+                                                   fetch=True)
         self.assertEqual(response2.feature.properties, new_properties)
 
         response3 = self.storage.get_feature(key)
