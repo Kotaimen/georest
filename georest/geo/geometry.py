@@ -27,7 +27,7 @@ import geojson.mapping
 
 from .exceptions import InvalidGeometry, InvalidGeoJsonInput
 from .spatialref import SpatialReference
-from .import jsonhelper as json
+from . import jsonhelper as json
 
 
 class Geometry(object):
@@ -109,8 +109,9 @@ class Geometry(object):
             raise InvalidGeometry('Unrecognized geometry input')
 
     @staticmethod
-    def export_geojson(geometry):
-        return json.dumps(geojson.mapping.to_mapping(geometry))
+    def export_geojson(geometry, double_precision=9):
+        return json.dumps(geojson.mapping.to_mapping(geometry),
+                          double_precision=double_precision)
 
 
 #
@@ -144,7 +145,7 @@ def create_geometry_from_geojson(geo_input, copy=False):
 
     try:
         # load json first
-        literal = json.loads(geo_input)
+        literal = json.loads(geo_input, precise_float=True)
     except (TypeError, ValueError) as e:
         raise InvalidGeoJsonInput("Can't decode json input", e=e)
 
