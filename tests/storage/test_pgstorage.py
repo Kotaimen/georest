@@ -27,129 +27,111 @@ class TestPostGISDataSource(unittest.TestCase):
             create_table=True
         )
 
+        full_key = Key.make_key(bucket='test_bucket', name='test_name')
+        feature = Feature.build_from_geometry(
+            'POINT (8 8)',
+            properties=dict(x=1, y=2),
+        )
+
+        response = self.storage.put_feature(full_key, feature)
+
+        self._test_key = full_key
+        self._test_feature = feature
+        self._test_rev = response.revision
+
     def tearDown(self):
         self.storage.close()
 
     def test_put_feature(self):
+        partial_key = Key.make_key(bucket='test_bucket')
         feature = Feature.build_from_geometry(
             'POINT (1 2)',
             properties=dict(x=1, y=2)
         )
 
-        response1 = self.storage.put_feature(feature, fetch=True)
-        self.assertEqual(response1.feature.metadata, feature.metadata)
-        self.assertEqual(response1.feature.properties, feature.properties)
-        self.assertEqual(response1.feature.geometry.wkt, feature.geometry.wkt)
-        self.assertEqual(response1.feature.key.bucket, feature.key.bucket)
-        self.assertIsNotNone(response1.feature.key.name)
-        self.assertIsNotNone(response1.revision)
+        # put a new feature
+        response = self.storage.put_feature(partial_key, feature, fetch=True)
+        self.assertTrue(response.feature.equals(feature))
+        self.assertEqual(response.key.bucket, partial_key.bucket)
+        self.assertIsNotNone(response.key.name)
+        self.assertIsNotNone(response.revision)
 
-        response2 = self.storage.put_feature(feature, fetch=True)
-        self.assertEqual(response2.feature.metadata, feature.metadata)
-        self.assertEqual(response2.feature.properties, feature.properties)
-        self.assertEqual(response2.feature.geometry.wkt, feature.geometry.wkt)
-        self.assertEqual(response2.feature.key.bucket, feature.key.bucket)
-        self.assertEqual(response2.feature.key.name, feature.key.name)
-        self.assertNotEqual(response2.revision, response1.revision)
+        # put a new feature with same key / update the whole feature
+        self.storage.put_feature(self._test_key, feature, fetch=True)
+        response = self.storage.get_feature(self._test_key)
+        self.assertTrue(response.feature.equals(feature))
+        head_rev = response.revision
 
+        # put a new feature with same key, wrong old revision
         self.assertRaises(
             ConflictVersion,
             self.storage.put_feature,
-            feature, response1.revision
+            self._test_key, feature, 'wrong version'
         )
 
-        response3 = self.storage.put_feature(feature, response2.revision,
-                                             fetch=True)
-        self.assertEqual(response3.feature.key, feature.key)
-        self.assertEqual(response3.feature.properties, feature.properties)
-        self.assertEqual(response3.feature.metadata, feature.metadata)
-        self.assertEqual(response3.feature.geometry.wkt, feature.geometry.wkt)
-        self.assertEqual(response3.feature.key, feature.key)
-        self.assertNotEqual(response3.revision, response2.revision)
+        # put a new feature with same key, correct revision
+        response = self.storage.put_feature(
+            self._test_key, feature, head_rev, fetch=True)
+        self.assertTrue(response.feature.equals(feature))
 
     def test_get_feature(self):
-        feature = Feature.build_from_geometry(
-            'POINT (1 2)',
-            properties=dict(x=1, y=2)
-        )
+        full_key = self._test_key
 
-        response1 = self.storage.put_feature(feature)
-        key = response1.key
+        # get a feature
+        response = self.storage.get_feature(full_key)
+        self.assertTrue(response.feature.equals(self._test_feature))
 
-        response2 = self.storage.get_feature(key)
-        self.assertEqual(response2.feature.key, feature.key)
-        self.assertEqual(response2.feature.properties, feature.properties)
-        self.assertEqual(response2.feature.metadata, feature.metadata)
-        self.assertEqual(response2.feature.geometry.wkt, feature.geometry.wkt)
-        self.assertEqual(response2.revision, response1.revision)
-
+        # modify a feature
+        feature = self._test_feature.duplicate()
         feature.properties['z'] = 3
 
-        response3 = self.storage.put_feature(feature)
+        # put a modified feature
+        self.storage.put_feature(full_key, feature)
 
-        response4 = self.storage.get_feature(key)
-        self.assertNotEqual(response1.revision, response4.revision)
-        self.assertEqual(response4.feature.properties['z'], 3)
+        # get the modified feature
+        response = self.storage.get_feature(full_key)
+        self.assertTrue(response.feature.equals(feature))
+
 
     def test_delete_feature(self):
-        feature = Feature.build_from_geometry(
-            'POINT (1 2)',
-            properties=dict(x=1, y=2)
-        )
+        full_key = self._test_key
 
-        response1 = self.storage.put_feature(feature, fetch=True)
-        key = response1.key
+        # delete the feature
+        self.storage.delete_feature(full_key)
+        self.assertRaises(FeatureNotFound, self.storage.get_feature, full_key)
 
-        response2 = self.storage.delete_feature(key)
-        self.assertNotEqual(response1.revision, response2.revision)
-
-        self.assertRaises(FeatureNotFound, self.storage.get_feature, key)
-
-        response3 = self.storage.get_feature(key, response1.revision)
-        self.assertEqual(response3.feature.key, response1.feature.key)
-        self.assertEqual(response3.feature.metadata,
-                         response1.feature.metadata)
-        self.assertEqual(response3.feature.properties,
-                         response1.feature.properties)
-        self.assertEqual(response3.feature.geometry.wkt,
-                         response1.feature.geometry.wkt)
-        self.assertEqual(response3.revision, response1.revision)
+        # get the old version
+        response = self.storage.get_feature(full_key, self._test_rev)
+        self.assertTrue(response.feature, self._test_feature)
 
     def test_update_geometry(self):
-        feature = Feature.build_from_geometry(
-            'POINT (1 2)',
-            properties=dict(x=1, y=2)
-        )
-
-        response1 = self.storage.put_feature(feature, fetch=True)
-        key = response1.feature.key
-
         geom = Geometry.build_geometry('POINT (2 2)', srid=4326)
-        response2 = self.storage.update_geometry(key, geom, fetch=True)
-        self.assertEqual(response2.feature.geometry.wkt, 'POINT (2 2)')
 
-        response3 = self.storage.get_feature(key)
-        self.assertEqual(response3.feature.geometry.wkt, 'POINT (2 2)')
+        # update the geometry
+        response = self.storage.update_geometry(
+            self._test_key, geom, fetch=True)
+        self.assertEqual(response.feature.geometry.wkt, 'POINT (2 2)')
 
-        response4 = self.storage.get_feature(key, response1.revision)
-        self.assertEqual(response4.feature.geometry.wkt, 'POINT (1 2)')
+        # get the feature to validate
+        response = self.storage.get_feature(self._test_key)
+        self.assertEqual(response.feature.geometry.wkt, 'POINT (2 2)')
+
+        # get the old revision
+        response = self.storage.get_feature(self._test_key, self._test_rev)
+        self.assertEqual(response.feature.geometry.wkt, 'POINT (8 8)')
 
     def test_update_properties(self):
-        feature = Feature.build_from_geometry(
-            'POINT (1 2)',
-            properties=dict(x=1, y=2)
-        )
-
-        response1 = self.storage.put_feature(feature, fetch=True)
-        key = response1.feature.key
-
         new_properties = dict(z=3)
-        response2 = self.storage.update_properties(key, new_properties,
-                                                   fetch=True)
-        self.assertEqual(response2.feature.properties, new_properties)
 
-        response3 = self.storage.get_feature(key)
-        self.assertEqual(response3.feature.properties, new_properties)
+        # update the properties
+        response = self.storage.update_properties(
+            self._test_key, new_properties, fetch=True)
+        self.assertEqual(response.feature.properties, new_properties)
 
-        response4 = self.storage.get_feature(key, response1.revision)
-        self.assertEqual(response4.feature.properties, feature.properties)
+        # get the feature to validate
+        response = self.storage.get_feature(self._test_key)
+        self.assertEqual(response.feature.properties, new_properties)
+
+        # get the old revision
+        response = self.storage.get_feature(self._test_key, self._test_rev)
+        self.assertEqual(response.feature.properties, dict(x=1, y=2))

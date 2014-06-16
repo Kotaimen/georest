@@ -217,7 +217,7 @@ class PostgisFeatureStorage(FeatureStorage):
 
         self._db = engine
 
-    def put_feature(self, feature, revision=None, fetch=False):
+    def put_feature(self, key, feature, revision=None, fetch=False):
         srid = feature.crs.srid
         if srid != 4326:
             raise InvalidFeature('srid=%s' % srid)
@@ -226,11 +226,13 @@ class PostgisFeatureStorage(FeatureStorage):
             proxy = _Proxy(conn)
             mapper = self._make_mapper_from_feature(feature)
 
-            bucket, name = feature.key
+            bucket, name = key
             if name is None:
-                name = proxy.random_num()
+                name=str(proxy.random_num())
 
-            mapper.storage_key = self._make_storage_key(bucket, name)
+            new_key = Key.make_key(bucket=bucket, name=name)
+
+            mapper.storage_key = new_key.qualified_name
 
             feature_entry = proxy.select_feature(mapper.storage_key)
 
@@ -267,11 +269,10 @@ class PostgisFeatureStorage(FeatureStorage):
                     version_entry.new_version
                 )
 
-            if feature.key.name is None:
-                feature.key = Key.make_key(bucket=bucket, name=name)
+            feature.key = new_key
 
             result = StorageResponse(
-                key=feature.key,
+                key=new_key,
                 revision=feature_entry.top_version,
                 feature=feature if fetch else None
             )
@@ -282,7 +283,7 @@ class PostgisFeatureStorage(FeatureStorage):
         with self._db.begin() as conn:
             proxy = _Proxy(conn)
 
-            storage_key = self._make_storage_key(key.bucket, key.name)
+            storage_key = key.qualified_name
 
             feature_entry = proxy.select_feature(storage_key)
             if feature_entry is None:
@@ -326,9 +327,9 @@ class PostgisFeatureStorage(FeatureStorage):
         with self._db.begin() as conn:
             proxy = _Proxy(conn)
 
-            storage_key = self._make_storage_key(key.bucket, key.name)
+            name = key.qualified_name
 
-            feature_entry = proxy.select_feature(storage_key)
+            feature_entry = proxy.select_feature(name)
             if feature_entry is None:
                 return StorageResponse(success=True)
 
@@ -341,7 +342,7 @@ class PostgisFeatureStorage(FeatureStorage):
                 old.metadata_id, old.properties_id, old.geometry_id,
                 feature_entry.top_version, 'deleted')
 
-            feature_entry = proxy.update_feature(storage_key,
+            feature_entry = proxy.update_feature(name,
                                                  version_entry.new_version,
                                                  version_entry.old_version)
 
@@ -372,9 +373,9 @@ class PostgisFeatureStorage(FeatureStorage):
         with self._db.begin() as conn:
             proxy = _Proxy(conn)
 
-            storage_key = self._make_storage_key(key.bucket, key.name)
+            name = key.qualified_name
 
-            feature_entry = proxy.select_feature(storage_key)
+            feature_entry = proxy.select_feature(name)
             if feature_entry is None:
                 raise FeatureNotFound('key: %s, version: %s' % (key, revision))
 
@@ -432,9 +433,9 @@ class PostgisFeatureStorage(FeatureStorage):
         with self._db.begin() as conn:
             proxy = _Proxy(conn)
 
-            storage_key = self._make_storage_key(key.bucket, key.name)
+            name = key.qualified_name
 
-            feature_entry = proxy.select_feature(storage_key)
+            feature_entry = proxy.select_feature(name)
             if feature_entry is None:
                 raise FeatureNotFound('key: %s, version: %s' % (key, revision))
 
@@ -493,9 +494,6 @@ class PostgisFeatureStorage(FeatureStorage):
             )
 
             return result
-
-    def _make_storage_key(self, bucket, name):
-        return '%s.%s' % (bucket, name)
 
     def _make_mapper_from_feature(self, feature):
 
