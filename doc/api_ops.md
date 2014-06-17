@@ -119,3 +119,25 @@ POST /ops/overlaps/~.0/~.1
 
 When result type is geojson, a success operation response is **ALWAYS** geojson
 document, representing the resulted geometry.
+
+For example, response of `GET /ops/boundary/ranch.sheep`:
+
+```json
+{
+  "type": "MultiLineString",
+  "coordinates": [[
+    [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0]
+  ]]
+}
+```
+
+When result type is pod, a success operation returns a json object with
+"result" key that bears the pod result.
+
+For example, response of `GET /ops/area/ranch.sheep`:
+
+```json
+{
+  "result": 42.0
+}
+```
