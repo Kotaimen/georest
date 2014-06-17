@@ -370,129 +370,34 @@ class PostgisFeatureStorage(FeatureStorage):
             return result
 
     def update_properties(self, key, properties, revision=None, fetch=False):
-        with self._db.begin() as conn:
-            proxy = _Proxy(conn)
+        response = self.get_feature(key, revision=revision)
+        feature = response.feature
 
-            name = key.qualified_name
+        new_feature = Feature(
+            key=key,
+            geometry=feature.geometry,
+            crs=feature.crs,
+            properties=properties,
+            metadata=feature.metadata,
+        )
 
-            feature_entry = proxy.select_feature(name)
-            if feature_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
-
-            if revision is None:
-                revision = feature_entry.top_version
-
-            version_entry = proxy.select_version(revision)
-            if version_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
-
-            if version_entry.status == 'deleted':
-                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
-
-            properties_entry = proxy.insert_properties(dict(properties))
-            metadata_entry = proxy.select_metadata(version_entry.metadata_id)
-            geometry_entry = proxy.select_geometry(version_entry.geometry_id)
-
-            version_entry = proxy.insert_version(
-                version_entry.metadata_id,
-                properties_entry.id,
-                version_entry.geometry_id,
-                old_version=revision,
-                status='available'
-            )
-
-            feature_entry = proxy.update_feature(
-                feature_entry.id,
-                version_entry.new_version,
-                version_entry.old_version
-            )
-            if feature_entry is None:
-                raise ConflictVersion()
-
-            crs = SpatialReference(srid=4326)
-            geometry = Geometry.build_geometry(geometry_entry.geometry.data)
-
-            feature = Feature(
-                key=key,
-                crs=crs,
-                metadata=Metadata(**metadata_entry.metadata),
-                properties=properties_entry.properties,
-                geometry=geometry,
-            )
-
-            result = StorageResponse(
-                key=feature.key,
-                revision=feature_entry.top_version,
-                feature=feature if fetch else None,
-            )
-
-            return result
+        return self.put_feature(
+            key, new_feature, revision=response.revision, fetch=fetch)
 
     def update_geometry(self, key, geometry, revision=None, fetch=False):
-        with self._db.begin() as conn:
-            proxy = _Proxy(conn)
+        response = self.get_feature(key, revision=revision)
+        feature = response.feature
 
-            name = key.qualified_name
+        new_feature = Feature(
+            key=key,
+            geometry=geometry,
+            crs=feature.crs,
+            properties=feature.properties,
+            metadata=feature.metadata,
+        )
 
-            feature_entry = proxy.select_feature(name)
-            if feature_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
-
-            if revision is None:
-                revision = feature_entry.top_version
-
-            version_entry = proxy.select_version(revision)
-            if version_entry is None:
-                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
-
-            if version_entry.status == 'deleted':
-                raise FeatureNotFound('key: %s, version: %s' % (key, revision))
-
-            properties_entry = proxy.select_properties(
-                version_entry.properties_id)
-            metadata_entry = proxy.select_metadata(version_entry.metadata_id)
-
-            srid = geometry._crs.srid
-            if srid != 4326:
-                raise InvalidGeometry('srid=%d' % srid)
-
-            geom = 'SRID=%d;%s' % (geometry._crs.srid, geometry.wkt)
-            geometry_entry = proxy.insert_geometry(geom)
-
-            version_entry = proxy.insert_version(
-                version_entry.metadata_id,
-                version_entry.properties_id,
-                geometry_entry.id,
-                old_version=revision,
-                status='available'
-            )
-
-            feature_entry = proxy.update_feature(
-                feature_entry.id,
-                version_entry.new_version,
-                version_entry.old_version
-            )
-            if feature_entry is None:
-                raise ConflictVersion()
-
-            crs = SpatialReference(srid=4326)
-            geometry = Geometry.build_geometry(geometry_entry.geometry.data)
-
-            feature = Feature(
-                key=key,
-                crs=crs,
-                metadata=Metadata(**metadata_entry.metadata),
-                properties=properties_entry.properties,
-                geometry=geometry,
-            )
-
-            result = StorageResponse(
-                key=feature.key,
-                revision=feature_entry.top_version,
-                feature=feature if fetch else None,
-            )
-
-            return result
+        return self.put_feature(
+            key, new_feature, revision=response.revision, fetch=fetch)
 
     def get_properties(self, key, revision=None):
         response = self.get_feature(key, revision)
