@@ -36,9 +36,8 @@ class Metadata(collections.namedtuple('Metadata',
 
     GEOHASH_PRECISION = 12
 
-    @staticmethod
-    def make_metadata(created=None, modified=None,
-                      geometry=None):
+    @classmethod
+    def make_metadata(cls, created=None, modified=None, geometry=None):
 
         if created is None:
             created = time.time()
@@ -50,17 +49,20 @@ class Metadata(collections.namedtuple('Metadata',
 
         geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
 
-        return Metadata(created, modified, bbox, geohash, [])
+        return cls(created, modified, bbox, geohash, [])
 
     def spawn(self, geometry=None):
         modified = time.time()
-        bbox = calc_bbox(geometry)
 
-        geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
+        if geometry is None:
+            return self._replace(modified=modified)
+        else:
+            bbox = calc_bbox(geometry)
+            geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
+            return self._replace(modified=modified,
+                                 bbox=bbox,
+                                 geohash=geohash)
 
-        return self._replace(modified=modified,
-                             bbox=bbox,
-                             geohash=geohash)
 
 
 def calc_bbox(geom):
