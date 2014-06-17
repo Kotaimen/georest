@@ -135,3 +135,11 @@ class TestPostGISDataSource(unittest.TestCase):
         # get the old revision
         response = self.storage.get_feature(self._test_key, self._test_rev)
         self.assertEqual(response.feature.properties, dict(x=1, y=2))
+
+    def test_get_properties(self):
+        prop = self.storage.get_properties(self._test_key, self._test_rev)
+        self.assertEqual(prop, dict(x=1, y=2))
+
+    def test_get_geometry(self):
+        geom = self.storage.get_geometry(self._test_key, self._test_rev)
+        self.assertEqual(geom.wkt, 'POINT (8 8)')

@@ -228,7 +228,7 @@ class PostgisFeatureStorage(FeatureStorage):
 
             bucket, name = key
             if name is None:
-                name=str(proxy.random_num())
+                name = str(proxy.random_num())
 
             new_key = Key.make_key(bucket=bucket, name=name)
 
@@ -428,7 +428,6 @@ class PostgisFeatureStorage(FeatureStorage):
 
             return result
 
-
     def update_geometry(self, key, geometry, revision=None, fetch=False):
         with self._db.begin() as conn:
             proxy = _Proxy(conn)
@@ -494,6 +493,14 @@ class PostgisFeatureStorage(FeatureStorage):
             )
 
             return result
+
+    def get_properties(self, key, revision=None):
+        response = self.get_feature(key, revision)
+        return response.feature.properties
+
+    def get_geometry(self, key, revision=None):
+        response = self.get_feature(key, revision)
+        return response.feature.geometry
 
     def _make_mapper_from_feature(self, feature):
 

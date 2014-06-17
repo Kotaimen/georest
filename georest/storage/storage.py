@@ -69,6 +69,7 @@ class FeatureStorage(object):
         """
         raise NotImplementedError
 
+
     def update_properties(self, key, properties, revision=None, fetch=False):
         """Update the properties of the feature.
 
@@ -81,6 +82,20 @@ class FeatureStorage(object):
         :raise `FeatureNotFound`
         :raise `ConflictVersion`
         :rtype `StorageResponse`
+        """
+        raise NotImplementedError
+
+
+    def get_properties(self, key, revision=None):
+        """Get the properties of the feature
+
+        Return the properties of the feature
+
+        :param `Key` key: key of the feature
+        :param str revision: revision of the feature
+        :raise `FeatureNotFound`
+        :raise `ConflictVersion`
+        :rtype dict
         """
         raise NotImplementedError
 
@@ -99,6 +114,19 @@ class FeatureStorage(object):
         """
         raise NotImplementedError
 
+
+    def get_geometry(self, key, revision=None):
+        """Get the geometry of the feature
+
+        Return the geometry of the feature
+
+        :param `Key` key: key of the feature
+        :param str revision: revision of the feature
+        :raise `FeatureNotFound`
+        :raise `ConflictVersion`
+        :rtype `Geometry`
+        """
+        raise NotImplementedError
 
     def close(self):
         """Close the data source
