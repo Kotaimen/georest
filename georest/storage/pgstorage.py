@@ -369,44 +369,6 @@ class PostgisFeatureStorage(FeatureStorage):
             )
             return result
 
-    def update_properties(self, key, properties, revision=None, fetch=False):
-        response = self.get_feature(key, revision=revision)
-        feature = response.feature
-
-        new_feature = Feature(
-            key=key,
-            geometry=feature.geometry,
-            crs=feature.crs,
-            properties=properties,
-            metadata=feature.metadata,
-        )
-
-        return self.put_feature(
-            key, new_feature, revision=response.revision, fetch=fetch)
-
-    def update_geometry(self, key, geometry, revision=None, fetch=False):
-        response = self.get_feature(key, revision=revision)
-        feature = response.feature
-
-        new_feature = Feature(
-            key=key,
-            geometry=geometry,
-            crs=feature.crs,
-            properties=feature.properties,
-            metadata=feature.metadata,
-        )
-
-        return self.put_feature(
-            key, new_feature, revision=response.revision, fetch=fetch)
-
-    def get_properties(self, key, revision=None):
-        response = self.get_feature(key, revision)
-        return response.feature.properties
-
-    def get_geometry(self, key, revision=None):
-        response = self.get_feature(key, revision)
-        return response.feature.geometry
-
     def _make_mapper_from_feature(self, feature):
 
         metadata = feature.metadata._asdict()
