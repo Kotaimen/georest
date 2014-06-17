@@ -15,16 +15,11 @@ import time
 import geohash
 import shapely.geometry.base
 
-from .spatialref import SpatialReference
-
 
 class Metadata(collections.namedtuple('Metadata',
-                                      '''created modified bbox geohash
-                                      cells''')):
+                                      '''bbox geohash cells''')):
     """ Metadata of a geometry
 
-    - `created` `modified` float timestamp, time since epoch returned
-       by `time.time()`
     - `geohash` geohash of the geometry used to do quick adhoc spatial search.
       For point geometry, max precision is 12 chars, for other geometry, defined
       by its bounding box.  Note geohash only works on geometry with lonlat
@@ -37,38 +32,25 @@ class Metadata(collections.namedtuple('Metadata',
     GEOHASH_PRECISION = 12
 
     @classmethod
-    def make_metadata(cls, created=None, modified=None, geometry=None):
-
-        if created is None:
-            created = time.time()
-
-        if modified is None:
-            modified = time.time()
-
+    def make_metadata(cls, geometry=None):
         bbox = calc_bbox(geometry)
 
         geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
 
-        return cls(created, modified, bbox, geohash, [])
+        return cls(bbox, geohash, [])
 
-    def spawn(self, geometry=None):
-        modified = time.time()
-
-        if geometry is None:
-            return self._replace(modified=modified)
-        else:
-            bbox = calc_bbox(geometry)
-            geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
-            return self._replace(modified=modified,
-                                 bbox=bbox,
-                                 geohash=geohash)
-
+    def spawn(self, geometry):
+        assert geometry is not None
+        bbox = calc_bbox(geometry)
+        geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
+        return self._replace(bbox=bbox, geohash=geohash)
 
 
 def calc_bbox(geom):
     """Calculate bounding box of the geometry"""
     assert isinstance(geom, shapely.geometry.base.BaseGeometry)
     return list(geom.bounds)
+
 
 # TODO: rename precision to length
 def calc_geohash(geom, precision=7, ignore_crs=False):

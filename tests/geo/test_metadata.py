@@ -17,8 +17,6 @@ class TestMetadata(unittest.TestCase):
         metadata = Metadata.make_metadata(geometry=geometry)
 
         self.assertIsInstance(metadata, Metadata)
-        self.assertIsNotNone(metadata.created)
-        self.assertIsNotNone(metadata.modified)
         self.assertIsNotNone(metadata.geohash)
         self.assertIsNotNone(metadata.bbox)
 

@@ -173,7 +173,8 @@ def create_geometry_from_literal(geo_input, copy=False):
         crs = SpatialReference.build_from_geojson_crs(geo_input['crs'])
         srid = crs.srid
     else:
-        srid = None
+        # geojson default crs is wgs84
+        srid = 4326
 
     try:
         if geojson_geometry['type'] != 'GeometryCollection':

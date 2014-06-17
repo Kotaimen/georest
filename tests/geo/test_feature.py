@@ -22,7 +22,6 @@ class TestFeature(unittest.TestCase):
         self.assertEqual(feature1.crs.srid, 4326)
         self.assertEqual(feature1.properties['x'], 1)
         self.assertEqual(feature1.properties['y'], 2)
-        self.assertIsNotNone(feature1.metadata.modified)
 
         feature2 = Feature.build_from_geojson(feature1.__geo_interface__)
         feature3 = Feature.build_from_geojson(feature1.geojson)

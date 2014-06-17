@@ -51,11 +51,6 @@ class Feature(object):
     def key(self):
         return self._key
 
-    @key.setter
-    def key(self, key):
-        assert isinstance(key, Key)
-        self._key = key
-
     @property
     def crs(self):
         return self._crs
