@@ -36,16 +36,16 @@ class TestHelpers(unittest.TestCase):
 
     def test_calc_geohash(self):
         geom1 = shapely.geometry.Point(126, 48)
-        hash0 = calc_geohash(geom1, precision=12)
+        hash0 = calc_geohash(geom1, length=12)
         self.assertEqual(hash0, '')
-        hash1 = calc_geohash(geom1, precision=12, ignore_crs=True)
+        hash1 = calc_geohash(geom1, length=12, ignore_crs=True)
         self.assertEqual('yb9954nkkb99', hash1)
 
         geom2 = shapely.geometry.LineString([(12, 34), (12.0001, 34.0001)])
-        hash2 = calc_geohash(geom2, precision=12, ignore_crs=True)
+        hash2 = calc_geohash(geom2, length=12, ignore_crs=True)
         self.assertEqual('sq093jd0', hash2)
 
-        hash2 = calc_geohash(geom2, precision=3, ignore_crs=True)
+        hash2 = calc_geohash(geom2, length=3, ignore_crs=True)
         self.assertEqual('sq0', hash2)
 
 

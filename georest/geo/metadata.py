@@ -6,11 +6,10 @@ __date__ = '6/3/14'
 """
     georest.geo.metadata
     ~~~~~~~~~~~~~~~~~~~~
-    Metadata of a feature
+    Metadata of a geometry, aka geoindex helpers
 """
 
 import collections
-import time
 
 import geohash
 import shapely.geometry.base
@@ -29,20 +28,20 @@ class Metadata(collections.namedtuple('Metadata',
       not implemented.
     """
 
-    GEOHASH_PRECISION = 12
+    GEOHASH_LENGTH = 12
 
     @classmethod
     def make_metadata(cls, geometry=None):
         bbox = calc_bbox(geometry)
 
-        geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
+        geohash = calc_geohash(geometry, Metadata.GEOHASH_LENGTH)
 
         return cls(bbox, geohash, [])
 
     def spawn(self, geometry):
         assert geometry is not None
         bbox = calc_bbox(geometry)
-        geohash = calc_geohash(geometry, Metadata.GEOHASH_PRECISION)
+        geohash = calc_geohash(geometry, Metadata.GEOHASH_LENGTH)
         return self._replace(bbox=bbox, geohash=geohash)
 
 
@@ -52,8 +51,7 @@ def calc_bbox(geom):
     return list(geom.bounds)
 
 
-# TODO: rename precision to length
-def calc_geohash(geom, precision=7, ignore_crs=False):
+def calc_geohash(geom, length=7, ignore_crs=False):
     """Calculate geohash of th geometry, mimics behaviour of postgis st_geohash
 
     `geom` must be a geometry with lonlat coordinates and `precision` is
@@ -69,26 +67,26 @@ def calc_geohash(geom, precision=7, ignore_crs=False):
         if crs is None or not crs.proj.is_latlong():
             return ''
 
-    assert isinstance(precision, int)
-    assert precision > 1  # useless if precision is too short
+    assert isinstance(length, int)
+    assert length > 1  # useless if precision is too short
 
     if geom.geom_type == 'Point':
         assert isinstance(geom, shapely.geometry.Point)
-        return geohash.encode(geom.y, geom.x, precision)
+        return geohash.encode(geom.y, geom.x, length)
 
     else:
         (left, bottom, right, top) = geom.bounds
 
         # Calculate the bounding box precision
-        hash1 = geohash.encode(bottom, left, precision)
-        hash2 = geohash.encode(top, right, precision)
+        hash1 = geohash.encode(bottom, left, length)
+        hash2 = geohash.encode(top, right, length)
 
         try:
             bounds_precision = \
                 list(x == y for x, y in zip(hash1, hash2)).index(False)
         except ValueError:
             # list.index throws ValueError if value is not found
-            bounds_precision = precision
+            bounds_precision = length
 
         # Calculate geohash using center point and bounds precision
         return geohash.encode((top + bottom) / 2.,
