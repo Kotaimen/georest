@@ -12,6 +12,8 @@ __date__ = '6/3/14'
 import collections
 
 import geohash
+
+import shapely.geometry
 import shapely.geometry.base
 
 
@@ -48,6 +50,7 @@ class Metadata(collections.namedtuple('Metadata',
 def calc_bbox(geom):
     """Calculate bounding box of the geometry"""
     assert isinstance(geom, shapely.geometry.base.BaseGeometry)
+
     return list(geom.bounds)
 
 
@@ -58,6 +61,7 @@ def calc_geohash(geom, length=7, ignore_crs=False):
     length of returned hash string for Point geometry.
     """
     assert isinstance(geom, shapely.geometry.base.BaseGeometry)
+
     if geom.is_empty:
         return ''
 

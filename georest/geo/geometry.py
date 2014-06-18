@@ -6,12 +6,14 @@ __date__ = '6/4/14'
 """
     georest.geo.geometry
     ~~~~~~~~~~~~~~~~~~~~
-    Geometry IO
+    Geometry IO stuff
 
 """
 
 import re
 import io
+
+import six
 
 import shapely.speedups
 import shapely.geometry
@@ -35,6 +37,10 @@ class Geometry(object):
 
     def __init__(self):
         raise NotImplementedError
+
+    @staticmethod
+    def is_geometry(obj):
+        return isinstance(obj, shapely.geometry.base.BaseGeometry)
 
     @classmethod
     def build_geometry(cls, geo_input, srid=4326, copy=False):
@@ -63,6 +69,8 @@ class Geometry(object):
         geometry instead of using a coordinates value proxy.  Don't copy
         coordinates means fast creation but can cause problems when doing
         geometry operations.
+
+        Returns a shapely.base.geometry.BaseGeometry object.
 
         NOTE: This is not really python3 compatible...
         """
@@ -123,7 +131,7 @@ class Geometry(object):
 # Magic regular expression
 #
 
-# XXX: Not really secure, are we allowing only GeoJSON input from API?
+# NOTE: Not really secure, are we allowing only GeoJSON input from API?
 HEX_REGEX = re.compile(r'^[0-9A-F]+$', re.I)
 
 WKT_REGEX = re.compile(r'^(SRID=(?P<SRID>\-?\d+);)?'
@@ -145,7 +153,8 @@ class NotMyType(RuntimeError):
 
 
 def create_geometry_from_geojson(geo_input, copy=False):
-    if not isinstance(geo_input, basestring) or not JSON_REGEX.match(geo_input):
+    if not isinstance(geo_input, six.string_types) or \
+            not JSON_REGEX.match(geo_input):
         raise NotMyType('GeoJson')
 
     try:
@@ -228,7 +237,7 @@ def create_geometrycollection_from_geojson(geometry, buf=None):
 
 
 def create_geometry_from_wkt(geo_input, copy):
-    if not isinstance(geo_input, basestring):
+    if not isinstance(geo_input, six.string_types):
         raise NotMyType('WKT')
     wkt_m = WKT_REGEX.match(geo_input)
     if not wkt_m:
@@ -252,7 +261,7 @@ def create_geometry_from_wkt(geo_input, copy):
 
 
 def create_geometry_from_wkb(geo_input, copy):
-    if isinstance(geo_input, (str, unicode)):
+    if isinstance(geo_input, six.string_types):
         if HEX_REGEX.match(geo_input):
             # HEX WKB
             hex = True
@@ -273,7 +282,7 @@ def create_geometry_from_wkb(geo_input, copy):
 
 
 def create_geometry_from_geometry(geo_input, copy=False):
-    if isinstance(geo_input, shapely.geometry.base.BaseGeometry):
+    if Geometry.is_geometry(geo_input):
         # check whether geometry already has a crs
         if geo_input._crs is not None:
             bundled_srid = geo_input._crs.srid

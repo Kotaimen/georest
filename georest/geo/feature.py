@@ -12,6 +12,7 @@ __date__ = '5/29/14'
 
 import copy
 
+import six
 import shapely.geometry.base
 import geojson.base
 
@@ -25,11 +26,30 @@ from .exceptions import InvalidFeature, InvalidGeometry, InvalidGeoJsonInput, \
 
 
 class Feature(object):
-    """ A Geo Feature with optional properties and SRS."""
+    """ A Geo Feature with optional properties and CRS
+
+    Available props:
+    - `key`: key of the feature
+    - `geometry`: the geometry, now a `shapely` geometry object
+    - `properties`: property list
+    - `crs`: coordinate reference system
+    - `metadata`: index metadata of the geometry
+
+    A `Feature` object is mutable, hashable as well as pickleable, plus
+    satisfies python geo interface.
+
+    GeoJson IO is slightly faster than `osgro.ogr` and `geojson` because
+    internal implementation avoided this:
+
+        string = json.dumps(json.loads(stuff))
+
+    Validation and check is performed in the GeoJson build method so its
+    safe to create a feature from request GeoJson data.
+    """
 
     def __init__(self, key, geometry, crs, properties, metadata):
         assert isinstance(key, Key)
-        assert isinstance(geometry, shapely.geometry.base.BaseGeometry)
+        assert Geometry.is_geometry(geometry)
         assert isinstance(crs, SpatialReference)
         assert isinstance(metadata, Metadata)
 
@@ -45,9 +65,11 @@ class Feature(object):
 
     @geometry.setter
     def geometry(self, geometry):
-        assert isinstance(geometry, shapely.geometry.base.BaseGeometry)
+        assert Geometry.is_geometry(geometry)
         self._geometry = geometry
-        self.refresh_metadata(geometry)
+        assert geometry._crs is not None
+        self._crs = geometry._crs
+        self.refresh_metadata()
 
     @property
     def properties(self):
@@ -96,7 +118,7 @@ class Feature(object):
                     geometry=shapely.geometry.mapping(self._geometry),
                     properties=self._properties,
                     crs=self._crs.geojson,
-                    id=self._key)
+                    id=self._key.qualified_name)
 
     @property
     def geojson(self):
@@ -123,7 +145,7 @@ class Feature(object):
     def build_from_geojson(cls, geo_input, key=None, srid=4326,
                            precise_float=True):
         # load json as python literal if necessary
-        if isinstance(geo_input, (str, unicode)):
+        if isinstance(geo_input, six.string_types):
             try:
                 literal = json.loads(geo_input, precise_float=precise_float)
             except (KeyError, ValueError) as e:
