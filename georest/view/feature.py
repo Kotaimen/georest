@@ -17,8 +17,10 @@ from flask import current_app
 from flask.views import MethodView
 from flask.json import jsonify
 
+from ..geo import GeoException
 
-class InvalidRequest(Exception):
+
+class InvalidRequest(GeoException):  # XXX: is this appropriate?
     HTTP_STATUS_CODE = 400
 
 
@@ -50,17 +52,6 @@ class StorageView(MethodView):
                     and request.if_modified_since >= metadata['last_modified']:
                 return flask.Response(status=304)
         return data, 200, headers
-
-    def _extract_content(self):
-        # content extraction
-        if request.mimetype != 'application/json':
-            raise InvalidRequest('Only "application/json" supported')
-        try:
-            data = request.data.decode('utf-8')
-        except UnicodeError:
-            raise InvalidRequest('Cannot decode content with utf-8')
-        obj = self.model.from_json(data)
-        return obj
 
     def put(self, key=None):
         if key is None:
@@ -107,6 +98,17 @@ class StorageView(MethodView):
         response = jsonify(code=201, key=long_key)
         response.headers.update(headers)
         return response
+
+    def _extract_content(self):
+        # content extraction
+        if request.mimetype != 'application/json':
+            raise InvalidRequest('Only "application/json" supported')
+        try:
+            data = request.data.decode('utf-8')
+        except UnicodeError:
+            raise InvalidRequest('Cannot decode content with utf-8')
+        obj = self.model.from_json(data)
+        return obj
 
 
 class Features(StorageView):
