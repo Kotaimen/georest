@@ -43,6 +43,12 @@ class Feature(object):
     def geometry(self):
         return self._geometry
 
+    @geometry.setter
+    def geometry(self, geometry):
+        assert isinstance(geometry, shapely.geometry.base.BaseGeometry)
+        self._geometry = geometry
+        self.refresh_metadata(geometry)
+
     @property
     def properties(self):
         return self._properties
