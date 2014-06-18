@@ -20,3 +20,4 @@ __author__ = 'pp'
 """
 
 from .feature import FeatureModel, GeometryModel, FeaturePropModel
+from .exceptions import ModelException
