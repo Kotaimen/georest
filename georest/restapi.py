@@ -46,17 +46,17 @@ class GeoRestApi(object):
                           endpoint='describe')
         self.add_resource(view.Features.as_view('features', feature_model),
                           '/features',
-                          '/features/<long_key>',
+                          '/features/<key>',
                           endpoint='features')
         self.add_resource(view.Geometry.as_view('geometry', geometry_model),
-                          '/features/<long_key>/geometry',
-                          '/geometries/<long_key>',
+                          '/features/<key>/geometry',
+                          '/geometries/<key>',
                           '/geometries',
                           '/features/geometry',
                           endpoint='geometry')
         self.add_resource(view.Properties.as_view('properties',
                                                   feature_prop_model),
-                          '/features/<long_key>/properties',
+                          '/features/<key>/properties',
                           endpoint='properties')
 
     def add_error_handler(self):
@@ -68,6 +68,6 @@ def rest_error(e):
     response = flask.jsonify(dict(code=code,
                                   message=str(e),
                                   exception=e.__class__.__name__,
-                                  traceback=traceback.format_tb(e.tb)))
-    response.status = code
+                                  traceback=traceback.format_tb(e.traceback)))
+    response.status_code = code
     return response
