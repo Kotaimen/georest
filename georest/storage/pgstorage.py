@@ -270,8 +270,6 @@ class PostgisFeatureStorage(FeatureStorage):
                     version_entry.new_version
                 )
 
-            feature.key = new_key
-
             result = StorageResponse(
                 key=new_key,
                 revision=feature_entry.top_version,
