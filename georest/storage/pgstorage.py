@@ -3,6 +3,7 @@
 __author__ = 'ray'
 __date__ = '6/10/14'
 
+import time
 import sqlalchemy
 import geoalchemy2
 from sqlalchemy import create_engine
@@ -274,7 +275,8 @@ class PostgisFeatureStorage(FeatureStorage):
             result = StorageResponse(
                 key=new_key,
                 revision=feature_entry.top_version,
-                feature=feature if fetch else None
+                feature=feature if fetch else None,
+                timestamp=time.time()
             )
 
             return result
@@ -319,6 +321,7 @@ class PostgisFeatureStorage(FeatureStorage):
                 key=feature.key,
                 revision=revision,
                 feature=feature,
+                timestamp=time.time()
             )
 
             return result
@@ -366,6 +369,7 @@ class PostgisFeatureStorage(FeatureStorage):
                 key=feature.key,
                 revision=feature_entry.top_version,
                 feature=feature if fetch else None,
+                timestamp=time.time()
             )
             return result
 
