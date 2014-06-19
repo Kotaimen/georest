@@ -14,7 +14,7 @@ __date__ = '6/12/14'
     also done in the CTOR, so we can simply pass `request.args` into the
     operator.
 
-    Geometry parameters are never modified but may be returned as result if
+    Geometry parameters are never modified but may returned as result if
     no computation is required.
 
     Design note:
@@ -32,9 +32,23 @@ from .geometry import Geometry
 from .exceptions import GeoException, OperationError, InvalidParameter
 from .spatialref import CoordinateTransform, SpatialReference
 
+__all__ = ['UnaryOperation', 'Attribute', 'UnaryPredicate',
+           'UnaryConstructor',
+           'Area', 'Length', 'IsSimple', 'Buffer',
+           'ConvexHull', 'Envelope', 'ParallelOffset',
+           'Simplify', 'Boundary', 'PointOnSurface', 'Centroid',
+           'BinaryOperation',
+           'Equals', 'Contains', 'Crosses', 'Disjoint', 'Intersects',
+           'Touches', 'Within',
+           'Intersection', 'SymmetricDifference', 'Difference', 'Union',
+]
+
+#
+# Base classes
+#
 
 class BaseOperation(object):
-    """Base geometry operation"""
+    """Base geometry operation, being a multi geometry operation"""
 
     DEBUG = True
 
@@ -52,28 +66,19 @@ class BaseOperation(object):
         # any left args is assumed to be used by actual operator
         self._kwargs = kwargs
 
+    def __call__(self, *geometries):
+        assert all(Geometry.is_geometry(g) for g in geometries)
 
-class UnaryOperation(BaseOperation):
-    """Base unary geometry operation"""
-
-    def __call__(self, this):
-        """Accepts a single geometry, being a good functor and call underlying
-        implement"""
-        assert Geometry.is_geometry(this)
-
-        # coordinate transform
-        this_crs = this._crs
-        if self._srid and this_crs:
+        if self._srid:
+            # need do crs transform before performing operation
+            geometries = tuple(self._transform_crs(geometries))
             result_crs = SpatialReference(self._srid)
-            transform = CoordinateTransform.build_transform(this_crs,
-                                                            result_crs)
-            this = transform(this)
         else:
-            result_crs = None
+            result_crs = self._check_crs(geometries)
 
         # call implementation, catch all exception and raise as 500 error
         try:
-            result = self._impl(this)
+            result = self._impl(*geometries)
         except GeoException as e:
             raise
         except Exception as e:
@@ -84,13 +89,67 @@ class UnaryOperation(BaseOperation):
 
         if Geometry.is_geometry(result):
             # update spatial reference
-            result_crs = result_crs if result_crs else this_crs
+            result._crs = result_crs
 
         return result
+
+    def _transform_crs(self, geometries):
+        for geometry in geometries:
+            geom_crs = geometry._crs
+            if not geom_crs:
+                raise InvalidParameter(
+                    'Requires all geometries have CRS defined')
+            result_crs = SpatialReference(self._srid)
+            transform = CoordinateTransform.build_transform(geom_crs,
+                                                            result_crs)
+            yield transform(geometry)
+
+    def _check_crs(self, geometries):
+        if not any(bool(g._crs) for g in geometries):
+            # if all geometries have undefined CRS or unassigned CRS
+            # we assume you know what you are doing
+            return SpatialReference(srid=0)
+        elif len(set(g._crs.srid for g in geometries)) > 1:
+            # but in any case you can't mix different CRS
+            raise InvalidParameter('Cannot operate on mixed CRS')
+        else:
+            return SpatialReference(geometries[0]._crs.srid)
+
+
+class UnaryOperation(BaseOperation):
+    """Base unary geometry operation"""
+
+    def __call__(self, this):
+        """Accepts a single geometry, and call underlying implement"""
+        return BaseOperation.__call__(self, this)
 
     def _impl(self, this):
         """By default, be a good coordinate transformer"""
         return this
+
+
+class Attribute(UnaryOperation):
+    """Geometry attributes returns a float/int/string"""
+    pass
+
+
+class UnaryPredicate(UnaryOperation):
+    """Accepts a geometry and returns bool"""
+    pass
+
+
+class UnaryConstructor(UnaryOperation):
+    """Accepts a geometry and optional parameters,
+    returns a new geometry"""
+    pass
+
+
+class UnarySetTheoreticMethod(UnaryOperation):
+    pass
+
+
+class AffineTransform(UnaryOperation):
+    pass
 
 
 class BinaryOperation(BaseOperation):
@@ -98,40 +157,28 @@ class BinaryOperation(BaseOperation):
 
     def __call__(self, this, other):
         """Accepts two geometries, and call underlying implement """
-        assert Geometry.is_geometry(this)
-        assert Geometry.is_geometry(other)
-
-        # coordinate transform
-        if self._srid:
-            transform1 = CoordinateTransform.build_transform(this._crs,
-                                                             self._srid)
-            transform2 = CoordinateTransform.build_transform(other._crs,
-                                                             self._srid)
-
-            this = transform1(this)
-            other = transform2(other)
-
-        # call implementation
-        try:
-            result = self._impl(this, other)
-        except GeoException as e:
-            raise
-        except Exception as e:
-            if self.DEBUG:
-                raise
-            else:
-                raise OperationError(e=e)
-
-        if Geometry.is_geometry(result):
-            # update spatial reference
-            result._crs = SpatialReference(srid=self._srid)
-
-        return result
-
+        return BaseOperation.__call__(self, this, other)
 
     def _impl(self, this, other):
-
         raise NotImplementedError
+
+
+class BinaryPredicate(BinaryOperation):
+    """Accepts two geometries and returns bool"""
+    pass
+
+
+class BinarySetTheoreticMethod(BinaryOperation):
+    """Binary set-theoretic methods"""
+    pass
+
+
+class LineReference(BinaryOperation):
+    pass
+
+
+class MultiGeometryOperation(BaseOperation):
+    pass
 
 
 class ParameterHelper(object):
@@ -225,41 +272,30 @@ class ParameterHelper(object):
             raise InvalidParameter('%s must be one of %r, got "%r"' % \
                                    (name, choices, value))
 
-    def check_geometry_type(self, geometry, choices=None):
+    def check_geometry_type_is(self, geometry, *choices):
         if geometry.geom_type not in choices:
-            raise InvalidParameter(
-                'Got "%s" instead of a %r' % (geometry.geom_type, choices))
+            raise InvalidParameter('Expecting one of %r instead of a %r' % (
+                choices, geometry.geom_type))
+
+    def check_geometry_type_is_not(self, geometry, *choices):
+        if geometry.geom_type in choices:
+            raise InvalidParameter('None of %r is allowed but got a %r' % (
+                choices, geometry.geom_type))
 
 
-class Attributes(UnaryOperation):
-    """Geometry attributes returns a float/int/string"""
-    pass
-
-
-class Area(Attributes):
+class Area(Attribute):
     def _impl(self, this):
         return this.area
 
 
-class Length(Attributes):
+class Length(Attribute):
     def _impl(self, this):
         return this.length
-
-
-class UnaryPredicate(UnaryOperation):
-    """Accepts a geometry and returns bool"""
-    pass
 
 
 class IsSimple(UnaryPredicate):
     def _impl(self, this):
         return this.is_simple
-
-
-class UnaryConstructor(UnaryOperation):
-    """Accepts a geometry and optional parameters,
-    returns a new geometry"""
-    pass
 
 
 class Buffer(UnaryConstructor, ParameterHelper):
@@ -324,12 +360,13 @@ class ParallelOffset(UnaryConstructor, ParameterHelper):
         super(ParallelOffset, self).__init__(**kwargs)
 
     def _impl(self, this):
+        self.check_geometry_type_is(this, 'LineString', 'MultiLineString')
         kwargs = self.extract_kwargs(self._kwargs)
-        return this.paraell_offset(**kwargs)
+        return this.parallel_offset(**kwargs)
 
 
 class Simplify(UnaryConstructor, ParameterHelper):
-    def __init__(self, tolerance, preserve_topology=True, **kwargs):
+    def __init__(self, tolerance, preserve_topology=False, **kwargs):
         ParameterHelper.__init__(self, ['tolerance', 'preserve_topology'])
 
         tolerance = self.check_float(tolerance=tolerance)
@@ -338,8 +375,88 @@ class Simplify(UnaryConstructor, ParameterHelper):
             preserve_topology=preserve_topology)
 
         kwargs = self.update_kwargs(kwargs, locals())
-        super(Buffer, self).__init__(**kwargs)
+        super(Simplify, self).__init__(**kwargs)
 
     def _impl(self, this):
         kwargs = self.extract_kwargs(self._kwargs)
         return this.simplify(**kwargs)
+
+
+class Boundary(UnarySetTheoreticMethod, ParameterHelper):
+    def _impl(self, this):
+        return this.boundary
+
+
+class Centroid(UnarySetTheoreticMethod):
+    def _impl(self, this):
+        return this.centroid
+
+
+class PointOnSurface(UnarySetTheoreticMethod):
+    def _impl(self, this):
+        return this.representative_point()
+
+
+class Equals(BinaryPredicate, ParameterHelper):
+    def __init__(self, decimal=6, **kwargs):
+        ParameterHelper.__init__(self, ['decimal'])
+        decimal = self.check_integer(decimal=decimal)
+        self.check_range(decimal=decimal, low=0, high=16)
+
+        kwargs = self.update_kwargs(kwargs, locals())
+        super(Equals, self).__init__(**kwargs)
+
+    def _impl(self, this, other):
+        kwargs = self.extract_kwargs(self._kwargs)
+        return this.almost_equals(other, **kwargs)
+
+
+class Contains(BinaryPredicate):
+    def _impl(self, this, other):
+        return this.contains(other)
+
+
+class Crosses(BinaryPredicate):
+    def _impl(self, this, other):
+        return this.crosses(other)
+
+
+class Disjoint(BinaryPredicate):
+    def _impl(self, this, other):
+        return this.disjoint(other)
+
+
+class Intersects(BinaryPredicate):
+    def _impl(self, this, other):
+        return this.intersects(other)
+
+
+class Touches(BinaryPredicate):
+    def _impl(self, this, other):
+        return this.touches(other)
+
+
+class Within(BinaryPredicate):
+    def _impl(self, this, other):
+        return this.within(other)
+
+
+class Intersection(BinarySetTheoreticMethod):
+    def _impl(self, this, other):
+        return this.intersection(other)
+
+
+class Difference(BinarySetTheoreticMethod):
+    def _impl(self, this, other):
+        return this.difference(other)
+
+
+class SymmetricDifference(BinarySetTheoreticMethod):
+    def _impl(self, this, other):
+        return this.symmetric_difference(other)
+
+
+class Union(BinarySetTheoreticMethod):
+    def _impl(self, this, other):
+        return this.union(other)
+

@@ -87,6 +87,10 @@ class SpatialReference(object):
     def __str__(self):
         return 'SpatialReference(srid=%d)' % self._srid
 
+    def __bool__(self):
+        # valid CRS only when srid!=0
+        return bool(self._srid)
+
     def __getstate__(self):
         return self._srid
 
