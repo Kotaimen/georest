@@ -132,6 +132,6 @@ class CoordinateTransform(object):
         if isinstance(after, int):
             crs2 = SpatialReference(after)
         else:
-            crs2 = before
+            crs2 = after
 
         return cls(crs1, crs2)
