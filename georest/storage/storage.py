@@ -12,7 +12,7 @@ __date__ = '6/3/14'
 from collections import namedtuple
 
 
-class StorageResponse(namedtuple('Foo', 'key revision feature')):
+class StorageResponse(namedtuple('Foo', 'key revision feature timestamp')):
     pass
 
 
