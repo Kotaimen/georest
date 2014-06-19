@@ -124,7 +124,8 @@ class Geometry(object):
 
     @staticmethod
     def export_ewkt(geometry):
-        raise NotImplementedError
+        assert geometry._crs
+        return 'SRID=%d;%s' % (geometry._crs.srid, geometry.wkt)
 
 
 #
