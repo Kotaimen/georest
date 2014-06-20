@@ -88,8 +88,6 @@ class TestCoordinateTransform(unittest.TestCase):
             if k == 'geometrycollection':
                 self.assertRaises(CoordinateTransformationError, forward, geom1)
             else:
-                print geom1.__class__.__bases__
-                print geom1.__class__.__mro__
                 geom2 = forward(geom1)
                 geom3 = backward(geom2)
                 self.assertTrue(geom1.almost_equals(geom3))

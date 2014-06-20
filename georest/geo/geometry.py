@@ -35,9 +35,9 @@ from . import jsonhelper as json
 class Geometry(object):
     """ Being a mixin class, provide extra attributes for shapely's geometry"""
 
-    def __init__(self):
-        """This class is not intended to be created explicitly """
-        raise NotImplementedError
+    # def __init__(self):
+    #     """This class is not intended to be created explicitly """
+    #     raise NotImplementedError
 
     @staticmethod
     def is_geometry(obj):
@@ -141,7 +141,16 @@ class Geometry(object):
 
 
 # TODO: populate the cache instead relying on lazy logic below
-GEOMETRY_HACK_TYPES = {}
+HACK_GEOMETRY_TYPES = {}
+
+KNOWN_TYPE_NAMES = frozenset(['MultiPoint', 'LineString', 'Polygon', 'Point',
+                              'MultiPointAdapter',
+                              'LineStringAdapter', 'GeometryCollection',
+                              'MultiLineString',
+                              'PolygonAdapter',
+                              'MultiPolygonAdapter', 'PointAdapter',
+                              'MultiLineStringAdapter',
+                              'MultiPolygon', 'GeometryCollection'])
 
 
 def hack_geometry(geometry):
@@ -149,26 +158,28 @@ def hack_geometry(geometry):
     See `shapely.geometry.base.geom_factory()` for why we are doing this.
     """
     if issubclass(geometry.__class__, Geometry):
-        # already a hacked geometry object
+        # already a hacked geometry object, exiting
         return
 
-    # just use old name
-    new_name = geometry.__class__.__name__
+    # get name of the geometry class
+    type_name = geometry.__class__.__name__
+    assert type_name in KNOWN_TYPE_NAMES
 
     try:
-        new_class = GEOMETRY_HACK_TYPES[new_name]
+        new_type = HACK_GEOMETRY_TYPES[type_name]
     except KeyError:
+        # generate a new hack geometry type of given class
+        original_type = geometry.__class__
+        # equivalent to
+        # class MyHackGeometryType(OriginalGeometry, Geometry): pass
+        new_type = type(geometry.__class__.__name__,
+                        (original_type, Geometry),
+                        dict(geometry.__class__.__dict__))
+        # update the cache
+        HACK_GEOMETRY_TYPES[type_name] = new_type
 
-        new_bases = list(geometry.__class__.__bases__)
-        # append as last base since `Geometry` is a mixin class
-        new_bases.append(Geometry)
-        new_class = type(geometry.__class__.__name__,
-                         tuple(new_bases),
-                         dict(geometry.__class__.__dict__), )
-        GEOMETRY_HACK_TYPES[new_name] = new_class
-
-    # replace the type, thus completed the hack
-    geometry.__class__ = new_class
+    # replace the type object
+    geometry.__class__ = new_type
 
 
 #
@@ -231,7 +242,6 @@ def create_geometry_from_literal(geo_input, copy=False):
 
     try:
         if geojson_geometry['type'] != 'GeometryCollection':
-
             # whether to copy geometry coordinates from geojson geometry,
             # which is slightly slower
             builder = shapely.geometry.shape if copy else shapely.geometry.asShape
