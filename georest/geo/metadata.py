@@ -67,7 +67,7 @@ def calc_geohash(geom, length=7, ignore_crs=False):
 
     # only supports lonlat coordinates
     if not ignore_crs:
-        crs = geom._crs
+        crs = geom.crs
         if crs is None or not crs.proj.is_latlong():
             return ''
 
@@ -75,9 +75,7 @@ def calc_geohash(geom, length=7, ignore_crs=False):
     assert length > 1  # useless if precision is too short
 
     if geom.geom_type == 'Point':
-        assert isinstance(geom, shapely.geometry.Point)
         return geohash.encode(geom.y, geom.x, length)
-
     else:
         (left, bottom, right, top) = geom.bounds
 

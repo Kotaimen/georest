@@ -123,9 +123,15 @@ class CoordinateTransform(object):
             raise CoordinateTransformationError(
                 message='GeometryCollection is not supported')
         try:
-            return shapely.ops.transform(self._projection, geometry)
+            result = shapely.ops.transform(self._projection, geometry)
+            # shapely transform uses type() so the result is already an
+            # instance of `geo.Geometry`, but crs is left unassigned
+            result._the_crs = self._crs2
         except RuntimeError as e:
             raise CoordinateTransformationError(e=e)
+
+        return result
+
 
     @classmethod
     def build_transform(cls, before, after):

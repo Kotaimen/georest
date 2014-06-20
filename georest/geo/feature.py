@@ -67,8 +67,7 @@ class Feature(object):
     def geometry(self, geometry):
         assert Geometry.is_geometry(geometry)
         self._geometry = geometry
-        assert geometry._crs is not None
-        self._crs = geometry._crs
+        self._crs = geometry.crs
         self.refresh_metadata()
 
     @property
@@ -114,11 +113,14 @@ class Feature(object):
 
     @property
     def __geo_interface__(self):
-        return dict(type='Feature',
-                    geometry=shapely.geometry.mapping(self._geometry),
-                    properties=self._properties,
-                    crs=self._crs.geojson,
-                    id=self._key.qualified_name)
+        geo_obj = dict(type='Feature',
+                      geometry=shapely.geometry.mapping(self._geometry),
+                      properties=self._properties,
+                      id=self._key.qualified_name)
+        if not self._crs and self._crs.srid != 4326:
+            geo_obj['crs'] = self._crs.geojson
+        return geo_obj
+
 
     @property
     def geojson(self):
@@ -136,8 +138,7 @@ class Feature(object):
         if properties is None:
             properties = dict()
 
-        crs = geometry._crs
-        assert crs is not None
+        crs = geometry.crs
 
         return cls(key, geometry, crs, properties, metadata)
 

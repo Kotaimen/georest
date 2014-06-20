@@ -87,15 +87,17 @@ class BaseOperation(object):
             else:
                 raise OperationError(e=e)
 
-        if Geometry.is_geometry(result):
+        if isinstance(result, shapely.geometry.base.BaseGeometry):
             # update spatial reference
-            result._crs = result_crs
+            result = Geometry.build_geometry(result,
+                                             srid=result_crs.srid,
+                                             empty_check=False)
 
         return result
 
     def _transform_crs(self, geometries):
         for geometry in geometries:
-            geom_crs = geometry._crs
+            geom_crs = geometry.crs
             if not geom_crs:
                 raise InvalidParameter(
                     'Requires all geometries have CRS defined')
@@ -105,15 +107,15 @@ class BaseOperation(object):
             yield transform(geometry)
 
     def _check_crs(self, geometries):
-        if not any(bool(g._crs) for g in geometries):
+        if not any(bool(g.crs) for g in geometries):
             # if all geometries have undefined CRS or unassigned CRS
             # we assume you know what you are doing
             return SpatialReference(srid=0)
-        elif len(set(g._crs.srid for g in geometries)) > 1:
+        elif len(set(g.crs.srid for g in geometries)) > 1:
             # but in any case you can't mix different CRS
             raise InvalidParameter('Cannot operate on mixed CRS')
         else:
-            return SpatialReference(geometries[0]._crs.srid)
+            return SpatialReference(geometries[0].crs.srid)
 
 
 class UnaryOperation(BaseOperation):

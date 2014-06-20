@@ -19,7 +19,7 @@ class TestUnaryOperation(unittest.TestCase):
         reference = Geometry.build_geometry(
             'POINT (111319.4907932723 111325.1428663849)')
         self.assertTrue(reference.almost_equals(result, 7))
-        self.assertEqual(result._crs.srid, 3857)
+        self.assertEqual(result.crs.srid, 3857)
 
 
     def test_crs(self):
@@ -27,7 +27,7 @@ class TestUnaryOperation(unittest.TestCase):
         operation = UnaryOperation()
 
         result = operation(this)
-        self.assertIsNotNone(result._crs)
+        self.assertIsNotNone(result.crs)
 
 
 class TestAttributes(unittest.TestCase):
