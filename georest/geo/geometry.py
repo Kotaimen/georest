@@ -33,14 +33,16 @@ from . import jsonhelper as json
 
 
 class Geometry(object):
-    """Just a namespace containing static methods"""
+    """ Being a mixin class, provide extra attributes for shapely's geometry"""
 
     def __init__(self):
         raise NotImplementedError
 
     @staticmethod
     def is_geometry(obj):
-        return isinstance(obj, shapely.geometry.base.BaseGeometry)
+        # only accepts our Geometry
+        return isinstance(obj, Geometry) and not \
+            isinstance(obj, shapely.geometry.base.BaseGeometry)
 
     @classmethod
     def build_geometry(cls, geo_input, srid=4326, copy=False):
@@ -75,7 +77,6 @@ class Geometry(object):
         NOTE: This is not really python3 compatible...
         """
         assert isinstance(srid, int)
-        assert srid != 0  # we don't support undefined coordinate system
 
         # factory methods, ordered by attempt priority
         factories = [create_geometry_from_geometry,
@@ -107,25 +108,77 @@ class Geometry(object):
             if bundled_srid is not None:
                 srid = bundled_srid
 
-            # assign new crs only if geometry don't have one
-            if geometry._crs is None:
-                geometry._crs = SpatialReference(srid=srid)
+            # hack the geometry
+            hack_geometry(geometry)
 
+            # assign new crs only if geometry don't have one
+            if not geometry.crs:
+                geometry.crs = SpatialReference(srid=srid)
             return geometry
 
         else:
             raise InvalidGeometry('Unrecognized geometry input')
 
-    @staticmethod
-    def export_geojson(geometry, double_precision=9):
-        return json.dumps(geojson.mapping.to_mapping(geometry),
+
+    @property
+    def __geo_interface__(self):
+        geoobj = super(Geometry, self).__geo_interface__()
+        if not self.__crs or self.__crs.srid == 4326:
+            geoobj['crs'] = self.__crs.geojson
+        return geoobj
+
+    @property
+    def geojson(self, double_precision=9):
+        return json.dumps(geojson.mapping.to_mapping(self),
                           double_precision=double_precision)
 
+    @property
+    def ewkt(self):
+        return 'SRID=%d;%s' % (self.crs.srid, self.wkt)
 
-    @staticmethod
-    def export_ewkt(geometry):
-        assert geometry._crs
-        return 'SRID=%d;%s' % (geometry._crs.srid, geometry.wkt)
+    # don't use shapely's _crs
+    __crs = None
+
+    @property
+    def crs(self):
+        return self.__crs
+
+
+    @crs.setter
+    def crs(self, crs):
+        assert isinstance(crs, SpatialReference)
+        self.__crs = crs  # Type cache
+
+
+# TODO: populate the cache instead relying on lazy logic below
+GEOMETRY_HACK_TYPES = {}
+
+
+def hack_geometry(geometry):
+    """ Inject out attributes by make our Geometry a shapely geometry's parent
+    See `shapely.geometry.base.geom_factory()` for why we are doing this.
+    """
+    if issubclass(geometry.__class__, Geometry):
+        # already a hacked geometry object
+        return
+
+    # just use old name
+    new_name = geometry.__class__.__name__
+
+    try:
+        new_class = GEOMETRY_HACK_TYPES[new_name]
+    except KeyError:
+
+        new_bases = list(geometry.__class__.__bases__)
+        # append as last base since `Geometry` is a mixin class
+        new_bases.append(Geometry)
+        new_class = type(geometry.__class__.__name__,
+                         tuple(new_bases),
+                         dict(geometry.__class__.__dict__), )
+        GEOMETRY_HACK_TYPES[new_name] = new_class
+
+    # replace the type, thus completed the hack
+    geometry.__class__ = new_class
 
 
 #

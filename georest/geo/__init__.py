@@ -9,8 +9,7 @@ __date__ = '5/29/14'
 
     This package provides GeoJson a-like Feature data model.
 
-    Overall goal is fast json/wkb/wkt io *without* magical python code... there
-    are already too much pain in various python geo packages:
+    Various python geo packages:
 
     - Geometry Engine:
         - shapely
