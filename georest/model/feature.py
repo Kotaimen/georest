@@ -10,6 +10,7 @@ __author__ = 'pp'
 """
 
 
+from datetime import datetime
 
 from .. import geo
 from ..geo import jsonhelper as json
@@ -74,7 +75,8 @@ class BaseFeatureModel(object):
 
 
 def _result2metadata(r):
-    return {'etag': r.version}
+    return {'etag': r.version,
+            'last_modified': datetime.utcfromtimestamp(r.timestamp)}
 
 
 class FeatureModel(BaseFeatureModel):
@@ -139,8 +141,6 @@ class GeometryModel(BaseFeatureModel):
             feature = geo.Feature.build_from_geometry(obj)
         else:
             if etag and r1.revision != etag:
-
-                # already conflict here
                 raise exceptions.KeyExists('given etag %s is stale' % etag)
 
             # replace geometry
@@ -174,12 +174,14 @@ class FeaturePropModel(BaseFeatureModel):
 
         # get feature
         r1 = self.feature_storage.get_feature(key)
+        if etag and r1.revision != etag:
+            raise exceptions.KeyExists('given etag %s is stale' % etag)
 
         # replace properties
         feature = r1.feature
         feature.properties = obj
 
         # save
-        r2 = self.feature_storage.put_feature(key, feature)
+        r2 = self.feature_storage.put_feature(key, feature, revision=etag)
         metadata = _result2metadata(r2)
         return metadata

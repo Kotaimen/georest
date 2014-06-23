@@ -63,6 +63,7 @@ from .metadata import Metadata
 from .spatialref import SpatialReference
 from .geometry import Geometry
 from .feature import Feature
+from .operations import *
 from .import jsonhelper
 
 def _describe():
