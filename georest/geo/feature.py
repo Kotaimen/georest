@@ -175,7 +175,7 @@ class Feature(object):
 
     def __repr__(self):
         feature = self.__geo_interface__
-        feature.update(self.metadata)
+        feature.update(self.metadata._asdict())
         return 'Feature(%s)' % json.dumps(feature)
 
     def __hash__(self):
