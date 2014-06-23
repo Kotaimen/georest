@@ -60,7 +60,7 @@ FEATURE_TABLE = Table(
     Column('top_version', String, ForeignKey('feature_version.new_version')),
 )
 
-FEATURE_KEY_SEQ = Sequence('feature_key_seq')
+FEATURE_KEY_SEQ = Sequence('feature_key_seq', metadata=metadata)
 
 
 class FeatureMapper(object):
@@ -375,7 +375,7 @@ class PostgisFeatureStorage(FeatureStorage):
 
         metadata = feature.metadata._asdict()
         properties = dict(feature.properties)
-        geometry = 'SRID=%d;%s' % (feature.crs.srid, feature.geometry.wkt)
+        geometry = feature.geometry.ewkt
 
         mapper = FeatureMapper(metadata=metadata, properties=properties,
                                geometry=geometry)
