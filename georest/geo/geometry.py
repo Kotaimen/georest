@@ -6,12 +6,14 @@ __date__ = '6/4/14'
 """
     georest.geo.geometry
     ~~~~~~~~~~~~~~~~~~~~
-    Geometry IO
+    Geometry IO stuff
 
 """
 
 import re
 import io
+
+import six
 
 import shapely.speedups
 import shapely.geometry
@@ -31,13 +33,20 @@ from . import jsonhelper as json
 
 
 class Geometry(object):
-    """Just a namespace containing static methods"""
+    """ Being a mixin class, provide extra attributes for shapely's geometry"""
 
-    def __init__(self):
-        raise NotImplementedError
+    # def __init__(self):
+    #     """This class is not intended to be created explicitly """
+    #     raise NotImplementedError
+
+    @staticmethod
+    def is_geometry(obj):
+        # only accepts our Geometry
+        return isinstance(obj, Geometry) and \
+               isinstance(obj, shapely.geometry.base.BaseGeometry)
 
     @classmethod
-    def build_geometry(cls, geo_input, srid=4326, copy=False):
+    def build_geometry(cls, geo_input, srid=4326, copy=False, empty_check=True):
         """Make a shapely Geometry object from given geometry input and srid
 
         `geo_input` can be one of the following format:
@@ -64,10 +73,11 @@ class Geometry(object):
         coordinates means fast creation but can cause problems when doing
         geometry operations.
 
+        Returns a shapely.base.geometry.BaseGeometry object.
+
         NOTE: This is not really python3 compatible...
         """
         assert isinstance(srid, int)
-        assert srid != 0  # we don't support undefined coordinate system
 
         # factory methods, ordered by attempt priority
         factories = [create_geometry_from_geometry,
@@ -92,38 +102,91 @@ class Geometry(object):
                 # when we read the geometry
                 raise InvalidGeometry('Invalid coordinates', e=e)
 
-            if geometry.is_empty:
+            if empty_check and geometry.is_empty:
                 raise InvalidGeometry('Empty geometry is not allowed')
 
             # bundled srid always overwrites provided one
-            if bundled_srid is not None:
+            if bundled_srid is not None and bundled_srid != 4326:
                 srid = bundled_srid
 
-            # assign new crs only if geometry don't have one
-            if geometry._crs is None:
-                geometry._crs = SpatialReference(srid=srid)
+            # hack the geometry
+            hack_geometry(geometry)
 
+            # assign new crs only if geometry don't already have one
+            if not geometry.crs:
+                geometry._the_crs = SpatialReference(srid=srid)
             return geometry
 
         else:
             raise InvalidGeometry('Unrecognized geometry input')
 
-    @staticmethod
-    def export_geojson(geometry, double_precision=9):
-        return json.dumps(geojson.mapping.to_mapping(geometry),
+    @property
+    def geojson(self, double_precision=9):
+        geo_obj = geojson.mapping.to_mapping(self)
+        if not self._the_crs or self._the_crs.srid != 4326:
+            geo_obj['crs'] = self._the_crs.geojson
+        return json.dumps(geo_obj,
                           double_precision=double_precision)
 
+    @property
+    def ewkt(self):
+        return 'SRID=%d;%s' % (self.crs.srid, self.wkt)
 
-    @staticmethod
-    def export_ewkt(geometry):
-        raise NotImplementedError
+    # don't use shapely's _crs
+    _the_crs = None
+
+    @property
+    def crs(self):
+        return self._the_crs
+
+
+# TODO: populate the cache instead relying on lazy logic below
+HACK_GEOMETRY_TYPES = {}
+
+KNOWN_TYPE_NAMES = frozenset(['MultiPoint', 'LineString', 'Polygon', 'Point',
+                              'MultiPointAdapter',
+                              'LineStringAdapter', 'GeometryCollection',
+                              'MultiLineString',
+                              'PolygonAdapter',
+                              'MultiPolygonAdapter', 'PointAdapter',
+                              'MultiLineStringAdapter',
+                              'MultiPolygon', 'GeometryCollection'])
+
+
+def hack_geometry(geometry):
+    """ Inject out attributes by make our Geometry a shapely geometry's parent
+    See `shapely.geometry.base.geom_factory()` for why we are doing this.
+    """
+    if issubclass(geometry.__class__, Geometry):
+        # already a hacked geometry object, exiting
+        return
+
+    # get name of the geometry class
+    type_name = geometry.__class__.__name__
+    assert type_name in KNOWN_TYPE_NAMES
+
+    try:
+        new_type = HACK_GEOMETRY_TYPES[type_name]
+    except KeyError:
+        # generate a new hack geometry type of given class
+        original_type = geometry.__class__
+        # equivalent to
+        # class MyHackGeometryType(OriginalGeometry, Geometry): pass
+        new_type = type(geometry.__class__.__name__,
+                        (original_type, Geometry),
+                        dict(geometry.__class__.__dict__))
+        # update the cache
+        HACK_GEOMETRY_TYPES[type_name] = new_type
+
+    # replace the type object
+    geometry.__class__ = new_type
 
 
 #
 # Magic regular expression
 #
 
-# XXX: Not really secure, are we allowing only GeoJSON input from API?
+# NOTE: Not really secure, are we allowing only GeoJSON input from API?
 HEX_REGEX = re.compile(r'^[0-9A-F]+$', re.I)
 
 WKT_REGEX = re.compile(r'^(SRID=(?P<SRID>\-?\d+);)?'
@@ -145,7 +208,8 @@ class NotMyType(RuntimeError):
 
 
 def create_geometry_from_geojson(geo_input, copy=False):
-    if not isinstance(geo_input, basestring) or not JSON_REGEX.match(geo_input):
+    if not isinstance(geo_input, six.string_types) or \
+            not JSON_REGEX.match(geo_input):
         raise NotMyType('GeoJson')
 
     try:
@@ -173,11 +237,11 @@ def create_geometry_from_literal(geo_input, copy=False):
         crs = SpatialReference.build_from_geojson_crs(geo_input['crs'])
         srid = crs.srid
     else:
-        srid = None
+        # geojson default crs is wgs84
+        srid = 4326
 
     try:
         if geojson_geometry['type'] != 'GeometryCollection':
-
             # whether to copy geometry coordinates from geojson geometry,
             # which is slightly slower
             builder = shapely.geometry.shape if copy else shapely.geometry.asShape
@@ -227,7 +291,7 @@ def create_geometrycollection_from_geojson(geometry, buf=None):
 
 
 def create_geometry_from_wkt(geo_input, copy):
-    if not isinstance(geo_input, basestring):
+    if not isinstance(geo_input, six.string_types):
         raise NotMyType('WKT')
     wkt_m = WKT_REGEX.match(geo_input)
     if not wkt_m:
@@ -251,7 +315,7 @@ def create_geometry_from_wkt(geo_input, copy):
 
 
 def create_geometry_from_wkb(geo_input, copy):
-    if isinstance(geo_input, (str, unicode)):
+    if isinstance(geo_input, six.string_types):
         if HEX_REGEX.match(geo_input):
             # HEX WKB
             hex = True
@@ -272,17 +336,17 @@ def create_geometry_from_wkb(geo_input, copy):
 
 
 def create_geometry_from_geometry(geo_input, copy=False):
-    if isinstance(geo_input, shapely.geometry.base.BaseGeometry):
-        # check whether geometry already has a crs
-        if geo_input._crs is not None:
-            bundled_srid = geo_input._crs.srid
-        else:
-            bundled_srid = None
-
+    if Geometry.is_geometry(geo_input):
+        bundled_srid = geo_input.crs.srid
         if not copy:
             return geo_input, bundled_srid
         else:
             return shapely.geometry.shape(geo_input), bundled_srid
+    elif isinstance(geo_input, shapely.geometry.base.BaseGeometry):
+        if not copy:
+            return geo_input, None
+        else:
+            return shapely.geometry.shape(geo_input), None
     else:
         raise NotMyType('Shapely Geometry')
 

@@ -12,6 +12,7 @@ __date__ = '5/29/14'
 
 import copy
 
+import six
 import shapely.geometry.base
 import geojson.base
 
@@ -25,11 +26,30 @@ from .exceptions import InvalidFeature, InvalidGeometry, InvalidGeoJsonInput, \
 
 
 class Feature(object):
-    """ A Geo Feature with optional properties and SRS."""
+    """ A Geo Feature with optional properties and CRS
+
+    Available props:
+    - `key`: key of the feature
+    - `geometry`: the geometry, now a `shapely` geometry object
+    - `properties`: property list
+    - `crs`: coordinate reference system
+    - `metadata`: index metadata of the geometry
+
+    A `Feature` object is mutable, hashable as well as pickleable, plus
+    satisfies python geo interface.
+
+    GeoJson IO is slightly faster than `osgro.ogr` and `geojson` because
+    internal implementation avoided this:
+
+        string = json.dumps(json.loads(stuff))
+
+    Validation and check is performed in the GeoJson build method so its
+    safe to create a feature from request GeoJson data.
+    """
 
     def __init__(self, key, geometry, crs, properties, metadata):
         assert isinstance(key, Key)
-        assert isinstance(geometry, shapely.geometry.base.BaseGeometry)
+        assert Geometry.is_geometry(geometry)
         assert isinstance(crs, SpatialReference)
         assert isinstance(metadata, Metadata)
 
@@ -43,6 +63,13 @@ class Feature(object):
     def geometry(self):
         return self._geometry
 
+    @geometry.setter
+    def geometry(self, geometry):
+        assert Geometry.is_geometry(geometry)
+        self._geometry = geometry
+        self._crs = geometry.crs
+        self.refresh_metadata()
+
     @property
     def properties(self):
         return self._properties
@@ -50,11 +77,6 @@ class Feature(object):
     @property
     def key(self):
         return self._key
-
-    @key.setter
-    def key(self, key):
-        assert isinstance(key, Key)
-        self._key = key
 
     @property
     def crs(self):
@@ -91,11 +113,14 @@ class Feature(object):
 
     @property
     def __geo_interface__(self):
-        return dict(type='Feature',
-                    geometry=shapely.geometry.mapping(self._geometry),
-                    properties=self._properties,
-                    crs=self._crs.geojson,
-                    id=self._key)
+        geo_obj = dict(type='Feature',
+                      geometry=shapely.geometry.mapping(self._geometry),
+                      properties=self._properties,
+                      id=self._key.qualified_name)
+        if not self._crs or self._crs.srid != 4326:
+            geo_obj['crs'] = self._crs.geojson
+        return geo_obj
+
 
     @property
     def geojson(self):
@@ -113,8 +138,7 @@ class Feature(object):
         if properties is None:
             properties = dict()
 
-        crs = geometry._crs
-        assert crs is not None
+        crs = geometry.crs
 
         return cls(key, geometry, crs, properties, metadata)
 
@@ -122,7 +146,7 @@ class Feature(object):
     def build_from_geojson(cls, geo_input, key=None, srid=4326,
                            precise_float=True):
         # load json as python literal if necessary
-        if isinstance(geo_input, (str, unicode)):
+        if isinstance(geo_input, six.string_types):
             try:
                 literal = json.loads(geo_input, precise_float=precise_float)
             except (KeyError, ValueError) as e:

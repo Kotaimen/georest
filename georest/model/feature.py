@@ -10,8 +10,12 @@ __author__ = 'pp'
 """
 
 
+from datetime import datetime
+
 from .. import geo
 from ..geo import jsonhelper as json
+from .. import storage
+from . import exceptions
 
 
 class BaseFeatureModel(object):
@@ -70,6 +74,11 @@ class BaseFeatureModel(object):
         raise NotImplementedError
 
 
+def _result2metadata(r):
+    return {'etag': r.version,
+            'last_modified': datetime.utcfromtimestamp(r.timestamp)}
+
+
 class FeatureModel(BaseFeatureModel):
     def from_json(self, s):
         return geo.Feature.build_from_geojson(s)
@@ -79,18 +88,21 @@ class FeatureModel(BaseFeatureModel):
 
     def create(self, obj, bucket=None):
         key = geo.Key(bucket=bucket)
-        obj.key = key
-        r = self.feature_storage.put_feature(obj)
-        # XXX: assert r.success
-        etag = str(r.version)
-
-        return super(FeatureModel, self).create(obj, bucket)
+        r = self.feature_storage.put_feature(key, obj)
+        metadata = _result2metadata(r)
+        return r.key, metadata
 
     def get(self, key):
-        return super(FeatureModel, self).get(key)
+        key = geo.Key.build_from_qualified_name(key)
+        r = self.feature_storage.get_feature(key)
+        metadata = _result2metadata(r)
+        return r.feature, metadata
 
     def put(self, obj, key, etag=None):
-        return super(FeatureModel, self).put(obj, key, etag)
+        key = geo.Key.build_from_qualified_name(key)
+        r = self.feature_storage.put_feature(key, obj, revision=etag)
+        metadata = _result2metadata(r)
+        return metadata
 
 
 class GeometryModel(BaseFeatureModel):
@@ -101,13 +113,44 @@ class GeometryModel(BaseFeatureModel):
         return geo.Geometry.export_geojson(obj)
 
     def create(self, obj, bucket=None):
-        return super(GeometryModel, self).create(obj, bucket)
+        key = geo.Key(bucket=bucket)
+
+        # new object
+        feature = geo.Feature.build_from_geometry(obj)
+
+        # store
+        r = self.feature_storage.put_feature(key, feature)
+        metadata = _result2metadata(r)
+        return r.key, metadata
 
     def get(self, key):
-        return super(GeometryModel, self).get(key)
+        key = geo.Key.build_from_qualified_name(key)
+        r = self.feature_storage.get_feature(key)
+        metadata = _result2metadata(r)
+        return r.feature.geometry, metadata
 
     def put(self, obj, key, etag=None):
-        return super(GeometryModel, self).put(obj, key, etag)
+        key = geo.Key.build_from_qualified_name(key)
+
+        # get feature
+        try:
+            r1 = self.feature_storage.get_feature(key)
+        except storage.FeatureNotFound:
+
+            # create new feature from scratch
+            feature = geo.Feature.build_from_geometry(obj)
+        else:
+            if etag and r1.revision != etag:
+                raise exceptions.KeyExists('given etag %s is stale' % etag)
+
+            # replace geometry
+            feature = r1.feature
+            feature.geometry = obj
+
+        # save
+        r2 = self.feature_storage.put_feature(key, feature, revision=etag)
+        metadata = _result2metadata(r2)
+        return metadata
 
 
 class FeaturePropModel(BaseFeatureModel):
@@ -117,11 +160,28 @@ class FeaturePropModel(BaseFeatureModel):
     def as_json(self, obj):
         return json.dumps(obj)
 
-    def create(self, obj, bucket=None):
-        return super(FeaturePropModel, self).create(obj, bucket)
+    # No direct create for properties
+    # def create(self, obj, bucket=None):
 
     def get(self, key):
-        return super(FeaturePropModel, self).get(key)
+        key = geo.Key.build_from_qualified_name(key)
+        r = self.feature_storage.get_feature(key)
+        metadata = _result2metadata(r)
+        return r.feature.properties
 
     def put(self, obj, key, etag=None):
-        return super(FeaturePropModel, self).put(obj, key, etag)
+        key = geo.Key.build_from_qualified_name(key)
+
+        # get feature
+        r1 = self.feature_storage.get_feature(key)
+        if etag and r1.revision != etag:
+            raise exceptions.KeyExists('given etag %s is stale' % etag)
+
+        # replace properties
+        feature = r1.feature
+        feature.properties = obj
+
+        # save
+        r2 = self.feature_storage.put_feature(key, feature, revision=etag)
+        metadata = _result2metadata(r2)
+        return metadata

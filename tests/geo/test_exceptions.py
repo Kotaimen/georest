@@ -7,6 +7,7 @@ import unittest
 
 from georest.geo.exceptions import GeoException
 
+
 class TestExceptions(unittest.TestCase):
     def test_exception_message(self):
         e = Exception('Game')

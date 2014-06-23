@@ -7,10 +7,9 @@ __date__ = '5/29/14'
     georest.geo
     ~~~~~~~~~~~
 
-    This package provides GeoJSON a-like Feature data model.
+    This package provides GeoJson a-like Feature data model.
 
-    Overall goal is fast json/wkb/wkt io *without* magical python code... there
-    are already too much pain in various python geo packages:
+    Various python geo packages:
 
     - Geometry Engine:
         - shapely
@@ -37,12 +36,12 @@ __date__ = '5/29/14'
     - geos/osgeo.ogr/osgeo.osr: official binding of c++ interface, powerful,
                                 too complex, not pythonic at all, requires 
                                 convert `GEOSGeometry` to `OGRGeometry` to do
-                                coordinate transform, very slow GeoJson 
+                                coordinate transform, slow GeoJson
                                 serialization (load/dump json...).
     - django.contrib.gis: very nice python bindings, still requires convert 
-                          geometry for transform, and it feels strange to use
-                          `django` in a `Flask` project ... (used in Mark1,
-                          for they don't require python-gdal)
+                          geometry for CRS transform, and it feels strange
+                          to use `django` in a `Flask` project ...
+                          (used in Mark1, don't require python-gdal)
     - geojson: Feature abstraction is what we want but uses `simplejson` for
                serialization which is slow.
     - ujson: Fast, stable, not as much options as standard library `json`, and
@@ -52,7 +51,8 @@ __date__ = '5/29/14'
                can't read a lot of shapefiles, implemented in pure python.
     - pyproj: Very weird abstraction compared to `osgeo.osr`, don't require
               `python-gdal` and `gdal`, supports transform coordinates without
-              load geometry from geos into gdal.
+              load geometry from `geos` into `gdal`.  Note it doesn't use
+              standard `gdal` projection database and don't link to libgdal.
 
 """
 
@@ -63,6 +63,7 @@ from .metadata import Metadata
 from .spatialref import SpatialReference
 from .geometry import Geometry
 from .feature import Feature
+from .operations import *
 from .import jsonhelper
 
 def _describe():
@@ -82,7 +83,7 @@ def _describe():
         'proj_data': '%s' % pyproj.pyproj_datadir,
     }
 
-# cache the _describe call since data is static
+# cache the _describe call since its data is static
 _description = _describe()
 del _describe
 

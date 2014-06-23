@@ -11,14 +11,18 @@ __author__ = 'pp'
 
 import re
 
+from werkzeug.http import http_date
+from werkzeug.datastructures import ETags
 import flask
 from flask import request
 from flask import current_app
 from flask.views import MethodView
 from flask.json import jsonify
 
+from ..geo import GeoException
 
-class InvalidRequest(Exception):
+
+class InvalidRequest(GeoException):  # XXX: is this appropriate?
     HTTP_STATUS_CODE = 400
 
 
@@ -38,29 +42,18 @@ class StorageView(MethodView):
 
         headers = {'Content-Type': 'application/json'}
         if 'etag' in metadata:
-            headers['ETag'] = metadata['etag']
+            headers['ETag'] = ETags([metadata['etag']])
             # check if-none-match
             if request.if_none_match.contains(metadata['etag']):
                 return flask.Response(status=304)
 
         if 'last_modified' in metadata:
-            headers['Last-Modified'] = metadata['last_modified']
+            headers['Last-Modified'] = http_date(metadata['last_modified'])
             # check if-not-modified
             if request.if_modified_since \
                     and request.if_modified_since >= metadata['last_modified']:
                 return flask.Response(status=304)
         return data, 200, headers
-
-    def _extract_content(self):
-        # content extraction
-        if request.mimetype != 'application/json':
-            raise InvalidRequest('Only "application/json" supported')
-        try:
-            data = request.data.decode('utf-8')
-        except UnicodeError:
-            raise InvalidRequest('Cannot decode content with utf-8')
-        obj = self.model.from_json(data)
-        return obj
 
     def put(self, key=None):
         if key is None:
@@ -81,10 +74,11 @@ class StorageView(MethodView):
         headers = {}
         r_data = dict(code=201, key=key)
         if 'etag' in metadata:
-            headers['ETag'] = metadata['etag']
+            headers['ETag'] = ETags([metadata['etag']])
             r_data['etag'] = metadata['etag']
-        response = jsonify(code=201, key=key)
-        response.headers.update(headers)
+        response = jsonify(r_data)
+        response.status_code = 201
+        response.headers.extend(headers)
         return response
 
     def post(self, key=None):
@@ -96,17 +90,26 @@ class StorageView(MethodView):
         obj = self._extract_content()
 
         key, metadata = self.model.create(obj, bucket=bucket)
-        assert re.match(r'^\w+$', key)
-
-        long_key = bucket + '.' + key if bucket else key
         headers = {}
-        r_data = dict(code=201, key=long_key)
+        r_data = dict(code=201, key=key)
         if 'etag' in metadata:
-            headers['ETag'] = metadata['etag']
+            headers['ETag'] = ETags([metadata['etag']])
             r_data['etag'] = metadata['etag']
-        response = jsonify(code=201, key=long_key)
-        response.headers.update(headers)
+        response = jsonify(r_data)
+        response.status_code = 201
+        response.headers.extend(headers)
         return response
+
+    def _extract_content(self):
+        # content extraction
+        if request.mimetype != 'application/json':
+            raise InvalidRequest('Only "application/json" supported')
+        try:
+            data = request.data.decode('utf-8')
+        except UnicodeError:
+            raise InvalidRequest('Cannot decode content with utf-8')
+        obj = self.model.from_json(data)
+        return obj
 
 
 class Features(StorageView):

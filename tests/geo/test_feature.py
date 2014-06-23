@@ -22,7 +22,6 @@ class TestFeature(unittest.TestCase):
         self.assertEqual(feature1.crs.srid, 4326)
         self.assertEqual(feature1.properties['x'], 1)
         self.assertEqual(feature1.properties['y'], 2)
-        self.assertIsNotNone(feature1.metadata.modified)
 
         feature2 = Feature.build_from_geojson(feature1.__geo_interface__)
         feature3 = Feature.build_from_geojson(feature1.geojson)
@@ -89,6 +88,14 @@ class TestFeature(unittest.TestCase):
 
             self.assertEqual(feature2.metadata, feature.metadata)
             self.assertTrue(feature2.equals(feature))
+
+    def test_update_geometry(self):
+        feature1 = Feature.build_from_geometry('POINT (1 2)',
+                                               properties=dict(x=1, y=2))
+        metadata1 = feature1.metadata
+        feature1.geometry = Geometry.build_geometry('POINT (3 4)')
+        metadata2  = feature1.metadata
+        self.assertNotEqual(metadata1, metadata2)
 
 
 if __name__ == '__main__':

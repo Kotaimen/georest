@@ -69,7 +69,7 @@ class TestCoordinateTransform(unittest.TestCase):
         crs2 = SpatialReference(3857)
 
         forward = CoordinateTransform(crs1, crs2)
-        backward = CoordinateTransform(crs2, crs1)
+        backward = CoordinateTransform.build_transform(crs2, crs1.srid)
 
         geom2 = forward(geom1)
         geom3 = backward(geom2)
@@ -88,7 +88,6 @@ class TestCoordinateTransform(unittest.TestCase):
             if k == 'geometrycollection':
                 self.assertRaises(CoordinateTransformationError, forward, geom1)
             else:
-
                 geom2 = forward(geom1)
                 geom3 = backward(geom2)
                 self.assertTrue(geom1.almost_equals(geom3))

@@ -20,21 +20,21 @@ from tests.geo.data import jsondata, pydata
 
 class TestBuildGeometry(unittest.TestCase):
     def test_wkt(self):
-        self.assertRaises(NotImplementedError, Geometry)
+        # self.assertRaises(NotImplementedError, Geometry)
 
         geom1 = Geometry.build_geometry('POINT(1 2)')
         self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
-        self.assertTrue(geom1._crs.equals(SpatialReference(srid=4326)))
+        self.assertTrue(geom1.crs.equals(SpatialReference(srid=4326)))
 
         geom2 = Geometry.build_geometry('POINT(1 2)', srid=3857)
-        self.assertTrue(geom2._crs.equals(SpatialReference(srid=3857)))
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=3857)))
 
         geom3 = Geometry.build_geometry('SRID=3857;POINT(1 2)')
-        self.assertTrue(geom3._crs.equals(SpatialReference(srid=3857)))
+        self.assertTrue(geom3.crs.equals(SpatialReference(srid=3857)))
 
         geom4 = Geometry.build_geometry('SRID=3857;POINT(1 2)', srid=4326)
         self.assertTrue(geom4.equals(shapely.geometry.Point(1, 2)))
-        self.assertTrue(geom4._crs.equals(SpatialReference(srid=3857)))
+        self.assertTrue(geom4.crs.equals(SpatialReference(srid=3857)))
 
         geom5 = Geometry.build_geometry(
             'GEOMETRYCOLLECTION (POINT (2 2), LINESTRING (0 0, 1 1))')
@@ -45,30 +45,30 @@ class TestBuildGeometry(unittest.TestCase):
         geom1 = Geometry.build_geometry(
             '0101000000000000000000F03F0000000000000040')
         self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
-        self.assertTrue(geom1._crs.equals(SpatialReference(srid=4326)))
+        self.assertTrue(geom1.crs.equals(SpatialReference(srid=4326)))
 
         geom2 = Geometry.build_geometry(
             buffer(
                 '\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@'))
         self.assertTrue(geom2.equals(shapely.geometry.Point(1, 2)))
-        self.assertTrue(geom2._crs.equals(SpatialReference(srid=4326)))
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=4326)))
 
     def test_geojson(self):
         geom1 = Geometry.build_geometry(
             '{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }')
         self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
-        self.assertTrue(geom1._crs.equals(SpatialReference(srid=4326)))
+        self.assertTrue(geom1.crs.equals(SpatialReference(srid=4326)))
 
         geom2 = Geometry.build_geometry(
             u'{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }')
         self.assertTrue(geom2.equals(shapely.geometry.Point(1, 2)))
-        self.assertTrue(geom2._crs.equals(SpatialReference(srid=4326)))
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=4326)))
 
     def test_literal(self):
         geom1 = Geometry.build_geometry(
             {"type": "Point", "coordinates": [1.0, 2.0]})
         self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
-        self.assertTrue(geom1._crs.equals(SpatialReference(srid=4326)))
+        self.assertTrue(geom1.crs.equals(SpatialReference(srid=4326)))
 
         geom2 = Geometry.build_geometry(
             {"type": "Point", "coordinates": [1.0, 2.0],
@@ -76,7 +76,7 @@ class TestBuildGeometry(unittest.TestCase):
                      'properties': {
                          'name': 'EPSG:3857'
                      }}})
-        self.assertTrue(geom2._crs.equals(SpatialReference(srid=3857)))
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=3857)))
 
     def test_failure(self):
         self.assertRaises(InvalidGeometry,
@@ -120,7 +120,7 @@ class TestBuildGeometry(unittest.TestCase):
     def test_geometry(self):
         geom = shapely.geometry.Point(1, 2)
         geom2 = Geometry.build_geometry(geom)
-        self.assertTrue(geom2._crs.equals(SpatialReference(srid=4326)))
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=4326)))
 
 
 class TestBuildGeometryCollection(unittest.TestCase):
@@ -183,9 +183,27 @@ class TestBuildAllGeometryTypes(unittest.TestCase):
         for k, v in jsondata.iteritems():
             geometry = Geometry.build_geometry(v)
             self.assertDictEqual(
-                json.loads(Geometry.export_geojson(geometry)),
+                json.loads(geometry.geojson),
                 pydata[k]
             )
+
+    def test_geometry_types_copy(self):
+        for k, v in jsondata.iteritems():
+            geometry = Geometry.build_geometry(v, copy=True)
+            self.assertDictEqual(
+                json.loads(geometry.geojson),
+                pydata[k]
+            )
+
+    def test_geometry_types_with_crs(self):
+        for k, v in jsondata.iteritems():
+            geometry = Geometry.build_geometry(v, srid=3857)
+            self.assertTrue('crs' in geometry.geojson)
+
+    def test_geometry_types_with_crs(self):
+        for k, v in jsondata.iteritems():
+            geometry = Geometry.build_geometry(v, copy=True, srid=3857)
+            self.assertTrue('crs' in geometry.geojson)
 
 
 if __name__ == '__main__':

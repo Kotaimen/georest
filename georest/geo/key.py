@@ -12,6 +12,8 @@ __date__ = '6/3/14'
 import collections
 import re
 
+import six
+
 from .exceptions import InvalidKey
 
 
@@ -29,13 +31,13 @@ class Key(collections.namedtuple('Key', 'bucket name')):
         if bucket is None:
             bucket = 'default'
         else:
-            if not isinstance(bucket, str):
+            if not isinstance(bucket, six.string_types):
                 raise InvalidKey('Invalid bucket: %r' % bucket)
             if not re.match(r'^(\w+\.)*\w+$', bucket):
                 raise InvalidKey('Invalid bucket: %r' % bucket)
 
         if name is not None:
-            if not isinstance(name, str):
+            if not isinstance(name, six.string_types):
                 raise InvalidKey('Invalid name: %r' % name)
             if not re.match(r'^\w+$', name):
                 raise InvalidKey('Invalid name: %r' % name)
@@ -44,7 +46,7 @@ class Key(collections.namedtuple('Key', 'bucket name')):
 
     @classmethod
     def build_from_qualified_name(cls, qualified_name):
-        assert isinstance(qualified_name, str)
+        assert isinstance(qualified_name, six.string_types)
         ret = qualified_name.rsplit('.', 1)
         if len(ret) != 2:
             raise InvalidKey('Not a valid qualified name: %s' % qualified_name)

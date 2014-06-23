@@ -62,3 +62,12 @@ class InvalidSpatialReference(GeoException):
 
 class CoordinateTransformationError(GeoException):
     HTTP_STATUS_CODE = 500
+
+
+class OperationError(GeoException):
+    HTTP_STATUS_CODE = 500
+
+
+class InvalidParameter(GeoException):
+    HTTP_STATUS_CODE = 400
+

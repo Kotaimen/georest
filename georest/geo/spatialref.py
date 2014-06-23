@@ -15,6 +15,7 @@ import re
 
 import pyproj
 import shapely.ops
+import shapely.geometry.base
 
 from .exceptions import InvalidSpatialReference, CoordinateTransformationError
 
@@ -56,8 +57,8 @@ class SpatialReference(object):
                         'name': 'EPSG:%d' % self._srid
                     }}
 
-    @staticmethod
-    def build_from_geojson_crs(crs):
+    @classmethod
+    def build_from_geojson_crs(cls, crs):
         if crs is None:
             return None
 
@@ -75,7 +76,8 @@ class SpatialReference(object):
             raise InvalidSpatialReference('Not a valid GeoJSON CRS')
 
         if match:
-            return SpatialReference(srid=int(match.group('srid')))
+            srid = int(match.group('srid'))
+            return cls(srid=srid)
         else:
             raise InvalidSpatialReference('Only supports EPSG:SRID')
 
@@ -84,6 +86,10 @@ class SpatialReference(object):
 
     def __str__(self):
         return 'SpatialReference(srid=%d)' % self._srid
+
+    def __bool__(self):
+        # valid CRS only when srid!=0
+        return bool(self._srid)
 
     def __getstate__(self):
         return self._srid
@@ -95,6 +101,8 @@ class SpatialReference(object):
 
 
 class CoordinateTransform(object):
+    """ A coordinate transformation functor"""
+
     def __init__(self, crs1, crs2):
         assert isinstance(crs1, SpatialReference)
         assert isinstance(crs2, SpatialReference)
@@ -104,11 +112,36 @@ class CoordinateTransform(object):
                                              crs1.proj, crs2.proj)
 
     def __call__(self, geometry):
+        assert isinstance(geometry, shapely.geometry.base.BaseGeometry)
+        if self._crs1.equals(self._crs2):
+            # returns original geometry if no transformation is required,
+            # violates behavior of transform, but saves a copy
+            return geometry
+
         if geometry.geom_type == 'GeometryCollection':
             # XXX shapely don't support transform GeometryCollection
             raise CoordinateTransformationError(
                 message='GeometryCollection is not supported')
         try:
-            return shapely.ops.transform(self._projection, geometry)
+            result = shapely.ops.transform(self._projection, geometry)
+            # shapely transform uses type() so the result is already an
+            # instance of `geo.Geometry`, but crs is left unassigned
+            result._the_crs = self._crs2
         except RuntimeError as e:
             raise CoordinateTransformationError(e=e)
+
+        return result
+
+
+    @classmethod
+    def build_transform(cls, before, after):
+        if isinstance(before, int):
+            crs1 = SpatialReference(srid=before)
+        else:
+            crs1 = before
+        if isinstance(after, int):
+            crs2 = SpatialReference(after)
+        else:
+            crs2 = after
+
+        return cls(crs1, crs2)
