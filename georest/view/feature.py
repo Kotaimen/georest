@@ -74,7 +74,7 @@ class StorageView(MethodView):
         headers = {}
         r_data = dict(code=201, key=key)
         if 'etag' in metadata:
-            headers['ETag'] =ETags([metadata['etag']])
+            headers['ETag'] = ETags([metadata['etag']])
             r_data['etag'] = metadata['etag']
         response = jsonify(r_data)
         response.status_code = 201
