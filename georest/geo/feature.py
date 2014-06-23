@@ -117,7 +117,7 @@ class Feature(object):
                       geometry=shapely.geometry.mapping(self._geometry),
                       properties=self._properties,
                       id=self._key.qualified_name)
-        if not self._crs and self._crs.srid != 4326:
+        if not self._crs or self._crs.srid != 4326:
             geo_obj['crs'] = self._crs.geojson
         return geo_obj
 
