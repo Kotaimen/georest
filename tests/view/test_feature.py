@@ -9,8 +9,7 @@ import unittest
 from tests.view.base import ViewTestMixin
 
 
-
-class TestStorageView(ViewTestMixin):
+class StorageViewBase(ViewTestMixin):
     def test_get_ok(self):
         self.model.get.return_value = self.data, {'last_modified': datetime(2014, 6, 20, 1, 0, 0), 'etag': 'foooo'}
         self.model.as_json.return_value = self.jdata
@@ -63,14 +62,14 @@ class TestStorageView(ViewTestMixin):
         self.assertEqual(r.headers['ETag'], '"hodorx2"')
 
 
-class TestFeatures(TestStorageView, unittest.TestCase):
+class TestFeatures(StorageViewBase, unittest.TestCase):
     def setUp(self):
         super(TestFeatures, self).setUp()
         self.data = {
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [[1, 2], [3, 4]]
+                "coordinates": [1, 2]
             }
         }
         self.jdata = json.dumps(self.data)
@@ -82,12 +81,12 @@ class TestFeatures(TestStorageView, unittest.TestCase):
         self.key = 'foo.bar'
 
 
-class TestGeometry(TestStorageView, unittest.TestCase):
+class TestGeometry(StorageViewBase, unittest.TestCase):
     def setUp(self):
         super(TestGeometry, self).setUp()
         self.data = {
             "type": "Point",
-            "coordinates": [[1, 2], [3, 4]]
+            "coordinates": [1, 2]
         }
         self.jdata = json.dumps(self.data)
         self.model = self.mock_geometry_model
@@ -98,7 +97,7 @@ class TestGeometry(TestStorageView, unittest.TestCase):
         self.key = 'foo.bar'
 
 
-class TestProperties(TestStorageView, unittest.TestCase):
+class TestProperties(StorageViewBase, unittest.TestCase):
     def setUp(self):
         super(TestProperties, self).setUp()
         self.data = {
@@ -113,4 +112,6 @@ class TestProperties(TestStorageView, unittest.TestCase):
         self.bucket = 'foo'
         self.key = 'foo.bar'
 
-    test_post_ok=None
+    @unittest.skip('No post for properties')
+    def test_post_ok(self):
+        pass
