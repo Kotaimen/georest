@@ -42,7 +42,7 @@ class BaseFeatureModel(object):
         self.allow_unknown_buckets = allow_unknown_buckets
         self.default_bucket_config = default_bucket_config or dict()
 
-    def from_json(self, s):
+    def from_json(self, s, **kwargs):
         """load obj from json representation
 
         :param s: serialized obj
@@ -51,7 +51,7 @@ class BaseFeatureModel(object):
         """
         raise NotImplementedError
 
-    def as_json(self, obj):
+    def as_json(self, obj, **kwargs):
         """to string representation
 
         :returns: string-serialized obj
@@ -79,11 +79,10 @@ class BaseFeatureModel(object):
         """
         raise NotImplementedError
 
-    def get(self, key, srid=None):
+    def get(self, key):
         """get the object by key and bucket from storage
 
         :param key: storage key
-        :param srid: srid of the geometry, ignored if the model is no geometry
         :returns: obj, metadata
         :raises ModelNotFound: no such obj
         """
@@ -145,10 +144,10 @@ class FeatureModel(BaseFeatureModel):
 
 
 class GeometryModel(BaseFeatureModel):
-    def from_json(self, s):
+    def from_json(self, s, **kwargs):
         return geo.Geometry.build_geometry(s)
 
-    def as_json(self, obj):
+    def as_json(self, obj, **kwargs):
         return obj.geojson
 
     def create(self, obj, bucket=None):
@@ -201,10 +200,10 @@ class GeometryModel(BaseFeatureModel):
 
 
 class FeaturePropertiesModel(BaseFeatureModel):
-    def from_json(self, s):
+    def from_json(self, s, **kwargs):
         return json.loads(s)
 
-    def as_json(self, obj):
+    def as_json(self, obj, **kwargs):
         return json.dumps(obj)
 
     # No direct create for properties
