@@ -31,9 +31,11 @@ class DummyFeatureBucket(FeatureBucket):
     def checkout(self, name, revision=None):
         try:
             mapper, timestamp = self._storage[name]
+            commit = Commit(name=name, revision=None, parent_revision=None,
+                            timestamp=timestamp)
         except KeyError:
             raise FeatureNotFound(name)
-        return mapper
+        return commit, mapper
 
     def head(self, name):
         try:

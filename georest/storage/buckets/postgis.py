@@ -103,9 +103,9 @@ class PostGISFeatureBucket(FeatureBucket):
 
         conn = self._pool.connect()
         with conn.begin() as trans:
-            metadata.drop_all(bind=conn)
-            conn.execute(DropSchema(name))
-            conn.execute(CreateSchema(name))
+            # metadata.drop_all(bind=conn)
+            # conn.execute(DropSchema(name))
+            conn.execute('''CREATE SCHEMA IF NOT EXISTS %s''' % name)
             metadata.create_all(bind=conn, checkfirst=True)
 
     def commit(self, name, mapper, parent=None):
@@ -164,13 +164,20 @@ class PostGISFeatureBucket(FeatureBucket):
             shapely_geom = geoalchemy2.shape.to_shape(geom_row.geometry)
             srid = geom_row.geometry.srid
 
+            commit = Commit(
+                name=name,
+                revision=feature_row.new_rev,
+                parent_revision=feature_row.old_rev,
+                timestamp=feature_row.timestamp
+            )
+
             mapper = FeatureMapper(
                 properties=prop_row.properties,
                 metadata=meta_row.metadata,
                 wkt=shapely_geom.wkt,
                 srid=srid
             )
-            return mapper
+            return commit, mapper
 
     def head(self, name):
         conn = self._pool.connect()

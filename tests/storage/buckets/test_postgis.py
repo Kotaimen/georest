@@ -52,16 +52,14 @@ class TestPostGISDataSource(unittest.TestCase):
         commit1 = entry.put_feature(key, feature)
 
         self.assertIsNotNone(commit1.key.name)
-        self.assertEqual(
-            commit1.revision, '2562ee5c5ea7e546cf2520ce3b8c7e8dc4798f30')
+        self.assertIsNotNone(commit1.revision)
         self.assertEqual(commit1.parent_revision, None)
         self.assertIsInstance(commit1.timestamp, datetime.datetime)
 
         # put a feature with same key
         commit2 = entry.put_feature(commit1.key, feature)
 
-        self.assertEqual(
-            commit2.revision, '8a44888182eec14d38677891b9d3ee7a8d3b6cdd')
+        self.assertIsNotNone(commit2.revision)
         self.assertEqual(commit2.parent_revision, commit1.revision)
         self.assertIsInstance(commit2.timestamp, datetime.datetime)
 
@@ -69,8 +67,7 @@ class TestPostGISDataSource(unittest.TestCase):
         commit3 = entry.put_feature(
             commit1.key, feature, revision=commit2.revision)
 
-        self.assertEqual(
-            commit3.revision, '5c0863f23ee65e1d6b6f992e8708119119cf6e8f')
+        self.assertIsNotNone(commit3.revision)
         self.assertEqual(commit3.parent_revision, commit2.revision)
         self.assertIsInstance(commit3.timestamp, datetime.datetime)
 
@@ -88,7 +85,7 @@ class TestPostGISDataSource(unittest.TestCase):
         bucket = self.storage.get_bucket(self.test_key.bucket)
 
         entry = FeatureEntry(bucket)
-        feature = entry.get_feature(self.test_key)
+        response, feature = entry.get_feature(self.test_key)
 
         self.assertEqual(feature.key, self.test_key)
         self.assertTrue(feature.equals(self.test_feature))
@@ -98,7 +95,8 @@ class TestPostGISDataSource(unittest.TestCase):
         self.assertRaises(FeatureNotFound, entry.get_feature, foo_key)
 
         # get a feature with a revision
-        feature = entry.get_feature(self.test_key, self.test_commit.revision)
+        response, feature = entry.get_feature(
+            self.test_key, self.test_commit.revision)
 
         self.assertEqual(feature.key, self.test_key)
         self.assertTrue(feature.equals(self.test_feature))
@@ -116,8 +114,7 @@ class TestPostGISDataSource(unittest.TestCase):
         commit = entry.delete_feature(self.test_key)
 
         self.assertEqual(commit.key, self.test_key)
-        self.assertEqual(
-            commit.revision, '2e580da5bb73c3d12167dd43ef1ad535b8d90ee5')
+        self.assertIsNotNone(commit.revision)
         self.assertIsInstance(commit.timestamp, datetime.datetime)
 
         # delete a feature with wrong key
@@ -137,7 +134,8 @@ class TestPostGISDataSource(unittest.TestCase):
         )
 
         # get a old version of the deleted feature
-        feature = entry.get_feature(self.test_key, self.test_commit.revision)
+        response, feature = entry.get_feature(
+            self.test_key, self.test_commit.revision)
         self.assertEqual(feature.key, self.test_key)
         self.assertTrue(feature.equals(self.test_feature))
 

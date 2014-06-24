@@ -109,13 +109,13 @@ class FeatureEntry(object):
 
         :param :class:`Key` key: feature key
         :param str revision: feature revision
-        :rtype :class:`Feature`
+        :rtype tuple(:class:`Response`, :class:`Feature`)
         """
         full_name = key.qualified_name
 
-        mapper = self._bucket.checkout(full_name, revision=revision)
+        commit, mapper = self._bucket.checkout(full_name, revision=revision)
         feature = make_feature_from_mapper(key, mapper)
-        return feature
+        return Response.from_commit(commit), feature
 
     def delete_feature(self, key, revision=None):
         """ Delete a feature in the bucket
