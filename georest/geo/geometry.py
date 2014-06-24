@@ -121,7 +121,7 @@ class Geometry(object):
             raise InvalidGeometry('Unrecognized geometry input')
 
     @property
-    def geojson(self, double_precision=9):
+    def geojson(self, double_precision=7):
         geo_obj = geojson.mapping.to_mapping(self)
         if not self._the_crs or self._the_crs.srid != 4326:
             geo_obj['crs'] = self._the_crs.geojson

@@ -204,7 +204,7 @@ class FeaturePropertiesModel(BaseFeatureModel):
         return json.loads(s)
 
     def as_json(self, obj, **kwargs):
-        return json.dumps(obj)
+        return json.dumps(obj, double_precision=7)
 
     # No direct create for properties
     # def create(self, obj, bucket=None):
