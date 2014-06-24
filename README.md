@@ -17,7 +17,7 @@ A restful, schema-less, searchable GeoFeature object storage.
 # assume you are root user
 # sudo -s
 apt-get update
-apt-get install libgeos-dev python-dev python-pip build-essential g++
+apt-get install libgeos-dev libpq-dev python-dev python-pip build-essential g++ 
 pip install -r requirements.txt
 ```
 
