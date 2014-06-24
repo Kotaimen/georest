@@ -180,7 +180,7 @@ class GeometryModel(BaseFeatureModel):
         visitor = self._get_visitor(key)
         # get feature
         try:
-            r1 = visitor.get_feature(key)
+            r1, feature = visitor.get_feature(key)
         except storage.FeatureNotFound:
 
             # create new feature from scratch
@@ -189,9 +189,8 @@ class GeometryModel(BaseFeatureModel):
             if etag and r1.revision != etag:
                 raise exceptions.KeyExists('given etag %s is stale' % etag)
 
-            # replace geometry
-            feature = r1.feature
-            feature.geometry = obj
+        # replace geometry
+        feature.geometry = obj
 
         # save
         r2 = visitor.put_feature(key, feature, revision=etag)
