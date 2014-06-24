@@ -24,9 +24,23 @@ class BaseFeatureModel(object):
     For now, this model is meant to be a thin-wrapper. All Exceptions are
     simply forwarded from georest.geo.exception and georest.store.exception
     """
-    def __init__(self, feature_storage, bucket_configs=None):
+    def __init__(self, feature_storage,
+                 bucket_table=None,
+                 allow_unknown_buckets=True,
+                 default_bucket_config=None):
+        """initialize the feature model
+
+        :param feature_storage: the storage object this model handles
+        :param bucket_table: bucket_name -> bucket_config mapping
+        :param allow_unknown_buckets: whether allow unknown bucket names
+                                      (not found in bucket_table)
+        :param default_bucket_config: when bucket config not specified in
+                                      bucket_table, use this config as default
+        """
         self.feature_storage = feature_storage
-        self.bucket_configs = bucket_configs or dict()
+        self.bucket_table = bucket_table or dict()
+        self.allow_unknown_buckets = allow_unknown_buckets
+        self.default_bucket_config = default_bucket_config or dict()
 
     def from_json(self, s):
         """load obj from json representation
@@ -79,7 +93,14 @@ class BaseFeatureModel(object):
         try:
             storage_bucket = self.feature_storage.get_bucket(key.bucket)
         except storage.BucketNotFound:
-            bucket_config = self.bucket_configs.get(key.bucket, dict())
+            try:
+                bucket_config = self.bucket_table[key.bucket]
+            except KeyError:
+                if self.allow_unknown_buckets:
+                    bucket_config = self.default_bucket_config
+                else:
+                    raise exceptions.BucketNotAccessable(
+                        'bucket %s is not allowed' % key.bucket)
             storage_bucket = self.feature_storage.create_bucket(key.bucket,
                                                                 **bucket_config)
         visitor = storage.FeatureEntry(storage_bucket)
@@ -87,8 +108,10 @@ class BaseFeatureModel(object):
 
 
 def _result2metadata(r):
-    return {'etag': r.revision,
-            'last_modified': r.timestamp}
+    metadata = {'last_modified': r.timestamp}
+    if not r.revision is None:
+        metadata['etag'] = r.revision
+    return metadata
 
 
 class FeatureModel(BaseFeatureModel):

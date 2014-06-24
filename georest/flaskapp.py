@@ -51,7 +51,7 @@ class GeoRestApp(Flask):
 
     def init_datasources(self):
         self.feature_storage = storage.build_feature_storage(
-            **self.config.get('storage', {}))
+            **self.config['STORAGE'])
 
     def init_views(self):
         """initiate extra views"""

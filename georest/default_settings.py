@@ -10,3 +10,4 @@
 
 
 EXPIRES = 10
+STORAGE = {'prototype': 'dummy'}

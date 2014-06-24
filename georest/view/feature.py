@@ -102,6 +102,7 @@ class StorageView(MethodView):
             raise InvalidRequest('Only "application/json" supported')
         try:
             data = request.data.decode('utf-8')
+            # data = request.get_data().decode('utf-8')
         except UnicodeError:
             raise InvalidRequest('Cannot decode content with utf-8')
         obj = self.model.from_json(data)
