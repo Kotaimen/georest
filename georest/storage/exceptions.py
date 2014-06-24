@@ -36,18 +36,22 @@ class BucketNotFound(StorageError):
 
 
 class FeatureNotFound(StorageError):
+    HTTP_STATUS_CODE = 404
+
     def __init__(self, key='', revision='', e=None):
         message = 'key: "%s", rev: %s' % (key, revision)
         StorageError.__init__(self, message, e)
 
 
 class ParentRevisionNotFound(StorageError):
+    HTTP_STATUS_CODE = 409
     def __init__(self, key='', parent_rev='', e=None):
         message = 'key: "%s", parent_rev: "%s"' % (key, parent_rev)
         StorageError.__init__(self, message, e)
 
 
 class NotHeadRevision(StorageError):
+    HTTP_STATUS_CODE = 409
     def __init__(self, key='', parent_rev=''):
         message = 'key: "%s", parent_rev: "%s"' % (key, parent_rev)
         StorageError.__init__(self, message, None)
