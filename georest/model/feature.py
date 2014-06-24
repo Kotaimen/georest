@@ -24,10 +24,25 @@ class BaseFeatureModel(object):
     For now, this model is meant to be a thin-wrapper. All Exceptions are
     simply forwarded from georest.geo.exception and georest.store.exception
     """
-    def __init__(self, feature_storage):
-        self.feature_storage = feature_storage
+    def __init__(self, feature_storage,
+                 bucket_table=None,
+                 allow_unknown_buckets=True,
+                 default_bucket_config=None):
+        """initialize the feature model
 
-    def from_json(self, s):
+        :param feature_storage: the storage object this model handles
+        :param bucket_table: bucket_name -> bucket_config mapping
+        :param allow_unknown_buckets: whether allow unknown bucket names
+                                      (not found in bucket_table)
+        :param default_bucket_config: when bucket config not specified in
+                                      bucket_table, use this config as default
+        """
+        self.feature_storage = feature_storage
+        self.bucket_table = bucket_table or dict()
+        self.allow_unknown_buckets = allow_unknown_buckets
+        self.default_bucket_config = default_bucket_config or dict()
+
+    def from_json(self, s, **kwargs):
         """load obj from json representation
 
         :param s: serialized obj
@@ -36,7 +51,7 @@ class BaseFeatureModel(object):
         """
         raise NotImplementedError
 
-    def as_json(self, obj):
+    def as_json(self, obj, **kwargs):
         """to string representation
 
         :returns: string-serialized obj
@@ -73,10 +88,29 @@ class BaseFeatureModel(object):
         """
         raise NotImplementedError
 
+    def _get_visitor(self, key):
+        try:
+            storage_bucket = self.feature_storage.get_bucket(key.bucket)
+        except storage.BucketNotFound:
+            try:
+                bucket_config = self.bucket_table[key.bucket]
+            except KeyError:
+                if self.allow_unknown_buckets:
+                    bucket_config = self.default_bucket_config
+                else:
+                    raise exceptions.BucketNotAccessable(
+                        'bucket %s is not allowed' % key.bucket)
+            storage_bucket = self.feature_storage.create_bucket(key.bucket,
+                                                                **bucket_config)
+        visitor = storage.FeatureEntry(storage_bucket)
+        return visitor
+
 
 def _result2metadata(r):
-    return {'etag': r.version,
-            'last_modified': datetime.utcfromtimestamp(r.timestamp)}
+    metadata = {'last_modified': r.timestamp}
+    if not r.revision is None:
+        metadata['etag'] = r.revision
+    return metadata
 
 
 class FeatureModel(BaseFeatureModel):
@@ -87,54 +121,66 @@ class FeatureModel(BaseFeatureModel):
         return obj.geojson
 
     def create(self, obj, bucket=None):
-        key = geo.Key(bucket=bucket)
-        r = self.feature_storage.put_feature(key, obj)
+        key = geo.Key.make_key(bucket=bucket)
+        visitor = self._get_visitor(key)
+        r = visitor.put_feature(key, obj)
         metadata = _result2metadata(r)
-        return r.key, metadata
+        return r.key.qualified_name, metadata
 
-    def get(self, key):
+    def get(self, key, srid=None):
+        assert not srid, 'srid modification not implemented!'
         key = geo.Key.build_from_qualified_name(key)
-        r = self.feature_storage.get_feature(key)
+        visitor = self._get_visitor(key)
+        r, feature = visitor.get_feature(key)
         metadata = _result2metadata(r)
-        return r.feature, metadata
+        return feature, metadata
 
     def put(self, obj, key, etag=None):
         key = geo.Key.build_from_qualified_name(key)
-        r = self.feature_storage.put_feature(key, obj, revision=etag)
+        visitor = self._get_visitor(key)
+        r = visitor.put_feature(key, obj, revision=etag)
         metadata = _result2metadata(r)
         return metadata
 
 
 class GeometryModel(BaseFeatureModel):
-    def from_json(self, s):
+    def from_json(self, s, **kwargs):
         return geo.Geometry.build_geometry(s)
 
-    def as_json(self, obj):
-        return geo.Geometry.export_geojson(obj)
+    def as_json(self, obj, **kwargs):
+        return obj.geojson
 
     def create(self, obj, bucket=None):
-        key = geo.Key(bucket=bucket)
+        key = geo.Key.make_key(bucket=bucket)
 
         # new object
         feature = geo.Feature.build_from_geometry(obj)
 
         # store
-        r = self.feature_storage.put_feature(key, feature)
+        visitor = self._get_visitor(key)
+        r = visitor.put_feature(key, feature)
         metadata = _result2metadata(r)
-        return r.key, metadata
+        return r.key.qualified_name, metadata
 
-    def get(self, key):
+    def get(self, key, srid=None):
+
         key = geo.Key.build_from_qualified_name(key)
-        r = self.feature_storage.get_feature(key)
+        visitor = self._get_visitor(key)
+        r, feature = visitor.get_feature(key)
+        geometry = feature.geometry
+        if srid:
+            # geometry srid conversion
+            # XXX: maybe add a function for this.
+            geometry = geo.UnaryOperation(srid=srid)(geometry)
         metadata = _result2metadata(r)
-        return r.feature.geometry, metadata
+        return geometry, metadata
 
     def put(self, obj, key, etag=None):
         key = geo.Key.build_from_qualified_name(key)
-
+        visitor = self._get_visitor(key)
         # get feature
         try:
-            r1 = self.feature_storage.get_feature(key)
+            r1 = visitor.get_feature(key)
         except storage.FeatureNotFound:
 
             # create new feature from scratch
@@ -148,16 +194,16 @@ class GeometryModel(BaseFeatureModel):
             feature.geometry = obj
 
         # save
-        r2 = self.feature_storage.put_feature(key, feature, revision=etag)
+        r2 = visitor.put_feature(key, feature, revision=etag)
         metadata = _result2metadata(r2)
         return metadata
 
 
-class FeaturePropModel(BaseFeatureModel):
-    def from_json(self, s):
+class FeaturePropertiesModel(BaseFeatureModel):
+    def from_json(self, s, **kwargs):
         return json.loads(s)
 
-    def as_json(self, obj):
+    def as_json(self, obj, **kwargs):
         return json.dumps(obj)
 
     # No direct create for properties
@@ -165,23 +211,25 @@ class FeaturePropModel(BaseFeatureModel):
 
     def get(self, key):
         key = geo.Key.build_from_qualified_name(key)
-        r = self.feature_storage.get_feature(key)
+        visitor = self._get_visitor(key)
+        r, feature = visitor.get_feature(key)
         metadata = _result2metadata(r)
-        return r.feature.properties
+        return feature.properties, metadata
 
     def put(self, obj, key, etag=None):
         key = geo.Key.build_from_qualified_name(key)
 
         # get feature
-        r1 = self.feature_storage.get_feature(key)
+        visitor = self._get_visitor(key)
+        r1, feature = visitor.get_feature(key)
         if etag and r1.revision != etag:
             raise exceptions.KeyExists('given etag %s is stale' % etag)
 
         # replace properties
-        feature = r1.feature
-        feature.properties = obj
+        feature.properties.clear()
+        feature.properties.update(obj)
 
         # save
-        r2 = self.feature_storage.put_feature(key, feature, revision=etag)
+        r2 = visitor.put_feature(key, feature, revision=etag)
         metadata = _result2metadata(r2)
         return metadata

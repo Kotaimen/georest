@@ -19,11 +19,7 @@ from flask import current_app
 from flask.views import MethodView
 from flask.json import jsonify
 
-from ..geo import GeoException
-
-
-class InvalidRequest(GeoException):  # XXX: is this appropriate?
-    HTTP_STATUS_CODE = 400
+from .exceptions import InvalidRequest
 
 
 class StorageView(MethodView):
@@ -106,6 +102,7 @@ class StorageView(MethodView):
             raise InvalidRequest('Only "application/json" supported')
         try:
             data = request.data.decode('utf-8')
+            # data = request.get_data().decode('utf-8')
         except UnicodeError:
             raise InvalidRequest('Cannot decode content with utf-8')
         obj = self.model.from_json(data)
