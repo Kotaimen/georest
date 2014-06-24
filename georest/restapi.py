@@ -38,7 +38,7 @@ class GeoRestApi(object):
         """bind api urls to app"""
         feature_storage = self.app.feature_storage
 
-        feature_model_config = self.app.config.get('feature_model', dict())
+        feature_model_config = self.app.config.get('FEATURE_MODEL', dict())
         feature_model = model.FeatureModel(feature_storage, **feature_model_config)
         geometry_model = model.GeometryModel(feature_storage, **feature_model_config)
         feature_prop_model = model.FeaturePropertiesModel(feature_storage, **feature_model_config)
