@@ -33,8 +33,6 @@ class FeatureModelMixin(object):
           - self.jsonobj
           - self.obj
         """
-        print self.model.as_json(self.obj)
-        print self.jsonobj
         self.assertEqual(json.loads(self.model.as_json(self.obj)), json.loads(self.jsonobj))
 
 
@@ -52,7 +50,6 @@ class TestFeatureModel(FeatureModelMixin, unittest.TestCase):
 
     def test_create_get(self):
         key, metadata = self.model.create(self.obj, bucket=self.bucket)
-        print key, metadata
         r_obj, r_metadata = self.model.get(key)
         self.assertEqual(metadata, r_metadata)
         self.assert_(self.obj.equals(r_obj))
@@ -78,7 +75,6 @@ class TestGeometryModel(FeatureModelMixin, unittest.TestCase):
 
     def test_create_get(self):
         key, metadata = self.model.create(self.obj, bucket=self.bucket)
-        print key, metadata
         r_obj, r_metadata = self.model.get(key)
         self.assertEqual(metadata, r_metadata)
         self.assert_(self.obj.equals(r_obj))
