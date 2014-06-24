@@ -90,7 +90,8 @@ class PostGISFeatureBucket(FeatureBucket):
             Column('geom_id', BigInteger, ForeignKey('geometry.id')),
             Column('deleted', Boolean, default=False),
             Column('timestamp', DateTime(timezone=True),
-                   server_default=text('CURRENT_TIMESTAMP')),
+                   server_default=text(
+                       "(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')")),
         )
 
         self.HEAD_REF_TABLE = Table(
