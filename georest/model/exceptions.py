@@ -25,7 +25,7 @@ class KeyExists(FeatureModelException):
     HTTP_STATUS_CODE = 409
 
 
-class BucketNotAccessable():
+class BucketNotAccessable(FeatureModelException):
     HTTP_STATUS_CODE = 403
 
 
