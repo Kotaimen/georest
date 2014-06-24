@@ -89,7 +89,7 @@ class PostGISFeatureBucket(FeatureBucket):
             Column('meta_id', BigInteger, ForeignKey('metadata.id')),
             Column('geom_id', BigInteger, ForeignKey('geometry.id')),
             Column('deleted', Boolean, default=False),
-            Column('timestamp', DateTime(timezone=True),
+            Column('timestamp', DateTime(timezone=False),
                    server_default=text(
                        "(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')")),
         )

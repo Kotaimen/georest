@@ -8,7 +8,7 @@ __date__ = '6/20/14'
     ~~~~~~~~~~~~~~~~~~~~~
     Geo Feature Storage Accessor.
 """
-
+import six
 from collections import namedtuple
 
 from ..geo import Key, Feature, SpatialReference, Metadata, Geometry
@@ -79,13 +79,18 @@ class FeatureEntry(object):
         :param str revision: feature revision
         :rtype :class:`Response`
         """
+        assert isinstance(key, Key)
+        assert isinstance(feature, Feature)
+        assert isinstance(revision, six.string_types) or revision is None
+
         # make a random name if name is None
         bucket, name = key
         if not name:
             name = self._bucket.make_random_name()
-        key = Key.make_key(bucket=bucket, name=name)
 
+        key = Key.make_key(bucket=bucket, name=name)
         full_name = key.qualified_name
+
         mapper = make_mapper_from_feature(feature)
 
         commit = self._bucket.commit(full_name, mapper, parent=revision)
@@ -111,10 +116,15 @@ class FeatureEntry(object):
         :param str revision: feature revision
         :rtype tuple(:class:`Response`, :class:`Feature`)
         """
+        assert isinstance(key, Key)
+        assert isinstance(revision, six.string_types) or revision is None
+
         full_name = key.qualified_name
 
         commit, mapper = self._bucket.checkout(full_name, revision=revision)
+
         feature = make_feature_from_mapper(key, mapper)
+
         return Response.from_commit(commit), feature
 
     def delete_feature(self, key, revision=None):
@@ -139,6 +149,9 @@ class FeatureEntry(object):
         :param str revision: feature revision
         :rtype :class:`Response`
         """
+        assert isinstance(key, Key)
+        assert isinstance(revision, six.string_types) or revision is None
+
         name = key.qualified_name
 
         commit = self._bucket.remove(name, parent=revision)
