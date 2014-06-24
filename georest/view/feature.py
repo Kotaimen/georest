@@ -19,11 +19,7 @@ from flask import current_app
 from flask.views import MethodView
 from flask.json import jsonify
 
-from ..geo import GeoException
-
-
-class InvalidRequest(GeoException):  # XXX: is this appropriate?
-    HTTP_STATUS_CODE = 400
+from .exceptions import InvalidRequest
 
 
 class StorageView(MethodView):

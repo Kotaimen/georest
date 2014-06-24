@@ -17,5 +17,21 @@ class ModelException(GeoException):
     pass
 
 
-class KeyExists(ModelException):
+class FeatureModelException(ModelException):
+    pass
+
+
+class KeyExists(FeatureModelException):
     HTTP_STATUS_CODE = 409
+
+
+class OperationsModelException(ModelException):
+    pass
+
+
+class NoSuchOperation(OperationsModelException):
+    HTTP_STATUS_CODE = 404
+
+
+class NoSuchOperation(OperationsModelException):
+    HTTP_STATUS_CODE = 404

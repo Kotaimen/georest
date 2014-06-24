@@ -40,7 +40,7 @@ class GeoRestApi(object):
 
         feature_model = model.FeatureModel(feature_storage)
         geometry_model = model.GeometryModel(feature_storage)
-        feature_prop_model = model.FeaturePropModel(feature_storage)
+        feature_prop_model = model.FeaturePropertiesModel(feature_storage)
 
         self.add_resource(view.describe, '/describe',
                           endpoint='describe')
