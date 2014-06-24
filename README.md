@@ -17,9 +17,8 @@ A restful, schema-less, searchable GeoFeature object storage.
 # assume you are root user
 # sudo -s
 apt-get update
-apt-get install libgeos-dev
-apt-get install python-pip
-pip install -U -r requirements.txt
+apt-get install libgeos-dev python-dev python-pip build-essential g++
+pip install -r requirements.txt
 ```
 
 ## Start Georest
