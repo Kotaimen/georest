@@ -55,7 +55,7 @@ class PostGISConnectionPool(object):
 
 
 class PostGISFeatureBucket(FeatureBucket):
-    def __init__(self, name, pool, srid=4326, max_revision_num=10):
+    def __init__(self, name, pool, srid=None, max_revision_num=10):
         FeatureBucket.__init__(self, name)
 
         self._pool = pool

@@ -21,6 +21,11 @@ __date__ = '6/12/14'
 
         storage = build_feature_storage()
 
+        try:
+            bucket = storage.get_bucket(...)
+        execept:
+            bucket = storage.create()
+
         bucket = storage.create_bucket('bucket_name', **params)
 
         visitor = FeatureEntry(bucket)

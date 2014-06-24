@@ -29,48 +29,36 @@ class FeatureStorage(object):
 
         :param basestring name: bucket name
         :param dict kwargs: parameters of the creation
-        :rtype `FeatureBucket`
+        :rtype :class:`FeatureBucket`
         """
         assert isinstance(name, six.string_types)
 
-        if name in self._collection:
-            raise DuplicatedBucket(name)
+        bucket = self._factory.create(name, **kwargs)
 
-        bucket = self._factory(name, **kwargs)
-
-        self._collection[name] = bucket
         return bucket
 
     def get_bucket(self, name):
         """Get a created feature bucket.
 
         :param basestring name: bucket name
-        :rtype `FeatureBucket`
+        :rtype :class:`FeatureBucket`
         """
         assert isinstance(name, six.string_types)
-        try:
-            return self._collection[name]
-        except KeyError:
-            raise BucketNotFound(name)
+
+        bucket = self._factory.get(name)
+
+        return bucket
 
     def delete_bucket(self, name):
         """Delete a created feature bucket. Do not raise if bucket not found.
 
         :param basestring name: bucket name
-        :rtype `FeatureBucket`
         """
         assert isinstance(name, six.string_types)
-        try:
-            del self._collection[name]
-        except KeyError:
-            pass
 
-    def list_buckets(self):
-        """List all the buckets in the storage.
+        self._factory.delete(name)
 
-        :rtype list
-        """
-        return self._collection.keys()
+        return True
 
     def close(self):
         pass

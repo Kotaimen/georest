@@ -9,7 +9,7 @@ __date__ = '6/23/14'
     Test for FeatureStorage
 
 """
-
+import os
 import unittest
 
 from georest.storage.buckets import DummyBucketFactory
@@ -17,7 +17,7 @@ from georest.storage import FeatureStorage, FeatureBucket, BucketNotFound, \
     DuplicatedBucket
 
 
-class TestFeatureStorage(unittest.TestCase):
+class TestDummyFeatureStorage(unittest.TestCase):
     def setUp(self):
         factory = DummyBucketFactory()
         self.storage = FeatureStorage(factory)
@@ -27,6 +27,8 @@ class TestFeatureStorage(unittest.TestCase):
         self.assertIsInstance(bucket, FeatureBucket)
         self.assertEqual(bucket.bucket_name, 'test_bucket')
 
+    def test_create_duplicated_bucket(self):
+        bucket = self.storage.create_bucket('test_bucket')
         self.assertRaises(
             DuplicatedBucket, self.storage.create_bucket, 'test_bucket')
 
@@ -39,6 +41,7 @@ class TestFeatureStorage(unittest.TestCase):
         self.assertIsInstance(bucket, FeatureBucket)
         self.assertEqual(bucket.bucket_name, 'test_bucket')
 
+    def test_fail_to_get_bucket(self):
         self.assertRaises(BucketNotFound, self.storage.get_bucket, 'no_name')
 
     def test_delete_bucket(self):
@@ -49,3 +52,8 @@ class TestFeatureStorage(unittest.TestCase):
         self.storage.delete_bucket('test_bucket')
         self.assertRaises(
             BucketNotFound, self.storage.get_bucket, 'test_bucket')
+
+    def test_delete_non_existent_bucket(self):
+        self.assertRaises(
+            BucketNotFound, self.storage.delete_bucket, 'test_bucket')
+

@@ -18,7 +18,7 @@ from georest.storage import FeatureNotFound
 
 class TestFeatureEntry(unittest.TestCase):
     def setUp(self):
-        self.bucket = DummyBucketFactory()('test')
+        self.bucket = DummyBucketFactory().create('test')
 
         self.test_key = Key.make_key(
             bucket=self.bucket.bucket_name, name='alice')
