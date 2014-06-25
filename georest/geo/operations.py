@@ -55,7 +55,11 @@ __all__ = ['BaseOperation', 'UnaryOperation', 'Attribute', 'UnaryPredicate',
 class BaseOperation(object):
     """Base geometry operation, being a multi geometry operation"""
 
-    DEBUG = True
+    # Whether to raise OperationalError on failure
+    DEBUG = False
+
+    # Operation result type
+    RESULT_TYPE = Geometry
 
     def __init__(self, **kwargs):
         """Create the operator, if `srid` is provided, geometry will be
@@ -93,6 +97,7 @@ class BaseOperation(object):
                 raise OperationError(e=e)
 
         if isinstance(result, shapely.geometry.base.BaseGeometry):
+            assert self.RESULT_TYPE == Geometry
             # update spatial reference
             result = Geometry.build_geometry(result,
                                              srid=result_crs.srid,
@@ -142,7 +147,8 @@ class Attribute(UnaryOperation):
 
 class UnaryPredicate(UnaryOperation):
     """Accepts a geometry and returns bool"""
-    pass
+
+    RESULT_TYPE = bool
 
 
 class UnaryConstructor(UnaryOperation):
@@ -152,10 +158,14 @@ class UnaryConstructor(UnaryOperation):
 
 
 class UnarySetTheoreticMethod(UnaryOperation):
+    """Accepts a geometry and optional parameters,
+    returns a new geometry"""
     pass
 
 
 class AffineTransform(UnaryOperation):
+    """Accepts a geometry and optional parameters,
+    returns a new geometry"""
     pass
 
 
@@ -172,7 +182,8 @@ class BinaryOperation(BaseOperation):
 
 class BinaryPredicate(BinaryOperation):
     """Accepts two geometries and returns bool"""
-    pass
+
+    RESULT_TYPE = bool
 
 
 class BinarySetTheoreticMethod(BinaryOperation):
@@ -292,6 +303,8 @@ class ParameterHelper(object):
 
 
 class Area(Attribute):
+    RESULT_TYPE = float
+
     __doc__ = shapely.geometry.base.BaseGeometry.area.__doc__
 
 
@@ -300,6 +313,7 @@ class Area(Attribute):
 
 
 class Length(Attribute):
+    RESULT_TYPE = float
     __doc__ = shapely.geometry.base.BaseGeometry.length.__doc__
 
 
@@ -308,6 +322,7 @@ class Length(Attribute):
 
 
 class IsSimple(UnaryPredicate):
+    RESULT_TYPE = bool
     __doc__ = shapely.geometry.base.BaseGeometry.is_simple.__doc__
 
 
@@ -318,7 +333,7 @@ class IsSimple(UnaryPredicate):
 class Buffer(UnaryConstructor, ParameterHelper):
     __doc__ = shapely.geometry.base.BaseGeometry.buffer.__doc__
 
-    def __init__(self, distance, resolution=16,
+    def __init__(self, distance=0.01, resolution=16,
                  cap_style='round', join_style='round',
                  mitre_limit=1.0, **kwargs):
         ParameterHelper.__init__(self, ['distance', 'resolution', 'cap_style',
@@ -365,7 +380,8 @@ class ParallelOffset(UnaryConstructor, ParameterHelper):
     __doc__ = shapely.geometry.LineString.parallel_offset.__doc__
 
 
-    def __init__(self, distance, side='left', resolution=16, join_style='round',
+    def __init__(self, distance=0.01, side='left', resolution=16,
+                 join_style='round',
                  mitre_limit=1.0, **kwargs):
         ParameterHelper.__init__(self, ['distance', 'side', 'resolution',
                                         'join_style', 'mitre_limit'])
@@ -394,7 +410,7 @@ class ParallelOffset(UnaryConstructor, ParameterHelper):
 class Simplify(UnaryConstructor, ParameterHelper):
     __doc__ = shapely.geometry.base.BaseGeometry.simplify.__doc__
 
-    def __init__(self, tolerance, preserve_topology=False, **kwargs):
+    def __init__(self, tolerance=0.01, preserve_topology=False, **kwargs):
         ParameterHelper.__init__(self, ['tolerance', 'preserve_topology'])
 
         tolerance = self.check_float(tolerance=tolerance)
