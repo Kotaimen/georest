@@ -27,21 +27,26 @@ __date__ = '6/12/14'
 
 import six
 import shapely.geometry.base
+import shapely.ops
 
 from .geometry import Geometry
 from .exceptions import GeoException, OperationError, InvalidParameter
 from .spatialref import CoordinateTransform, SpatialReference
 
-__all__ = ['UnaryOperation', 'Attribute', 'UnaryPredicate',
-           'UnaryConstructor',
+__all__ = ['BaseOperation', 'UnaryOperation', 'Attribute', 'UnaryPredicate',
+           'UnaryConstructor', 'BinaryOperation', 'BinaryPredicate',
+           'BinarySetTheoreticMethod', 'MultiGeometryOperation',
+
            'Area', 'Length', 'IsSimple', 'Buffer',
            'ConvexHull', 'Envelope', 'ParallelOffset',
            'Simplify', 'Boundary', 'PointOnSurface', 'Centroid',
-           'BinaryOperation',
+           'Distance',
+
            'Equals', 'Contains', 'Crosses', 'Disjoint', 'Intersects',
            'Touches', 'Within',
+
            'Intersection', 'SymmetricDifference', 'Difference', 'Union',
-]
+           'CascadeUnion', ]
 
 #
 # Base classes
@@ -249,7 +254,8 @@ class ParameterHelper(object):
         elif isinstance(value, bool):
             return value
         else:
-            return bool(value)
+            raise InvalidParameter(
+                '%s must be a True or False, got "%s"' % (name, value))
 
     def check_range(self, low=0., high=65535., **kwargs):
         assert len(kwargs) == 1
@@ -286,21 +292,32 @@ class ParameterHelper(object):
 
 
 class Area(Attribute):
+    __doc__ = shapely.geometry.base.BaseGeometry.area.__doc__
+
+
     def _impl(self, this):
         return this.area
 
 
 class Length(Attribute):
+    __doc__ = shapely.geometry.base.BaseGeometry.length.__doc__
+
+
     def _impl(self, this):
         return this.length
 
 
 class IsSimple(UnaryPredicate):
+    __doc__ = shapely.geometry.base.BaseGeometry.is_simple.__doc__
+
+
     def _impl(self, this):
         return this.is_simple
 
 
 class Buffer(UnaryConstructor, ParameterHelper):
+    __doc__ = shapely.geometry.base.BaseGeometry.buffer.__doc__
+
     def __init__(self, distance, resolution=16,
                  cap_style='round', join_style='round',
                  mitre_limit=1.0, **kwargs):
@@ -331,16 +348,23 @@ class Buffer(UnaryConstructor, ParameterHelper):
 
 
 class ConvexHull(UnaryConstructor):
+    __doc__ = shapely.geometry.base.BaseGeometry.convex_hull.__doc__
+
     def _impl(self, this):
         return this.convex_hull
 
 
 class Envelope(UnaryConstructor):
+    __doc__ = shapely.geometry.base.BaseGeometry.envelope.__doc__
+
     def _impl(self, this):
         return this.envelope
 
 
 class ParallelOffset(UnaryConstructor, ParameterHelper):
+    __doc__ = shapely.geometry.LineString.parallel_offset.__doc__
+
+
     def __init__(self, distance, side='left', resolution=16, join_style='round',
                  mitre_limit=1.0, **kwargs):
         ParameterHelper.__init__(self, ['distance', 'side', 'resolution',
@@ -368,6 +392,8 @@ class ParallelOffset(UnaryConstructor, ParameterHelper):
 
 
 class Simplify(UnaryConstructor, ParameterHelper):
+    __doc__ = shapely.geometry.base.BaseGeometry.simplify.__doc__
+
     def __init__(self, tolerance, preserve_topology=False, **kwargs):
         ParameterHelper.__init__(self, ['tolerance', 'preserve_topology'])
 
@@ -385,21 +411,36 @@ class Simplify(UnaryConstructor, ParameterHelper):
 
 
 class Boundary(UnarySetTheoreticMethod, ParameterHelper):
+    __doc__ = shapely.geometry.base.BaseGeometry.boundary.__doc__
+
     def _impl(self, this):
         return this.boundary
 
 
 class Centroid(UnarySetTheoreticMethod):
+    __doc__ = shapely.geometry.base.BaseGeometry.centroid.__doc__
+
     def _impl(self, this):
         return this.centroid
 
 
 class PointOnSurface(UnarySetTheoreticMethod):
+    __doc__ = shapely.geometry.base.BaseGeometry.representative_point.__doc__
+
     def _impl(self, this):
         return this.representative_point()
 
 
+class Distance(BinaryOperation):
+    __doc__ = shapely.geometry.base.BaseGeometry.distance.__doc__
+
+    def _impl(self, this, other):
+        return this.distance(other)
+
+
 class Equals(BinaryPredicate, ParameterHelper):
+    __doc__ = shapely.geometry.base.BaseGeometry.almost_equals.__doc__
+
     def __init__(self, decimal=6, **kwargs):
         ParameterHelper.__init__(self, ['decimal'])
         decimal = self.check_integer(decimal=decimal)
@@ -414,51 +455,80 @@ class Equals(BinaryPredicate, ParameterHelper):
 
 
 class Contains(BinaryPredicate):
+    __doc__ = shapely.geometry.base.BaseGeometry.contains.__doc__
+
     def _impl(self, this, other):
         return this.contains(other)
 
 
 class Crosses(BinaryPredicate):
+    __doc__ = shapely.geometry.base.BaseGeometry.crosses.__doc__
+
     def _impl(self, this, other):
         return this.crosses(other)
 
 
 class Disjoint(BinaryPredicate):
+    __doc__ = shapely.geometry.base.BaseGeometry.disjoint.__doc__
+
     def _impl(self, this, other):
         return this.disjoint(other)
 
 
 class Intersects(BinaryPredicate):
+    __doc__ = shapely.geometry.base.BaseGeometry.intersects.__doc__
+
     def _impl(self, this, other):
         return this.intersects(other)
 
 
 class Touches(BinaryPredicate):
+    __doc__ = shapely.geometry.base.BaseGeometry.touches.__doc__
+
     def _impl(self, this, other):
         return this.touches(other)
 
 
 class Within(BinaryPredicate):
+    __doc__ = shapely.geometry.base.BaseGeometry.within.__doc__
+
     def _impl(self, this, other):
         return this.within(other)
 
 
 class Intersection(BinarySetTheoreticMethod):
+    __doc__ = shapely.geometry.base.BaseGeometry.intersection.__doc__
+
     def _impl(self, this, other):
         return this.intersection(other)
 
 
 class Difference(BinarySetTheoreticMethod):
+    __doc__ = shapely.geometry.base.BaseGeometry.difference.__doc__
+
+
     def _impl(self, this, other):
         return this.difference(other)
 
 
 class SymmetricDifference(BinarySetTheoreticMethod):
+    __doc__ = shapely.geometry.base.BaseGeometry.symmetric_difference.__doc__
+
     def _impl(self, this, other):
         return this.symmetric_difference(other)
 
 
 class Union(BinarySetTheoreticMethod):
+    __doc__ = shapely.geometry.base.BaseGeometry.union.__doc__
+
     def _impl(self, this, other):
         return this.union(other)
+
+
+class CascadeUnion(MultiGeometryOperation):
+    __doc__ = shapely.ops.unary_union.__doc__
+
+    def _impl(self, *geometries):
+        return shapely.ops.unary_union(geometries)
+
 

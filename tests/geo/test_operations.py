@@ -8,7 +8,10 @@ import unittest
 import shapely.geometry
 
 from georest.geo.operations import *
+from georest.geo.operations import ParameterHelper
 from georest.geo.geometry import Geometry
+
+from georest.geo.exceptions import InvalidParameter
 
 
 class TestUnaryOperation(unittest.TestCase):
@@ -28,6 +31,35 @@ class TestUnaryOperation(unittest.TestCase):
 
         result = operation(this)
         self.assertIsNotNone(result.crs)
+
+
+class TestParameterHelper(unittest.TestCase):
+    def setUp(self):
+        self.helper = ParameterHelper(args=[])
+
+    def test_check_float(self):
+        self.assertRaises(InvalidParameter, self.helper.check_float, f=1)
+        self.assertRaises(InvalidParameter, self.helper.check_float, f='a')
+        self.assertEqual(1.0, self.helper.check_float(f=1.0))
+        self.assertEqual(1.0, self.helper.check_float(f='1'))
+        self.assertEqual(1.0, self.helper.check_float(f='1.0'))
+
+    def test_check_integer(self):
+        self.assertRaises(InvalidParameter, self.helper.check_integer, f=1.2)
+        self.assertRaises(InvalidParameter, self.helper.check_integer, f='1.0')
+        self.assertEqual(1, self.helper.check_integer(f=1))
+        self.assertEqual(1, self.helper.check_integer(f='1'))
+
+    def test_check_boolean(self):
+        self.assertRaises(InvalidParameter, self.helper.check_boolean, f=2)
+        self.assertRaises(InvalidParameter, self.helper.check_boolean, f='2')
+        self.assertRaises(InvalidParameter, self.helper.check_boolean, f='yes')
+        self.assertFalse(self.helper.check_boolean(f=False))
+        self.assertFalse(self.helper.check_boolean(f='false'))
+        self.assertFalse(self.helper.check_boolean(f='0'))
+        self.assertTrue(self.helper.check_boolean(f=True))
+        self.assertTrue(self.helper.check_boolean(f='true'))
+        self.assertTrue(self.helper.check_boolean(f='1'))
 
 
 class TestAttributes(unittest.TestCase):
@@ -124,7 +156,11 @@ class TestUnarySetTheoreticMethods(unittest.TestCase):
         self.assertTrue(result.almost_equals(reference))
 
     def test_pointonsurface(self):
-        pass
+        this = Geometry.build_geometry('LINESTRING (0 0, 1 1)')
+        operation = PointOnSurface()
+        result = operation(this)
+        reference = Geometry.build_geometry('POINT (0.5 0.5)')
+        self.assertFalse(result.almost_equals(reference))
 
 
 class TestBinaryOperation(unittest.TestCase):
@@ -216,6 +252,11 @@ class TestBinarySetTheoreticMethods(unittest.TestCase):
         reference = Geometry.build_geometry(
             'MULTIPOLYGON (((0 0, 0 1, 1 1, 1 0.5, 0.5 0, 0 0)), ((1 0, 1 0.5, 1.5 1, 1.5 0, 1 0)))')
         self.assertTrue(result.equals(reference))
+
+
+class TestMultiOperations(unittest.TestCase):
+    def test_cascade_union(self):
+        pass
 
 
 if __name__ == '__main__':
