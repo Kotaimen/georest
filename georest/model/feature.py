@@ -113,11 +113,11 @@ def _result2metadata(r):
     return metadata
 
 
-class FeatureModel(BaseFeatureModel):
-    def from_json(self, s):
+class FeaturesModel(BaseFeatureModel):
+    def from_json(self, s, **kwargs):
         return geo.Feature.build_from_geojson(s)
 
-    def as_json(self, obj):  # XXX: flat precision
+    def as_json(self, obj, **kwargs):  # XXX: flat precision
         return obj.geojson
 
     def create(self, obj, bucket=None):

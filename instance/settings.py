@@ -7,7 +7,7 @@
 
 STORAGE = {
     'prototype': 'postgis',
-    'host': '172.26.183.193',
+    'host': '127.0.0.1',
     'username': 'postgres',
     'password': '123456',
     'database': 'georest-test',

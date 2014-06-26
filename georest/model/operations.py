@@ -10,7 +10,9 @@ __date__ = '6/19/14'
 """
 
 from collections import namedtuple
+from .. import geo
 from ..geo import operations as ops
+from ..geo import jsonhelper as json
 from .exceptions import NoSuchOperation
 
 
@@ -40,7 +42,19 @@ OPERATION_MAPPING = dict(
 )
 
 
-class Operations(object):
+class OperationResult(namedtuple('OperationResult', ['value', 'is_pod'])):
+    """operation result capsulation"""
+    __slots__ = ()
+
+    def json(self):
+        """json representation of the result"""
+        if self.is_pod:
+            return json.dumps({'result': self.value})
+        else:
+            return self.value.geojson
+
+
+class OperationsModel(object):
     def __init__(self):
         self.operations = OPERATION_MAPPING
 
@@ -50,6 +64,13 @@ class Operations(object):
             'operations': list(self.operations)
         }
 
+    def describe_operation(self, op_name):
+        op = self.operations.get(op_name, None)
+        if not op:
+            raise NoSuchOperation('Cannot find op %s' % op_name)
+
+        return {'name': op_name, 'doc': op.__doc__}
+
     def invoke(self, op_name, *args, **kwargs):
         """invoke an operation
 
@@ -57,9 +78,11 @@ class Operations(object):
         :param args: list of geometry objects
         :param kwargs: operation arguments
         :raises NoSuchOperation: when operation is not found
+        :rtype: OperationResult
         """
         op = self.operations.get(op_name, None)
         if not op:
             raise NoSuchOperation('Cannot find op %s' % op_name)
 
-        return op(**kwargs)(*args)
+        value = op(**kwargs)(*args)
+        return OperationResult(value, not isinstance(value, geo.Geometry))
