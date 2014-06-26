@@ -20,6 +20,7 @@ from flask.views import MethodView
 from flask.json import jsonify
 
 from .exceptions import InvalidRequest
+from .utils import get_json_content, get_if_match
 
 
 class StorageView(MethodView):
@@ -56,13 +57,7 @@ class StorageView(MethodView):
             flask.abort(404)
 
         # etag extraction
-        pre_etag = None
-        if request.if_match and not request.if_match.star_tag:
-            try:
-                pre_etag, = request.if_match.as_set()  # only 1 allowed
-            except ValueError:
-                raise InvalidRequest('Cannot process if_match %s' % \
-                                     request.if_match)
+        pre_etag = get_if_match()
 
         obj = self._extract_content()
         metadata = self.model.put(obj, key, etag=pre_etag)
@@ -97,14 +92,7 @@ class StorageView(MethodView):
         return response
 
     def _extract_content(self):
-        # content extraction
-        if request.mimetype != 'application/json':
-            raise InvalidRequest('Only "application/json" supported')
-        try:
-            data = request.data.decode('utf-8')
-            # data = request.get_data().decode('utf-8')
-        except UnicodeError:
-            raise InvalidRequest('Cannot decode content with utf-8')
+        data = get_json_content()
         obj = self.model.from_json(data)
         return obj
 

@@ -39,13 +39,14 @@ class GeoRestApi(object):
         feature_storage = self.app.feature_storage
 
         feature_model_config = self.app.config.get('FEATURE_MODEL', dict())
-        feature_model = model.FeatureModel(feature_storage, **feature_model_config)
+        features_model = model.FeaturesModel(feature_storage, **feature_model_config)
         geometry_model = model.GeometryModel(feature_storage, **feature_model_config)
         feature_prop_model = model.FeaturePropertiesModel(feature_storage, **feature_model_config)
+        operations_model = model.OperationsModel()
 
         self.add_resource(view.describe, '/describe',
                           endpoint='describe')
-        self.add_resource(view.Features.as_view('features', feature_model),
+        self.add_resource(view.Features.as_view('features', features_model),
                           '/features',
                           '/features/<key>',
                           endpoint='features')
@@ -59,6 +60,12 @@ class GeoRestApi(object):
                                                   feature_prop_model),
                           '/features/<key>/properties',
                           endpoint='properties')
+        self.add_resource(view.Operations.as_view('operations',
+                                                  operations_model,
+                                                  geometry_model
+                                                  ),
+                          '/operations/<op_name>/<path:arg_list>',
+                          endpoint='operations')
 
     def add_error_handler(self):
         self.app.errorhandler(geo.GeoException)(rest_error)

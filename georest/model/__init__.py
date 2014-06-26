@@ -19,5 +19,6 @@ __author__ = 'pp'
     will pass-through, unless special handling is required.
 """
 
-from .feature import FeatureModel, GeometryModel, FeaturePropertiesModel
+from .feature import FeaturesModel, GeometryModel, FeaturePropertiesModel
+from .operations import OperationsModel
 from .exceptions import ModelException

@@ -35,7 +35,3 @@ class OperationsModelException(ModelException):
 
 class NoSuchOperation(OperationsModelException):
     HTTP_STATUS_CODE = 404
-
-
-class NoSuchOperation(OperationsModelException):
-    HTTP_STATUS_CODE = 404

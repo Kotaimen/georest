@@ -36,10 +36,10 @@ class FeatureModelMixin(object):
         self.assertEqual(json.loads(self.model.as_json(self.obj)), json.loads(self.jsonobj))
 
 
-class TestFeatureModel(FeatureModelMixin, unittest.TestCase):
+class TestFeaturesModel(FeatureModelMixin, unittest.TestCase):
     def setUp(self):
-        super(TestFeatureModel, self).setUp()
-        self.model = FeatureModel(self.storage)
+        super(TestFeaturesModel, self).setUp()
+        self.model = FeaturesModel(self.storage)
         self.jsonobj = '{"type":"Feature","id":"foo.?","geometry":{"type":"LineString","coordinates":[[102.0,0.0],[103.0,1.0]]},"properties":{"prop1":0.0,"prop0":"value0"}}'
         self.obj = geo.Feature.build_from_geojson(self.jsonobj, key=geo.Key.make_key(bucket='foo'))
         self.bucket = 'foo'
@@ -95,7 +95,7 @@ class TestPropertiesModel(FeatureModelMixin, unittest.TestCase):
         self.bucket = 'foo'
         self.key = 'foo.bar'
         # store a feature first to test put
-        feature_model = FeatureModel(self.storage)
+        feature_model = FeaturesModel(self.storage)
         feature_key = geo.Key.build_from_qualified_name('foo.bar')
         feature_json = '{"type":"Feature","geometry":{"type":"Point","coordinates":[30,10]},"properties":{}}'
         feature = geo.Feature.build_from_geojson(feature_json,
