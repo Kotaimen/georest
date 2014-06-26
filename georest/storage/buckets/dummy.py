@@ -11,8 +11,38 @@ __date__ = '6/23/14'
 """
 import uuid
 import datetime
+
 from ..bucket import FeatureBucket, Commit
-from ..exceptions import FeatureNotFound
+from ..exceptions import FeatureNotFound, DuplicatedBucket, BucketNotFound
+from .factory import FeatureBucketFactory
+
+
+class DummyBucketFactory(FeatureBucketFactory):
+    def __init__(self):
+        self._collection = dict()
+
+    def create(self, name, **kwargs):
+        if name in self._collection:
+            raise DuplicatedBucket(name)
+
+        bucket = DummyFeatureBucket(name)
+        self._collection[name] = bucket
+        return bucket
+
+    def get(self, name):
+        try:
+            return self._collection[name]
+        except KeyError:
+            raise BucketNotFound(name)
+
+    def delete(self, name):
+        try:
+            del self._collection[name]
+        except KeyError:
+            raise BucketNotFound(name)
+
+    def has(self, name):
+        return name in self._collection
 
 
 class DummyFeatureBucket(FeatureBucket):

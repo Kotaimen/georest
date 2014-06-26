@@ -3,4 +3,5 @@
 __author__ = 'ray'
 __date__ = '6/20/14'
 
-from .factory import DummyBucketFactory, PostGISFeatureBucketFactory
+from .dummy import DummyBucketFactory
+from .postgis import PostGISFeatureBucketFactory

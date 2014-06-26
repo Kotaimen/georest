@@ -8,7 +8,7 @@ __date__ = '6/17/14'
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     PostGIS Geo Feature Bucket.
 """
-
+import uuid
 import sqlalchemy
 import geoalchemy2
 import geoalchemy2.shape
@@ -23,9 +23,10 @@ from sqlalchemy.exc import IntegrityError
 
 from ..exceptions import *
 from ..bucket import FeatureBucket, FeatureMapper, Commit
+from .factory import FeatureBucketFactory
 
 
-class PostGISConnectionPool(object):
+class PostGISFeatureBucketFactory(FeatureBucketFactory):
     def __init__(self,
                  host='localhost',
                  port=5432,
@@ -50,15 +51,49 @@ class PostGISConnectionPool(object):
         self._engine = create_engine(
             connection_string, pool_size=pool_size, poolclass=QueuePool)
 
-    def connect(self):
-        return self._engine.connect()
+
+    def create(self, bucket_name, srid=4326, checkfirst=False):
+        if self.has(bucket_name):
+            if checkfirst:
+                return self.get(bucket_name)
+            raise DuplicatedBucket(bucket_name)
+        bucket = PostGISFeatureBucket(bucket_name, self._engine, srid=srid)
+        return bucket
+
+    def get(self, bucket_name):
+        srid = self._inspect_bucket_srid(bucket_name)
+        if srid is None:
+            raise BucketNotFound(bucket_name)
+        bucket = PostGISFeatureBucket(bucket_name, self._engine, srid)
+        return bucket
+
+    def has(self, bucket_name):
+        srid = self._inspect_bucket_srid(bucket_name)
+        return srid is not None
+
+    def delete(self, bucket_name):
+        if not self.has(bucket_name):
+            raise BucketNotFound(bucket_name)
+
+        with self._engine.begin() as conn:
+            conn.execute('''DROP SCHEMA "%s" CASCADE''' % bucket_name)
+        return True
+
+    def _inspect_bucket_srid(self, bucket_name):
+        with self._engine.begin() as conn:
+            row = conn.execute(
+                '''SELECT * FROM geometry_columns WHERE f_table_schema=%(name)s''',
+                name=bucket_name).fetchone()
+            if row:
+                return row.srid
+        return None
 
 
 class PostGISFeatureBucket(FeatureBucket):
-    def __init__(self, name, pool, srid=None, max_revision_num=10):
+    def __init__(self, name, engine, srid=None, max_revision_num=10):
         FeatureBucket.__init__(self, name)
 
-        self._pool = pool
+        self._engine = engine
         self._srid = srid
 
         metadata = sqlalchemy.MetaData(schema=name)
@@ -102,16 +137,14 @@ class PostGISFeatureBucket(FeatureBucket):
 
         self.FEATURE_KEY_SEQ = Sequence('global_id_seq', metadata=metadata)
 
-        conn = self._pool.connect()
-        with conn.begin() as trans:
+        with self._engine.begin() as conn:
             # metadata.drop_all(bind=conn)
             # conn.execute(DropSchema(name))
-            conn.execute('''CREATE SCHEMA IF NOT EXISTS %s''' % name)
+            conn.execute('''CREATE SCHEMA IF NOT EXISTS "%s"''' % name)
             metadata.create_all(bind=conn, checkfirst=True)
 
     def commit(self, name, mapper, parent=None):
-        conn = self._pool.connect()
-        with conn.begin() as trans:
+        with self._engine.begin() as conn:
             # if name exists and parent is None, set parent to head revision
             head_row = self._select_head(conn, name)
             if head_row and parent is None:
@@ -142,11 +175,11 @@ class PostGISFeatureBucket(FeatureBucket):
                 parent_revision=inserted.old_rev,
                 timestamp=inserted.timestamp
             )
+
             return commit
 
     def checkout(self, name, revision=None):
-        conn = self._pool.connect()
-        with conn.begin() as trans:
+        with self._engine.begin() as conn:
 
             head_row = self._select_head(conn, name)
             if head_row is None:
@@ -181,13 +214,13 @@ class PostGISFeatureBucket(FeatureBucket):
             return commit, mapper
 
     def head(self, name):
-        conn = self._pool.connect()
-        with conn.begin() as trans:
+        with self._engine.begin() as conn:
             head_row = self._select_head(conn, name)
             if not head_row:
                 raise FeatureNotFound(name)
 
-            feature_row = self._select_feature(conn, name, head_row.head_rev)
+            feature_row = self._select_feature(conn, name,
+                                               head_row.head_rev)
             commit = Commit(
                 name=name,
                 revision=feature_row.new_rev,
@@ -200,8 +233,7 @@ class PostGISFeatureBucket(FeatureBucket):
         if revision is None:
             return self.head(name)
 
-        conn = self._pool.connect()
-        with conn.begin() as trans:
+        with self._engine.begin() as conn:
             feature_row = self._select_feature(conn, name, revision)
             if feature_row is None:
                 raise FeatureNotFound(name, revision)
@@ -214,10 +246,8 @@ class PostGISFeatureBucket(FeatureBucket):
             )
             return commit
 
-
     def remove(self, name, parent=None):
-        conn = self._pool.connect()
-        with conn.begin() as trans:
+        with self._engine.begin() as conn:
             head_row = self._select_head(conn, name)
             if head_row is None:
                 raise FeatureNotFound(name, parent)
@@ -250,10 +280,11 @@ class PostGISFeatureBucket(FeatureBucket):
             return commit
 
     def make_random_name(self):
-        conn = self._pool.connect()
-        with conn.begin() as trans:
-            ret = conn.execute(select([self.FEATURE_KEY_SEQ.next_value()]))
-            return 'feature%d' % ret.scalar()
+        name = uuid.uuid4().hex
+        return name
+        # with self._engine.begin() as conn:
+        #     ret = conn.execute(select([self.FEATURE_KEY_SEQ.next_value()]))
+        #     return 'feature%d' % ret.scalar()
 
     def _insert_prop(self, conn, prop):
         stmt = self.PROPERTIES_TABLE.insert()
