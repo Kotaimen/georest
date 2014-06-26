@@ -64,6 +64,8 @@ class GeoRestApi(object):
                                                   operations_model,
                                                   geometry_model
                                                   ),
+                          '/operations',
+                          '/operations/<op_name>',
                           '/operations/<op_name>/<path:arg_list>',
                           endpoint='operations')
 

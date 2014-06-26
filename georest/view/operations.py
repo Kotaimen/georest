@@ -58,13 +58,19 @@ class Operations(MethodView):
         self.operations_model = operations_model
         self.geometry_model = geometry_model
 
-    def get(self, op_name, arg_list):
+    def get(self, op_name=None, arg_list=None):
+        if op_name is None:
+            return jsonify(self.operations_model.describe())
+        if arg_list is None:
+            return jsonify(self.operations_model.describe_operation(op_name))
         geoms = self._load_geoms(arg_list)
         kwargs = self._get_kwargs()
         result = self.operations_model.invoke(op_name, *geoms, **kwargs)
         return result.json(), 200, {'Content-Type': 'application/json'}
 
-    def post(self, op_name, arg_list):
+    def post(self, op_name=None, arg_list=None):
+        if op_name is None or arg_list is None:
+            flask.abort(404)
         data = get_json_content()
         geom = geo.Geometry.build_geometry(data)
         geoms = self._load_geoms(arg_list, geom)

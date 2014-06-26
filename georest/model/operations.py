@@ -64,6 +64,13 @@ class OperationsModel(object):
             'operations': list(self.operations)
         }
 
+    def describe_operation(self, op_name):
+        op = self.operations.get(op_name, None)
+        if not op:
+            raise NoSuchOperation('Cannot find op %s' % op_name)
+
+        return {'name': op_name, 'doc': op.__doc__}
+
     def invoke(self, op_name, *args, **kwargs):
         """invoke an operation
 
