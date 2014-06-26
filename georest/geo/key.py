@@ -33,13 +33,13 @@ class Key(collections.namedtuple('Key', 'bucket name')):
         else:
             if not isinstance(bucket, six.string_types):
                 raise InvalidKey('Invalid bucket: %r' % bucket)
-            if not re.match(r'^(\w+\.)*\w+$', bucket):
+            if not re.match(r'^[A-Za-z][A-Za-z0-9_]+$', bucket):
                 raise InvalidKey('Invalid bucket: %r' % bucket)
 
         if name is not None:
             if not isinstance(name, six.string_types):
                 raise InvalidKey('Invalid name: %r' % name)
-            if not re.match(r'^\w+$', name):
+            if not re.match(r'^([A-Za-z0-9_]+\.)*[A-Za-z0-9_]+$', name):
                 raise InvalidKey('Invalid name: %r' % name)
 
         return Key(bucket, name)
@@ -47,10 +47,10 @@ class Key(collections.namedtuple('Key', 'bucket name')):
     @classmethod
     def build_from_qualified_name(cls, qualified_name):
         assert isinstance(qualified_name, six.string_types)
-        ret = qualified_name.rsplit('.', 1)
-        if len(ret) != 2:
+        try:
+            bucket, name = qualified_name.split('.', 1)
+        except ValueError:
             raise InvalidKey('Not a valid qualified name: %s' % qualified_name)
-        bucket, name = tuple(ret)
         return cls.make_key(name=name, bucket=bucket)
 
     @property

@@ -30,8 +30,8 @@ class TestKey(unittest.TestCase):
         self.assertEqual(key6, ('Snakes', 'Sand'))
 
     def test_build_fail(self):
-        self.assertRaises(InvalidKey, Key.make_key, 'a.b.c', 'Sand')
-        self.assertRaises(InvalidKey, Key.make_key, 'Snake', 'Sand~')
+        self.assertRaises(InvalidKey, Key.make_key, 'Sand', 'a.b.c')
+        self.assertRaises(InvalidKey, Key.make_key, 'Sand~', 'Snake')
         self.assertRaises(InvalidKey, Key.make_key, 1, 'Sand')
         self.assertRaises(InvalidKey, Key.make_key, 'Snake', 1)
         self.assertRaises(InvalidKey, Key.build_from_qualified_name, '')
@@ -44,7 +44,7 @@ class TestKey(unittest.TestCase):
         key1 = Key.build_from_qualified_name('Kettle.Black')
         self.assertEqual(key1, Key.make_key('Black', 'Kettle'))
         key2 = Key.build_from_qualified_name('Kettle.Black.Osmus')
-        self.assertEqual(key2, Key.make_key('Osmus', 'Kettle.Black'))
+        self.assertEqual(key2, Key.make_key('Black.Osmus', 'Kettle'))
         key3 = Key.make_key()
         self.assertEqual(str(key3), 'default.?')
 
