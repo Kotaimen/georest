@@ -143,6 +143,18 @@ class PostGISFeatureBucket(FeatureBucket):
             conn.execute('''CREATE SCHEMA IF NOT EXISTS "%s"''' % name)
             metadata.create_all(bind=conn, checkfirst=True)
 
+    def describe(self):
+        import psycopg2
+
+        description = {
+            'SQLAlchemy': 'SQLAlchemy (%s)' % sqlalchemy.__version__,
+            'GeoAlchemy2': 'GeoAlchemy2 (%s)' % '0.2.4',
+            'psycopg2': 'psycopg2 (%s)' % psycopg2.__version__,
+            'support_version': True
+        }
+
+        return description
+
     def commit(self, name, mapper, parent=None):
         with self._engine.begin() as conn:
             # if name exists and parent is None, set parent to head revision

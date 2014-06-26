@@ -53,19 +53,6 @@ from .exceptions import (
 )
 
 
-def describe():
-    import sqlalchemy
-    import geoalchemy2
-    import psycopg2
-
-    description = {
-        'SQLAlchemy': 'SQLAlchemy (%s)' % sqlalchemy.__version__,
-        'GeoAlchemy2': 'GeoAlchemy2 (%s)' % '0.2.4',
-        'psycopg2': 'psycopg2 (%s)' % psycopg2.__version__
-    }
-
-    return description
-
 
 def build_feature_storage(prototype, **kwargs):
     if prototype == 'dummy':
