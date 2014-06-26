@@ -76,7 +76,7 @@ class PostGISFeatureBucketFactory(FeatureBucketFactory):
             raise BucketNotFound(bucket_name)
 
         with self._engine.begin() as conn:
-            conn.execute('''DROP SCHEMA %s CASCADE''' % bucket_name)
+            conn.execute('''DROP SCHEMA "%s" CASCADE''' % bucket_name)
         return True
 
     def _inspect_bucket_srid(self, bucket_name):
@@ -140,7 +140,7 @@ class PostGISFeatureBucket(FeatureBucket):
         with self._engine.begin() as conn:
             # metadata.drop_all(bind=conn)
             # conn.execute(DropSchema(name))
-            conn.execute('''CREATE SCHEMA IF NOT EXISTS %s''' % name)
+            conn.execute('''CREATE SCHEMA IF NOT EXISTS "%s"''' % name)
             metadata.create_all(bind=conn, checkfirst=True)
 
     def commit(self, name, mapper, parent=None):
