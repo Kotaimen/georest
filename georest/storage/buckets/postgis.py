@@ -147,11 +147,8 @@ class PostGISFeatureBucket(FeatureBucket):
         with self._engine.begin() as conn:
             # if name exists and parent is None, set parent to head revision
             head_row = self._select_head(conn, name)
-            if head_row is not None:
-                if parent is not None and parent != head_row.head_rev:
-                    raise NotHeadRevision(name, parent_rev=parent)
-                else:
-                    parent = head_row.head_rev
+            if head_row and parent is None:
+                parent = head_row.head_rev
 
             # insert components of the feature
             prop_id = self._insert_prop(conn, mapper.properties)
