@@ -21,6 +21,14 @@ class DummyBucketFactory(FeatureBucketFactory):
     def __init__(self):
         self._collection = dict()
 
+    def describe(self):
+
+        description = {
+            'support_version': False
+        }
+
+        return description
+
     def create(self, name, **kwargs):
         if name in self._collection:
             raise DuplicatedBucket(name)

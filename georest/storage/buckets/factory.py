@@ -11,6 +11,10 @@ __date__ = '6/23/14'
 """
 
 class FeatureBucketFactory(object):
+
+    def describe(self):
+        raise NotImplementedError
+
     def create(self, name, **kwargs):
         raise NotImplementedError
 

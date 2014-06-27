@@ -57,3 +57,5 @@ class TestDummyFeatureStorage(unittest.TestCase):
         self.assertRaises(
             BucketNotFound, self.storage.delete_bucket, 'test_bucket')
 
+    def test_describe(self):
+        self.assertIn('support_version', self.storage.describe())

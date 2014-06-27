@@ -62,10 +62,6 @@ class FeatureBucket(object):
         """Get bucket name"""
         return self._name
 
-    def describe(self):
-        """Basic information about the bucket"""
-        return None
-
     def commit(self, name, mapper, parent=None):
         """Commit a feature"""
         raise NotImplementedError

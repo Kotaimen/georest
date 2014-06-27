@@ -52,6 +52,19 @@ class PostGISFeatureBucketFactory(FeatureBucketFactory):
             connection_string, pool_size=pool_size, poolclass=QueuePool)
 
 
+    def describe(self):
+        import psycopg2
+
+        description = {
+            'SQLAlchemy': 'SQLAlchemy (%s)' % sqlalchemy.__version__,
+            'GeoAlchemy2': 'GeoAlchemy2 (%s)' % '0.2.4',
+            'psycopg2': 'psycopg2 (%s)' % psycopg2.__version__,
+            'support_version': True
+        }
+
+        return description
+
+
     def create(self, bucket_name, srid=4326, checkfirst=False):
         if self.has(bucket_name):
             if checkfirst:
@@ -142,18 +155,6 @@ class PostGISFeatureBucket(FeatureBucket):
             # conn.execute(DropSchema(name))
             conn.execute('''CREATE SCHEMA IF NOT EXISTS "%s"''' % name)
             metadata.create_all(bind=conn, checkfirst=True)
-
-    def describe(self):
-        import psycopg2
-
-        description = {
-            'SQLAlchemy': 'SQLAlchemy (%s)' % sqlalchemy.__version__,
-            'GeoAlchemy2': 'GeoAlchemy2 (%s)' % '0.2.4',
-            'psycopg2': 'psycopg2 (%s)' % psycopg2.__version__,
-            'support_version': True
-        }
-
-        return description
 
     def commit(self, name, mapper, parent=None):
         with self._engine.begin() as conn:
@@ -295,7 +296,7 @@ class PostGISFeatureBucket(FeatureBucket):
         name = uuid.uuid4().hex
         return name
         # with self._engine.begin() as conn:
-        #     ret = conn.execute(select([self.FEATURE_KEY_SEQ.next_value()]))
+        # ret = conn.execute(select([self.FEATURE_KEY_SEQ.next_value()]))
         #     return 'feature%d' % ret.scalar()
 
     def _insert_prop(self, conn, prop):

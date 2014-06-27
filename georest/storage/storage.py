@@ -24,6 +24,11 @@ class FeatureStorage(object):
         self._factory = bucket_factory
         self._collection = dict()
 
+    def describe(self):
+        """Get Storage Description.
+        """
+        return self._factory.describe()
+
     def create_bucket(self, name, **kwargs):
         """Create a feature bucket.
 
