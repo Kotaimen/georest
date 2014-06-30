@@ -7,6 +7,7 @@ __date__ = '6/24/14'
 import json
 import unittest
 from tests.view.base import ViewTestMixin
+from georest import storage
 from georest.storage import build_feature_storage
 from georest.model import *
 from georest import geo
@@ -59,6 +60,12 @@ class TestFeaturesModel(FeatureModelMixin, unittest.TestCase):
         r_obj, r_metadata = self.model.get(self.key)
         self.assertEqual(metadata, r_metadata)
         self.assert_(self.obj.equals(r_obj))
+
+    def test_put_delete_get(self):
+        metadata = self.model.put(self.obj, key=self.key)
+        r_metadata = self.model.delete(self.key)
+        with self.assertRaises(storage.FeatureNotFound):
+            r_obj, r_metadata = self.model.get(self.key)
 
 
 class TestGeometryModel(FeatureModelMixin, unittest.TestCase):
