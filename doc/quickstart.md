@@ -15,17 +15,21 @@ imported from `georest.default_settings`.
 
 name | description
 ---- | -----------
-EXPIRES | volatile cache control (not implemented yet)
 STORAGE | storage configuration
 FEATURE_MODEL | feature model configuration
 
-## Running the interface
-
-
 ## Store some features
+```shell
+curl -X PUT http://localhost:5000/features/foo.bar\
+     -H 'Content-Type: "application/json"'\
+     -d '{"type":"Feature","geometry":{"type":"Point","coordinates":[30,10]},"properties":{}}'
 
-
-## Modify features
-
+curl -X PUT http://localhost:5000/features/foo.zoo\
+     -H 'Content-Type: "application/json"'\
+     -d '{"type":"Feature","geometry":{"type":"Point","coordinates":[20,20]},"properties":{}}'
+```
 
 ## Do some geometry calculation
+```shell
+curl http://localhost:5000/operations/symmetric_difference/foo.bar/foo.zoo
+```
