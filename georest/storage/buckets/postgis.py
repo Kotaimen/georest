@@ -8,33 +8,41 @@ __date__ = '6/17/14'
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     PostGIS Geo Feature Bucket.
 """
+
 import uuid
+import ujson
 import sqlalchemy
 import geoalchemy2
 import geoalchemy2.shape
 from sqlalchemy import create_engine
-from sqlalchemy import Table, Column, ForeignKey, Sequence
-from sqlalchemy import BigInteger, String, DateTime, Boolean
-from sqlalchemy.sql import select, func, bindparam, and_, text
-from sqlalchemy.schema import CreateSchema, DropSchema
+from sqlalchemy import PrimaryKeyConstraint, Table, Column, DDL, event
+from sqlalchemy import BigInteger, String, DateTime
+from sqlalchemy.sql import func, bindparam, select, and_
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.exc import IntegrityError
 
 from ..exceptions import *
+from ..storage import FeatureStorage
 from ..bucket import FeatureBucket, FeatureMapper, Commit
-from .factory import FeatureBucketFactory
 
 
-class PostGISFeatureBucketFactory(FeatureBucketFactory):
+def qualified_schema_name(name):
+    return 'bucket_%s' % name
+
+
+class PostGISFeatureStorage(FeatureStorage):
+    support_version = True
+
     def __init__(self,
                  host='localhost',
                  port=5432,
                  username='postgres',
                  password='123456',
                  database='test',
-                 pool_size=5):
-        connection_params = {
+                 pool_size=5,
+                 debug=False):
+        conn_params = {
             'database': database,
             'username': username,
             'password': password,
@@ -42,106 +50,20 @@ class PostGISFeatureBucketFactory(FeatureBucketFactory):
             'port': port
         }
 
-        connection_template = \
-            'postgresql+psycopg2://%(username)s:%(password)s' \
-            '@%(host)s:%(port)s/%(database)s'
+        conn_template = \
+            'postgresql+psycopg2://' \
+            '%(username)s:%(password)s@%(host)s:%(port)s/%(database)s'
 
-        connection_string = connection_template % connection_params
+        conn_string = conn_template % conn_params
 
         self._engine = create_engine(
-            connection_string, pool_size=pool_size, poolclass=QueuePool)
-
-
-    def create(self, bucket_name, srid=4326, checkfirst=False):
-        if self.has(bucket_name):
-            if checkfirst:
-                return self.get(bucket_name)
-            raise DuplicatedBucket(bucket_name)
-        bucket = PostGISFeatureBucket(bucket_name, self._engine, srid=srid)
-        return bucket
-
-    def get(self, bucket_name):
-        srid = self._inspect_bucket_srid(bucket_name)
-        if srid is None:
-            raise BucketNotFound(bucket_name)
-        bucket = PostGISFeatureBucket(bucket_name, self._engine, srid)
-        return bucket
-
-    def has(self, bucket_name):
-        srid = self._inspect_bucket_srid(bucket_name)
-        return srid is not None
-
-    def delete(self, bucket_name):
-        if not self.has(bucket_name):
-            raise BucketNotFound(bucket_name)
-
-        with self._engine.begin() as conn:
-            conn.execute('''DROP SCHEMA "%s" CASCADE''' % bucket_name)
-        return True
-
-    def _inspect_bucket_srid(self, bucket_name):
-        with self._engine.begin() as conn:
-            row = conn.execute(
-                '''SELECT * FROM geometry_columns WHERE f_table_schema=%(name)s''',
-                name=bucket_name).fetchone()
-            if row:
-                return row.srid
-        return None
-
-
-class PostGISFeatureBucket(FeatureBucket):
-    def __init__(self, name, engine, srid=None, max_revision_num=10):
-        FeatureBucket.__init__(self, name)
-
-        self._engine = engine
-        self._srid = srid
-
-        metadata = sqlalchemy.MetaData(schema=name)
-
-        self.PROPERTIES_TABLE = Table(
-            'properties', metadata,
-            Column('id', BigInteger, primary_key=True, autoincrement=True),
-            Column('properties', JSON, default={}),
+            conn_string,
+            pool_size=pool_size,
+            poolclass=QueuePool,
+            json_serializer=ujson.dumps,
+            json_deserializer=ujson.loads,
+            echo=debug,
         )
-
-        self.METADATA_TABLE = Table(
-            'metadata', metadata,
-            Column('id', BigInteger, primary_key=True, autoincrement=True),
-            Column('metadata', JSON, default={}),
-        )
-
-        self.GEOMETRY_TABLE = Table(
-            'geometry', metadata,
-            Column('id', BigInteger, primary_key=True, autoincrement=True),
-            Column('geometry', geoalchemy2.Geometry('GEOMETRY', srid=srid)),
-        )
-
-        self.FEATURE_TABLE = Table(
-            'features', metadata,
-            Column('new_rev', String, primary_key=True),
-            Column('old_rev', String, ForeignKey('features.new_rev')),
-            Column('prop_id', BigInteger, ForeignKey('properties.id')),
-            Column('meta_id', BigInteger, ForeignKey('metadata.id')),
-            Column('geom_id', BigInteger, ForeignKey('geometry.id')),
-            Column('deleted', Boolean, default=False),
-            Column('timestamp', DateTime(timezone=False),
-                   server_default=text(
-                       "(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')")),
-        )
-
-        self.HEAD_REF_TABLE = Table(
-            'head_ref', metadata,
-            Column('id', String, primary_key=True),
-            Column('head_rev', String, ForeignKey('features.new_rev')),
-        )
-
-        self.FEATURE_KEY_SEQ = Sequence('global_id_seq', metadata=metadata)
-
-        with self._engine.begin() as conn:
-            # metadata.drop_all(bind=conn)
-            # conn.execute(DropSchema(name))
-            conn.execute('''CREATE SCHEMA IF NOT EXISTS "%s"''' % name)
-            metadata.create_all(bind=conn, checkfirst=True)
 
     def describe(self):
         import psycopg2
@@ -150,242 +72,505 @@ class PostGISFeatureBucket(FeatureBucket):
             'SQLAlchemy': 'SQLAlchemy (%s)' % sqlalchemy.__version__,
             'GeoAlchemy2': 'GeoAlchemy2 (%s)' % '0.2.4',
             'psycopg2': 'psycopg2 (%s)' % psycopg2.__version__,
-            'support_version': True
         }
 
+        description.update(FeatureStorage.describe(self))
         return description
+
+    def create_bucket(self, name, overwrite=False, **kwargs):
+        srid = kwargs.get('srid', 4326)
+
+        schema_name = qualified_schema_name(name)
+
+        if self.has_bucket(name):
+            if not overwrite:
+                raise DuplicatedBucket(name)
+            self._drop_schema(schema_name)
+
+        self._create_schema(schema_name)
+
+        bucket = PostGISFeatureBucket(
+            name, self._engine, schema=schema_name, srid=srid)
+
+        return bucket
+
+    def get_bucket(self, name):
+        schema_name = qualified_schema_name(name)
+
+        srid = self._inspect_srid(schema_name)
+        if srid is None:
+            raise BucketNotFound(name)
+
+        bucket = PostGISFeatureBucket(
+            name, self._engine, schema=schema_name, srid=srid)
+
+        return bucket
+
+    def has_bucket(self, name):
+        schema_name = qualified_schema_name(name)
+        srid = self._inspect_srid(schema_name)
+        return srid is not None
+
+    def delete_bucket(self, name):
+        schema_name = qualified_schema_name(name)
+        if not self.has_bucket(name):
+            raise BucketNotFound(name)
+        self._drop_schema(schema_name)
+        return True
+
+    def _create_schema(self, schema_name):
+        with self._engine.begin() as conn:
+            conn.execute(
+                '''CREATE SCHEMA IF NOT EXISTS "%s";''' % schema_name)
+
+    def _drop_schema(self, schema_name):
+        with self._engine.begin() as conn:
+            conn.execute(
+                '''DROP SCHEMA IF EXISTS "%s" CASCADE;''' % schema_name)
+
+
+    def _inspect_srid(self, bucket_name):
+        with self._engine.begin() as conn:
+            srid = conn.execute(
+                '''SELECT * FROM geometry_columns WHERE f_table_schema=%(name)s''',
+                name=bucket_name).scalar()
+            return srid
+
+
+class PostGISFeatureBucket(FeatureBucket):
+    def __init__(self, name, engine, schema='', srid=None, revision_cap=10):
+        FeatureBucket.__init__(self, name)
+
+        self._engine = engine
+        self._schema = schema
+        self._srid = srid
+        self._revision_cap = revision_cap
+
+        metadata = sqlalchemy.MetaData(schema=self._schema)
+
+        self.FEATURE_TABLE = Table(
+            'feature', metadata,
+            Column('name', String, index=True),
+            Column('properties', JSON, default=None),
+            Column('metadata', JSON, default=None),
+            Column('geometry', geoalchemy2.Geometry('GEOMETRY', srid=4326)),
+            Column('create_at', DateTime, nullable=False),
+            Column('expire_at', DateTime, nullable=False),
+            Column('revision', String, index=True),
+            PrimaryKeyConstraint('name', 'expire_at')
+        )
+
+        create_feature_view = DDL("""
+            CREATE OR REPLACE VIEW %(schema)s.current_feature AS
+                SELECT * FROM %(fullname)s WHERE expire_at = 'infinity';
+        """)
+
+        create_time_travel_before_func = DDL("""
+            CREATE OR REPLACE FUNCTION %(schema)s.time_travel_before()
+            RETURNS trigger AS
+            $BODY$
+            DECLARE
+                time_now TIMESTAMP;
+                revision VARCHAR;
+            BEGIN
+                time_now = now();
+                revision = encode(public.digest(CAST(time_now AS text), 'sha1'), 'hex');
+
+                IF (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
+                    IF OLD.expire_at != 'infinity' THEN
+                        RAISE EXCEPTION 'Cannot %% old row', TG_OP;
+                    END IF;
+
+                    EXECUTE 'SELECT * FROM ' || format('%%s.%%s', TG_TABLE_SCHEMA, TG_TABLE_NAME)::regclass || ' WHERE ctid = $1 FOR UPDATE' USING OLD.ctid;
+
+                    IF (TG_OP = 'UPDATE') THEN
+                        NEW.create_at := time_now;
+                        NEW.expire_at := 'infinity';
+                        NEW.revision := revision;
+                        RETURN NEW;
+
+                    ELSIF (TG_OP = 'DELETE') THEN
+                        RETURN OLD;
+
+                    ELSE
+                        RETURN NULL;
+
+                    END IF;
+
+                ELSIF (TG_OP = 'INSERT') THEN
+                    IF NEW.create_at IS NULL THEN
+                        NEW.create_at := time_now;
+                    END IF;
+
+                    IF NEW.expire_at IS NULL THEN
+                        NEW.expire_at := 'infinity';
+                    END IF;
+
+                    IF NEW.revision IS NULL THEN
+                        NEW.revision := revision;
+                    END IF;
+
+                    RETURN NEW;
+
+                ELSE
+                    RETURN NULL;
+
+                END IF;
+
+            END;
+            $BODY$
+            LANGUAGE plpgsql;
+        """)
+
+        create_time_travel_after_func = DDL("""
+            CREATE OR REPLACE FUNCTION %(schema)s.time_travel_after()
+            RETURNS trigger AS
+            $BODY$
+            DECLARE
+                temp_row RECORD;
+            BEGIN
+
+                IF (TG_OP = 'UPDATE' OR TG_OP = 'DELETE') THEN
+
+                    temp_row := OLD;
+
+                    IF (TG_OP = 'UPDATE') THEN
+                        temp_row.expire_at := NEW.create_at;
+                    ELSIF (TG_OP = 'DELETE') THEN
+                        temp_row.expire_at := now();
+                    END IF;
+
+                    EXECUTE 'INSERT INTO  ' || format('%%s.%%s', TG_TABLE_SCHEMA, TG_TABLE_NAME)::regclass || ' SELECT $1.*' USING temp_row;
+
+                END IF;
+
+                RETURN NULL;
+
+            END;
+            $BODY$
+            LANGUAGE plpgsql;
+        """)
+
+        create_time_travel_before_trigger = DDL("""
+            CREATE TRIGGER "10_time_travel_before_trigger"
+            BEFORE INSERT OR UPDATE OR DELETE
+            ON %(fullname)s
+            FOR EACH ROW
+            EXECUTE PROCEDURE %(schema)s.time_travel_before();
+        """)
+
+        create_time_travel_after_trigger = DDL("""
+            CREATE TRIGGER "11_time_travel_after_trigger"
+            AFTER UPDATE OR DELETE
+            ON %(fullname)s
+            FOR EACH ROW
+            EXECUTE PROCEDURE %(schema)s.time_travel_after();
+        """)
+
+        # register views
+        event.listen(
+            self.FEATURE_TABLE,
+            "after_create",
+            create_feature_view,
+        )
+
+        # # register functions
+        event.listen(
+            self.FEATURE_TABLE,
+            "after_create",
+            create_time_travel_before_func,
+        )
+        event.listen(
+            self.FEATURE_TABLE,
+            "after_create",
+            create_time_travel_after_func,
+        )
+        event.listen(
+            self.FEATURE_TABLE,
+            "after_create",
+            create_time_travel_before_trigger,
+        )
+
+        event.listen(
+            self.FEATURE_TABLE,
+            "after_create",
+            create_time_travel_after_trigger,
+        )
+
+        metadata.create_all(bind=engine, checkfirst=True)
+
 
     def commit(self, name, mapper, parent=None):
         with self._engine.begin() as conn:
-            # if name exists and parent is None, set parent to head revision
-            head_row = self._select_head(conn, name)
-            if head_row and parent is None:
-                parent = head_row.head_rev
 
-            # insert components of the feature
-            prop_id = self._insert_prop(conn, mapper.properties)
-            meta_id = self._insert_meta(conn, mapper.metadata)
-            geom_id = self._insert_geom(conn, mapper.wkt, mapper.srid)
+            top = self._select_top_revision(conn, name)
+            if top:
+                if parent is None:
+                    inserted = self._update(conn, name, mapper)
+                else:
+                    try:
+                        inserted = self._update_against_parent(
+                            conn, name, mapper, parent)
+                    except sqlalchemy.exc.InternalError as e:
+                        raise NotHeadRevision(name, parent, e)
+            else:
+                if parent is not None:
+                    raise ParentRevisionNotFound(name, parent)
 
-            # insert a new revision of the feature
-            try:
-                inserted = self._insert_feature(
-                    conn, prop_id, meta_id, geom_id, parent_rev=parent)
-            except sqlalchemy.exc.IntegrityError:
-                raise ParentRevisionNotFound(name, parent_rev=parent)
-
-            # update or insert the head reference
-            try:
-                self._upsert_head(
-                    conn, name, inserted.new_rev, inserted.old_rev)
-            except sqlalchemy.exc.IntegrityError:
-                raise NotHeadRevision(name, parent_rev=parent)
+                inserted = self._insert(conn, name, mapper)
 
             commit = Commit(
-                name=name,
-                revision=inserted.new_rev,
-                parent_revision=inserted.old_rev,
-                timestamp=inserted.timestamp
+                name=inserted.name,
+                revision=inserted.revision,
+                create_at=inserted.create_at,
+                expire_at=inserted.expire_at,
             )
 
             return commit
 
     def checkout(self, name, revision=None):
         with self._engine.begin() as conn:
+            if revision is not None:
+                selected = self._select(conn, name, revision)
+                if selected is None:
+                    raise FeatureNotFound(name, revision)
 
-            head_row = self._select_head(conn, name)
-            if head_row is None:
-                raise FeatureNotFound(name, revision)
-            if revision is None:
-                revision = head_row.head_rev
-
-            feature_row = self._select_feature(conn, name, revision)
-            if feature_row is None or feature_row.deleted:
-                raise FeatureNotFound(name, revision)
-
-            prop_row = self._select_prop(conn, feature_row.prop_id)
-            meta_row = self._select_meta(conn, feature_row.meta_id)
-            geom_row = self._select_geom(conn, feature_row.geom_id)
-
-            shapely_geom = geoalchemy2.shape.to_shape(geom_row.geometry)
-            srid = geom_row.geometry.srid
+            else:
+                selected = self._select_top(conn, name)
+                if selected is None:
+                    raise FeatureNotFound(name, revision)
 
             commit = Commit(
-                name=name,
-                revision=feature_row.new_rev,
-                parent_revision=feature_row.old_rev,
-                timestamp=feature_row.timestamp
+                name=selected.name,
+                revision=selected.revision,
+                create_at=selected.create_at,
+                expire_at=selected.expire_at,
             )
 
             mapper = FeatureMapper(
-                properties=prop_row.properties,
-                metadata=meta_row.metadata,
-                wkt=shapely_geom.wkt,
-                srid=srid
+                properties=selected.properties,
+                metadata=selected.metadata,
+                wkt=geoalchemy2.shape.to_shape(selected.geometry).wkt,
+                srid=selected.geometry.srid
             )
+
             return commit, mapper
+
 
     def head(self, name):
         with self._engine.begin() as conn:
-            head_row = self._select_head(conn, name)
-            if not head_row:
-                raise FeatureNotFound(name)
+            selected = self._select_top_revision(conn, name)
+            if selected is None:
+                raise FeatureNotFound(conn, name)
 
-            feature_row = self._select_feature(conn, name,
-                                               head_row.head_rev)
             commit = Commit(
-                name=name,
-                revision=feature_row.new_rev,
-                parent_revision=feature_row.old_rev,
-                timestamp=feature_row.timestamp
+                name=selected.name,
+                revision=selected.revision,
+                create_at=selected.create_at,
+                expire_at=selected.expire_at,
             )
             return commit
+
 
     def status(self, name, revision=None):
         if revision is None:
             return self.head(name)
 
         with self._engine.begin() as conn:
-            feature_row = self._select_feature(conn, name, revision)
-            if feature_row is None:
+            selected = self._select_revision(conn, name, revision)
+            if selected is None:
                 raise FeatureNotFound(name, revision)
 
             commit = Commit(
-                name=name,
-                revision=feature_row.new_rev,
-                parent_revision=feature_row.old_rev,
-                timestamp=feature_row.timestamp
+                name=selected.name,
+                revision=selected.revision,
+                create_at=selected.create_at,
+                expire_at=selected.expire_at,
             )
             return commit
 
+
     def remove(self, name, parent=None):
         with self._engine.begin() as conn:
-            head_row = self._select_head(conn, name)
-            if head_row is None:
-                raise FeatureNotFound(name, parent)
             if parent is None:
-                parent = head_row.head_rev
-            if parent != head_row.head_rev:
-                raise NotHeadRevision(name, parent_rev=parent)
+                deleted = self._delete(conn, name)
+            else:
+                try:
+                    deleted = self._delete_agains_parent(conn, name, parent)
+                except sqlalchemy.exc.InternalError as e:
+                    raise NotHeadRevision(name, parent, e)
 
-            # insert a new revision of the feature
-            prop_id = meta_id = geom_id = None
-            try:
-                inserted = self._insert_feature(
-                    conn, prop_id, meta_id, geom_id, parent_rev=parent,
-                    deleted=True)
-            except sqlalchemy.exc.IntegrityError as e:
-                raise ParentRevisionNotFound(name, parent)
-
-            try:
-                self._upsert_head(
-                    conn, name, inserted.new_rev, inserted.old_rev)
-            except sqlalchemy.exc.IntegrityError:
-                raise NotHeadRevision(name, parent_rev=parent)
+            selected = self._select_revision(conn, name, deleted.revision)
 
             commit = Commit(
-                name=name,
-                revision=inserted.new_rev,
-                parent_revision=inserted.old_rev,
-                timestamp=inserted.timestamp
+                name=deleted.name,
+                revision=None,  # deleted.revision,
+                create_at=deleted.create_at,
+                expire_at=selected.expire_at,
             )
             return commit
 
     def make_random_name(self):
         name = uuid.uuid4().hex
         return name
-        # with self._engine.begin() as conn:
-        #     ret = conn.execute(select([self.FEATURE_KEY_SEQ.next_value()]))
-        #     return 'feature%d' % ret.scalar()
 
-    def _insert_prop(self, conn, prop):
-        stmt = self.PROPERTIES_TABLE.insert()
-        result = conn.execute(stmt, properties=prop)
-        prop_id = result.inserted_primary_key[0]
-        return prop_id
-
-    def _insert_meta(self, conn, meta):
-        stmt = self.METADATA_TABLE.insert()
-        result = conn.execute(stmt, metadata=meta)
-        meta_id = result.inserted_primary_key[0]
-        return meta_id
-
-    def _insert_geom(self, conn, wkt, srid):
-        stmt = self.GEOMETRY_TABLE.insert()
-        result = conn.execute(
-            stmt, geometry=geoalchemy2.WKTElement(wkt, srid))
-        geom_id = result.inserted_primary_key[0]
-        return geom_id
-
-    def _insert_feature(
-            self, conn, prop_id, meta_id, geom_id, parent_rev, deleted=False):
-        insert_feature = self.FEATURE_TABLE.insert().values(
-            new_rev=func.encode(
-                func.digest(bindparam('new_rev'), 'sha1'), 'hex')
-        ).returning(
-            self.FEATURE_TABLE.c.new_rev,
-            self.FEATURE_TABLE.c.old_rev,
-            self.FEATURE_TABLE.c.timestamp
+    def _insert(self, conn, name, mapper):
+        insert_stmt = self.FEATURE_TABLE.insert().returning(
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
         )
 
-        result = conn.execute(
-            insert_feature,
-            prop_id=prop_id,
-            meta_id=meta_id,
-            geom_id=geom_id,
-            old_rev=parent_rev,
-            new_rev='%s%s%s%s' % (prop_id, meta_id, geom_id, parent_rev),
-            deleted=deleted
-        )
-        inserted = result.fetchone()
+        inserted = conn.execute(
+            insert_stmt,
+            name=name,
+            properties=mapper.properties,
+            metadata=mapper.metadata,
+            geometry=geoalchemy2.WKTElement(mapper.wkt, mapper.srid),
+        ).fetchone()
         return inserted
 
-    def _upsert_head(self, conn, name, head_rev, parent_rev):
-        update_head = self.HEAD_REF_TABLE.update().where(
+    def _update(self, conn, name, mapper):
+        update_stmt = self.FEATURE_TABLE.update().where(
             and_(
-                self.HEAD_REF_TABLE.c.id == name,
-                self.HEAD_REF_TABLE.c.head_rev == parent_rev
+                self.FEATURE_TABLE.c.name == name,
+                self.FEATURE_TABLE.c.expire_at == 'infinity',
+            )
+        ).returning(
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
+        )
+
+        updated = conn.execute(
+            update_stmt,
+            properties=mapper.properties,
+            metadata=mapper.metadata,
+            geometry=geoalchemy2.WKTElement(mapper.wkt, mapper.srid),
+        ).fetchone()
+        return updated
+
+    def _update_against_parent(self, conn, name, mapper, parent):
+        update_stmt = self.FEATURE_TABLE.update().where(
+            and_(
+                self.FEATURE_TABLE.c.name == name,
+                self.FEATURE_TABLE.c.revision == parent,
+            )
+        ).returning(
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
+        )
+
+        updated = conn.execute(
+            update_stmt,
+            properties=mapper.properties,
+            metadata=mapper.metadata,
+            geometry=geoalchemy2.WKTElement(mapper.wkt, mapper.srid),
+        ).fetchone()
+        return updated
+
+    def _delete(self, conn, name):
+        delete_stmt = self.FEATURE_TABLE.delete().where(
+            and_(
+                self.FEATURE_TABLE.c.name == name,
+                self.FEATURE_TABLE.c.expire_at == 'infinity',
+            )
+        ).returning(
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
+        )
+
+        deleted = conn.execute(delete_stmt).fetchone()
+        return deleted
+
+    def _delete_agains_parent(self, conn, name, parent):
+        delete_stmt = self.FEATURE_TABLE.delete().where(
+            and_(
+                self.FEATURE_TABLE.c.name == name,
+                self.FEATURE_TABLE.c.revision == parent,
+            )
+        ).returning(
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
+        )
+
+        deleted = conn.execute(delete_stmt).fetchone()
+        return deleted
+
+    def _select(self, conn, name, revision):
+        select_stmt = select([
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.properties,
+            self.FEATURE_TABLE.c.metadata,
+            self.FEATURE_TABLE.c.geometry,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
+        ]).where(
+            and_(
+                self.FEATURE_TABLE.c.name == name,
+                self.FEATURE_TABLE.c.revision == revision
             )
         )
 
-        result = conn.execute(update_head, head_rev=head_rev)
-        if result.rowcount == 0:
-            insert_head = self.HEAD_REF_TABLE.insert()
-            conn.execute(insert_head, id=name, head_rev=head_rev)
+        selected = conn.execute(select_stmt).fetchone()
+        return selected
 
-
-    def _select_head(self, conn, name):
-        select_head = self.HEAD_REF_TABLE.select().where(
-            self.HEAD_REF_TABLE.c.id == name
+    def _select_revision(self, conn, name, revision):
+        select_stmt = select([
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
+        ]).where(
+            and_(
+                self.FEATURE_TABLE.c.name == name,
+                self.FEATURE_TABLE.c.revision == revision,
+            )
         )
 
-        head_row = conn.execute(select_head).fetchone()
-        return head_row
+        selected = conn.execute(select_stmt).fetchone()
+        return selected
 
-    def _select_feature(self, conn, name, rev):
-        select_feature = self.FEATURE_TABLE.select().where(
-            self.FEATURE_TABLE.c.new_rev == rev
+    def _select_top(self, conn, name):
+        select_stmt = select([
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.properties,
+            self.FEATURE_TABLE.c.metadata,
+            self.FEATURE_TABLE.c.geometry,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
+        ]).where(
+            and_(
+                self.FEATURE_TABLE.c.name == name,
+                self.FEATURE_TABLE.c.expire_at == 'infinity',
+            )
         )
-        feature_row = conn.execute(select_feature).fetchone()
-        return feature_row
 
-    def _select_prop(self, conn, prop_id):
-        select_prop = self.PROPERTIES_TABLE.select().where(
-            self.PROPERTIES_TABLE.c.id == prop_id
-        )
-        prop_row = conn.execute(select_prop).fetchone()
-        return prop_row
+        selected = conn.execute(select_stmt).fetchone()
+        return selected
 
-    def _select_meta(self, conn, meta_id):
-        select_meta = self.METADATA_TABLE.select().where(
-            self.METADATA_TABLE.c.id == meta_id
+    def _select_top_revision(self, conn, name):
+        select_stmt = select([
+            self.FEATURE_TABLE.c.name,
+            self.FEATURE_TABLE.c.create_at,
+            self.FEATURE_TABLE.c.expire_at,
+            self.FEATURE_TABLE.c.revision,
+        ]).where(
+            and_(
+                self.FEATURE_TABLE.c.name == name,
+                self.FEATURE_TABLE.c.expire_at == 'infinity',
+            )
         )
-        meta_row = conn.execute(select_meta).fetchone()
-        return meta_row
 
-    def _select_geom(self, conn, geom_id):
-        select_geom = self.GEOMETRY_TABLE.select().where(
-            self.GEOMETRY_TABLE.c.id == geom_id
-        )
-        geom_row = conn.execute(select_geom).fetchone()
-        return geom_row
+        selected = conn.execute(select_stmt).fetchone()
+        return selected

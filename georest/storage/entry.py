@@ -43,7 +43,7 @@ class Response(namedtuple('Bar', 'key, revision, parent_revision, timestamp')):
     def from_commit(cls, commit):
         key = Key.build_from_qualified_name(commit.name)
         return Response(
-            key, commit.revision, commit.parent_revision, commit.timestamp)
+            key, commit.revision, None, commit.create_at)
 
 
 class FeatureEntry(object):

@@ -10,9 +10,6 @@ __date__ = '6/16/14'
 
 """
 
-import six
-from .exceptions import BucketNotFound, DuplicatedBucket
-
 
 class FeatureStorage(object):
     """Geo Feature Storage
@@ -20,22 +17,20 @@ class FeatureStorage(object):
     The storage manages feature buckets.
     """
 
-    def __init__(self, bucket_factory):
-        self._factory = bucket_factory
-        self._collection = dict()
+    support_version = False
 
-    def create_bucket(self, name, **kwargs):
+    def describe(self):
+        return dict(support_version=self.support_version)
+
+    def create_bucket(self, name, overwrite=False, **kwargs):
         """Create a feature bucket.
 
         :param basestring name: bucket name
+        :param bool overwrite: whether overwrite the bucket with same name.
         :param dict kwargs: parameters of the creation
         :rtype :class:`FeatureBucket`
         """
-        assert isinstance(name, six.string_types)
-
-        bucket = self._factory.create(name, **kwargs)
-
-        return bucket
+        raise NotImplementedError
 
     def get_bucket(self, name):
         """Get a created feature bucket.
@@ -43,23 +38,24 @@ class FeatureStorage(object):
         :param basestring name: bucket name
         :rtype :class:`FeatureBucket`
         """
-        assert isinstance(name, six.string_types)
-
-        bucket = self._factory.get(name)
-
-        return bucket
+        raise NotImplementedError
 
     def delete_bucket(self, name):
         """Delete a created feature bucket. Do not raise if bucket not found.
 
         :param basestring name: bucket name
         """
-        assert isinstance(name, six.string_types)
+        raise NotImplementedError
 
-        self._factory.delete(name)
+    def has_bucket(self, name):
+        """Check existence of the bucket.
 
-        return True
+        :param basestring name: bucket name
+        """
+        raise NotImplementedError
 
     def close(self):
+        """Shutdown the storage
+        """
         pass
 

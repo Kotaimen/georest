@@ -12,16 +12,16 @@ __date__ = '6/23/14'
 import uuid
 import datetime
 
+from ..storage import FeatureStorage
 from ..bucket import FeatureBucket, Commit
 from ..exceptions import FeatureNotFound, DuplicatedBucket, BucketNotFound
-from .factory import FeatureBucketFactory
 
 
-class DummyBucketFactory(FeatureBucketFactory):
+class DummyStorage(FeatureStorage):
     def __init__(self):
         self._collection = dict()
 
-    def create(self, name, **kwargs):
+    def create_bucket(self, name, overwrite=False, **kwargs):
         if name in self._collection:
             raise DuplicatedBucket(name)
 
@@ -29,19 +29,19 @@ class DummyBucketFactory(FeatureBucketFactory):
         self._collection[name] = bucket
         return bucket
 
-    def get(self, name):
+    def get_bucket(self, name):
         try:
             return self._collection[name]
         except KeyError:
             raise BucketNotFound(name)
 
-    def delete(self, name):
+    def delete_bucket(self, name):
         try:
             del self._collection[name]
         except KeyError:
             raise BucketNotFound(name)
 
-    def has(self, name):
+    def has_bucket(self, name):
         return name in self._collection
 
 
@@ -54,15 +54,19 @@ class DummyFeatureBucket(FeatureBucket):
     def commit(self, name, mapper, parent=None):
         timestamp = datetime.datetime.now()
         self._storage[name] = mapper, timestamp
-        commit = Commit(name=name, revision=None, parent_revision=None,
-                        timestamp=timestamp)
+        commit = Commit(name=name,
+                        revision=None,
+                        create_at=timestamp,
+                        expire_at=datetime.datetime.max)
         return commit
 
     def checkout(self, name, revision=None):
         try:
             mapper, timestamp = self._storage[name]
-            commit = Commit(name=name, revision=None, parent_revision=None,
-                            timestamp=timestamp)
+            commit = Commit(name=name,
+                            revision=None,
+                            create_at=timestamp,
+                            expire_at=datetime.datetime.max)
         except KeyError:
             raise FeatureNotFound(name)
         return commit, mapper
@@ -72,8 +76,10 @@ class DummyFeatureBucket(FeatureBucket):
             mapper, timestamp = self._storage[name]
         except KeyError:
             raise FeatureNotFound(name)
-        commit = Commit(name=name, revision=None, parent_revision=None,
-                        timestamp=timestamp)
+        commit = Commit(name=name,
+                        revision=None,
+                        create_at=timestamp,
+                        expire_at=datetime.datetime.max)
         return commit
 
     def status(self, name, revision=None):
@@ -85,8 +91,10 @@ class DummyFeatureBucket(FeatureBucket):
             del self._storage[name]
         except KeyError:
             raise FeatureNotFound(name)
-        commit = Commit(name=name, revision=None, parent_revision=None,
-                        timestamp=timestamp)
+        commit = Commit(name=name,
+                        revision=None,
+                        create_at=timestamp,
+                        expire_at=datetime.datetime.max)
         return commit
 
     def make_random_name(self):

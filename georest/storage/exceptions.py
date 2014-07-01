@@ -54,6 +54,6 @@ class ParentRevisionNotFound(StorageError):
 class NotHeadRevision(StorageError):
     HTTP_STATUS_CODE = 409
 
-    def __init__(self, key='', parent_rev=''):
+    def __init__(self, key='', parent_rev='', e=None):
         message = 'key: "%s", parent_rev: "%s"' % (key, parent_rev)
-        StorageError.__init__(self, message, None)
+        StorageError.__init__(self, message, e)

@@ -12,13 +12,13 @@ __date__ = '6/23/14'
 
 import unittest
 from georest.geo import Key, Feature
-from georest.storage import Response, FeatureEntry, DummyBucketFactory
+from georest.storage import Response, FeatureEntry, DummyStorage
 from georest.storage import FeatureNotFound
 
 
 class TestFeatureEntry(unittest.TestCase):
     def setUp(self):
-        self.bucket = DummyBucketFactory().create('test')
+        self.bucket = DummyStorage().create_bucket('test')
 
         self.test_key = Key.make_key(
             bucket=self.bucket.bucket_name, name='alice')
@@ -48,15 +48,6 @@ class TestFeatureEntry(unittest.TestCase):
         response, feature = entry.get_feature(self.test_key)
         self.assertEqual(feature.key, self.test_key)
         self.assertTrue(feature.equals(self.test_feature2))
-
-    def test_put_feature_with_same_key_with_head_revision(self):
-        pass
-
-    def test_put_feature_with_same_key_with_wrong_revision(self):
-        pass
-
-    def test_put_feature_with_same_key_with_old_revision(self):
-        pass
 
     def test_get_feature(self):
         test_key = Key.make_key(bucket=self.bucket.bucket_name, name='alice')

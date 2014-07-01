@@ -3,18 +3,16 @@
 __author__ = 'ray'
 __date__ = '6/20/14'
 
-
 """
     georest.storage.bucket
     ~~~~~~~~~~~~~~~~~~~~~
     Geo Feature Bucket Interface.
 """
 
-
 from collections import namedtuple
 
 
-class Commit(namedtuple('Foo', 'name revision parent_revision timestamp')):
+class Commit(namedtuple('Foo', 'name revision create_at expire_at')):
     """Commit result"""
     pass
 
@@ -24,9 +22,6 @@ class FeatureMapper(object):
     """
 
     def __init__(self, properties, metadata, wkt, srid):
-        assert isinstance(properties, dict)
-        assert isinstance(metadata, dict)
-
         self._properties = properties
         self._metadata = metadata
         self._wkt = wkt
@@ -54,13 +49,13 @@ class FeatureBucket(object):
     """ Geo Feature Bucket
     """
 
-    def __init__(self, name):
-        self._name = name
+    def __init__(self, bucket_name):
+        self._bucket_name = bucket_name
 
     @property
     def bucket_name(self):
         """Get bucket name"""
-        return self._name
+        return self._bucket_name
 
     def describe(self):
         """Basic information about the bucket"""
@@ -87,5 +82,5 @@ class FeatureBucket(object):
         raise NotImplementedError
 
     def make_random_name(self):
-        """make a random feature name"""
+        """create a random name"""
         raise NotImplementedError
