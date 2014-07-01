@@ -91,6 +91,14 @@ class StorageView(MethodView):
         response.headers.extend(headers)
         return response
 
+    def delete(self, key=None):
+        if key is None:
+            flask.abort(404)
+
+        pre_etag = get_if_match()
+        metadata = self.model.delete(key, etag=pre_etag)
+        return flask.Response(status=204)
+
     def _extract_content(self):
         data = get_json_content()
         obj = self.model.from_json(data)
@@ -102,9 +110,11 @@ class Features(StorageView):
 
 
 class Geometry(StorageView):
+    delete = None  # only delete feature allowed
     pass
 
 
 class Properties(StorageView):
-    post = None  # no create bare property
+    delete = None  # only delete feature allowed
+    post = None   # no create bare property
     pass

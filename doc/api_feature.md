@@ -21,15 +21,10 @@ Key is global identifier of persisted features. It is a string with words
 and dots.
 
 ```
-ket := (word dot)* word
-dot := <\.>
-word := <[0-9a-zA-Z_]+>
+bucket := <[A-Za-z][A-Za-z0-9_]+>
+name := <([A-Za-z0-9_]+\.)*[A-Za-z0-9_]+>
+key := bucket.name
 ```
-
-### Namespace
-
-Namespace is the part of a key string before the last dot. e.g. namespace of
-key `foo.bar.baz` is `foo.bar`; namespace of key `` is null.  
 
 ## Store feature
 
@@ -62,7 +57,7 @@ Normal response codes:
 Typical error codes:
 
   - `400 Bad Request` - e.g. invalid request data/format
-  - `412 Precondition Failed` if one of the conditional request headers failed
+  - `409 Conflict` if one of the conditional request headers failed
                               to match (see above)
 
 Success response body:
@@ -93,14 +88,16 @@ Normal response codes:
 
   - `204 No Content`
   - `404 Not Found`
-
+  - `409 Conflict` if one of the conditional request headers failed
+                              to match (see above)
 
 ## Store Geometry
 ```
 PUT /features/:key/geometry
 ```
 Updates geometry if given `:key` exists. Create feature if key does not exist.
-If automatic naming is required, use Feature resource instead.
+If automatic naming is required, use Feature resource instead. Although
+Geometry cannot be deleted, use delete feature instead.
 
 Normal response codes:
 
@@ -110,7 +107,7 @@ Normal response codes:
 Typical error codes:
 
   - `400 Bad Request` - e.g. invalid request data/format
-  - `412 Precondition Failed` if one of the conditional request headers failed
+  - `409 Conflict` if one of the conditional request headers failed
                               to match (see above)
 
 
@@ -137,10 +134,10 @@ Normal response codes:
 Typical error codes:
 
   - `400 Bad Request` - e.g. invalid request data/format
-  - `412 Precondition Failed` if one of the conditional request headers failed
+  - `409 Conflict` if one of the conditional request headers failed
                               to match (see above)
 
->>> There is no PATCH support for now. consider use
+> There is no PATCH support for now. consider use
 [RFC 6902](http://tools.ietf.org/html/rfc6902) if it's needed
 
 

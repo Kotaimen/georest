@@ -299,7 +299,6 @@ class PostGISFeatureBucket(FeatureBucket):
 
         metadata.create_all(bind=engine, checkfirst=True)
 
-
     def commit(self, name, mapper, parent=None):
         with self._engine.begin() as conn:
 

@@ -13,7 +13,7 @@ from collections import namedtuple
 from .. import geo
 from ..geo import operations as ops
 from ..geo import jsonhelper as json
-from .exceptions import NoSuchOperation
+from .exceptions import NoSuchOperation, BadInvoke
 
 
 OPERATION_MAPPING = dict(
@@ -55,6 +55,7 @@ class OperationResult(namedtuple('OperationResult', ['value', 'is_pod'])):
 
 
 class OperationsModel(object):
+    """"""
     def __init__(self):
         self.operations = OPERATION_MAPPING
 
@@ -69,7 +70,7 @@ class OperationsModel(object):
         if not op:
             raise NoSuchOperation('Cannot find op %s' % op_name)
 
-        return {'name': op_name, 'doc': op.__doc__}
+        return {'name': op_name, 'doc': getattr(op, '__doc__', None)}
 
     def invoke(self, op_name, *args, **kwargs):
         """invoke an operation
@@ -84,5 +85,21 @@ class OperationsModel(object):
         if not op:
             raise NoSuchOperation('Cannot find op %s' % op_name)
 
+        l_args = len(args)
+        if l_args <= 0:
+            raise BadInvoke('invoking %s with zero args' % op_name)
+
+        if issubclass(op, ops.UnaryOperation) and l_args != 1:
+            raise BadInvoke('invoking unary operation %s with %d args'
+                            % (op_name, l_args))
+
+        if issubclass(op, ops.BinaryOperation) and l_args != 2:
+            raise BadInvoke('invoking binary operation %s with %d args'
+                            % (op_name, l_args))
+
         value = op(**kwargs)(*args)
         return OperationResult(value, not isinstance(value, geo.Geometry))
+
+
+class AttributesModel(object):
+    pass

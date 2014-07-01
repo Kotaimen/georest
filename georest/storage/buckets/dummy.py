@@ -21,6 +21,14 @@ class DummyStorage(FeatureStorage):
     def __init__(self):
         self._collection = dict()
 
+    def describe(self):
+
+        description = {
+            'support_version': False
+        }
+
+        return description
+
     def create_bucket(self, name, overwrite=False, **kwargs):
         if name in self._collection:
             raise DuplicatedBucket(name)

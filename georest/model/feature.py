@@ -88,6 +88,10 @@ class BaseFeatureModel(object):
         """
         raise NotImplementedError
 
+    def delete(self, key, etag=None):
+        """delete the object by key"""
+        raise NotImplementedError
+
     def _get_visitor(self, key):
         try:
             storage_bucket = self.feature_storage.get_bucket(key.bucket)
@@ -139,6 +143,13 @@ class FeaturesModel(BaseFeatureModel):
         key = geo.Key.build_from_qualified_name(key)
         visitor = self._get_visitor(key)
         r = visitor.put_feature(key, obj, revision=etag)
+        metadata = _result2metadata(r)
+        return metadata
+
+    def delete(self, key, etag=None):
+        key = geo.Key.build_from_qualified_name(key)
+        visitor = self._get_visitor(key)
+        r = visitor.delete_feature(key, revision=etag)
         metadata = _result2metadata(r)
         return metadata
 

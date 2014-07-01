@@ -35,3 +35,7 @@ class OperationsModelException(ModelException):
 
 class NoSuchOperation(OperationsModelException):
     HTTP_STATUS_CODE = 404
+
+
+class BadInvoke(OperationsModelException):
+    HTTP_STATUS_CODE = 400

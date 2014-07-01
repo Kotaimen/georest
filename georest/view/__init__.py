@@ -12,7 +12,6 @@ import platform
 
 import flask
 from flask import current_app
-from flask.views import MethodView
 from flask.json import jsonify
 
 from georest import __version__, geo
@@ -28,6 +27,7 @@ def describe():
                          'python': '%s-%s' % (
                              platform.python_implementation(),
                              platform.python_version()),
-            },
+                },
             'engine': geo.describe(),
+            'feature_storage': current_app.feature_storage.describe(),
     })

@@ -77,8 +77,15 @@ class TestFeatures(StorageViewBase, unittest.TestCase):
         self.get_url = '/features/foo.bar'
         self.put_url = '/features/foo.bar'
         self.post_url = '/features?bucket=foo'
+        self.delete_url = '/features/foo.bar'
         self.bucket = 'foo'
         self.key = 'foo.bar'
+
+    def test_delete(self):
+        self.model.delete.return_value = {}
+        r = self.client.delete(self.delete_url, headers={'If-Match': '"tatar"'})
+        self.model.delete.assert_called_once_with(self.key, etag='tatar')
+        self.assertEqual(r.status_code, 204)
 
 
 class TestGeometry(StorageViewBase, unittest.TestCase):
