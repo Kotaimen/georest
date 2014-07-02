@@ -449,6 +449,7 @@ class PointOnSurface(UnarySetTheoreticMethod):
 
 class Distance(BinaryOperation):
     __doc__ = shapely.geometry.base.BaseGeometry.distance.__doc__
+    RESULT_TYPE = float
 
     def _impl(self, this, other):
         return this.distance(other)
