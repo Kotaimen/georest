@@ -9,6 +9,7 @@ __date__ = '6/20/14'
     Geo Feature Bucket Interface.
 """
 
+import uuid
 from collections import namedtuple
 
 
@@ -130,4 +131,5 @@ class FeatureBucket(object):
 
         :rtype basestring
         """
-        raise NotImplementedError
+        name = uuid.uuid4().hex
+        return name

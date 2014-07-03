@@ -9,7 +9,7 @@ __date__ = '6/23/14'
     A Dummy feature bucket
 
 """
-import uuid
+
 import datetime
 
 from ..storage import FeatureStorage
@@ -100,7 +100,3 @@ class DummyFeatureBucket(FeatureBucket):
             expire_at=datetime.datetime.now())
 
         return new_commit
-
-    def make_random_name(self):
-        name = uuid.uuid4().hex
-        return name

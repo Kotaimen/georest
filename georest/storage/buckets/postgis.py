@@ -9,15 +9,14 @@ __date__ = '6/17/14'
     PostGIS Geo Feature Bucket.
 """
 
-import uuid
 import ujson
 import sqlalchemy
 import geoalchemy2
 import geoalchemy2.shape
 from sqlalchemy import create_engine
 from sqlalchemy import PrimaryKeyConstraint, Table, Column, DDL, event
-from sqlalchemy import BigInteger, String, DateTime
-from sqlalchemy.sql import func, bindparam, select, and_
+from sqlalchemy import String, DateTime
+from sqlalchemy.sql import select, and_
 from sqlalchemy.pool import QueuePool
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.exc import IntegrityError
@@ -393,10 +392,6 @@ class PostGISFeatureBucket(FeatureBucket):
                 expire_at=selected.expire_at,
             )
             return commit
-
-    def make_random_name(self):
-        name = uuid.uuid4().hex
-        return name
 
     def _insert(self, conn, name, mapper):
         insert_stmt = self.FEATURE_TABLE.insert().returning(
