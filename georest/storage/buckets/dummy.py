@@ -17,7 +17,12 @@ from ..bucket import FeatureBucket, Commit
 from ..exceptions import FeatureNotFound, DuplicatedBucket, BucketNotFound
 
 
-class DummyStorage(FeatureStorage):
+class DummyFeatureStorage(FeatureStorage):
+    """ Dummy Feature Storage
+
+    Feature storage implemented with :class:`dict`, only for test use.
+    """
+
     def __init__(self):
         self._collection = dict()
 

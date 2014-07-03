@@ -72,4 +72,4 @@ def benchmark_update_feature(iteration=1000):
 
 
 if __name__ == '__main__':
-    cProfile.run('benchmark_commit_feature()', sort='tottime')
+    cProfile.run('benchmark_update_feature()', sort='tottime')

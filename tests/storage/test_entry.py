@@ -12,13 +12,13 @@ __date__ = '6/23/14'
 
 import unittest
 from georest.geo import Key, Feature
-from georest.storage import Response, FeatureEntry, DummyStorage
+from georest.storage import Response, FeatureEntry, DummyFeatureStorage
 from georest.storage import FeatureNotFound
 
 
 class TestFeatureEntry(unittest.TestCase):
     def setUp(self):
-        self.bucket = DummyStorage().create_bucket('test')
+        self.bucket = DummyFeatureStorage().create_bucket('test')
 
         self.test_key = Key.make_key(
             bucket=self.bucket.bucket_name, name='alice')

@@ -41,7 +41,7 @@ __date__ = '6/12/14'
 from .storage import FeatureStorage
 from .bucket import Commit, FeatureBucket, FeatureMapper
 from .entry import FeatureEntry, Response
-from .buckets import DummyStorage, PostGISFeatureStorage
+from .buckets import DummyFeatureStorage, PostGISFeatureStorage
 from .exceptions import (
     StorageError,
     DuplicatedBucket,
@@ -56,7 +56,7 @@ from .exceptions import (
 
 def build_feature_storage(prototype, **kwargs):
     if prototype == 'dummy':
-        storage = DummyStorage()
+        storage = DummyFeatureStorage()
     elif prototype == 'postgis':
         storage = PostGISFeatureStorage(**kwargs)
     else:
