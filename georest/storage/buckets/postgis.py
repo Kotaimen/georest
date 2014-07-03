@@ -355,28 +355,13 @@ class PostGISFeatureBucket(FeatureBucket):
 
             return commit, mapper
 
-
-    def head(self, name):
-        with self._engine.begin() as conn:
-            selected = self._select_top_revision(conn, name)
-            if selected is None:
-                raise FeatureNotFound(conn, name)
-
-            commit = Commit(
-                name=selected.name,
-                revision=selected.revision,
-                create_at=selected.create_at,
-                expire_at=selected.expire_at,
-            )
-            return commit
-
-
     def status(self, name, revision=None):
-        if revision is None:
-            return self.head(name)
-
         with self._engine.begin() as conn:
-            selected = self._select_revision(conn, name, revision)
+            if revision is None:
+                selected = self._select_top_revision(conn, name)
+            else:
+                selected = self._select_revision(conn, name, revision)
+
             if selected is None:
                 raise FeatureNotFound(name, revision)
 

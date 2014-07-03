@@ -101,16 +101,6 @@ class FeatureBucket(object):
         """
         raise NotImplementedError
 
-    def head(self, name):
-        """Get the top commit of a feature
-
-        Returns the top commit of the named feature data.
-
-        :param basestring name: name of the feature data.
-        :rtype :class:`Commit`
-        """
-        raise NotImplementedError
-
     def status(self, name, revision=None):
         """Get the commit of a revision of a feature
 
@@ -123,6 +113,15 @@ class FeatureBucket(object):
         """
         raise NotImplementedError
 
+    def head(self, name):
+        """Get the top commit of a feature
+
+        Returns the top commit of the named feature data.
+
+        :param basestring name: name of the feature data.
+        :rtype :class:`Commit`
+        """
+        return self.status(name)
 
     def make_random_name(self):
         """create a random name

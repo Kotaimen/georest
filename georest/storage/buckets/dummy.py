@@ -22,17 +22,10 @@ class DummyFeatureStorage(FeatureStorage):
 
     Feature storage implemented with :class:`dict`, only for test use.
     """
+    support_version = False
 
     def __init__(self):
         self._collection = dict()
-
-    def describe(self):
-
-        description = {
-            'support_version': False
-        }
-
-        return description
 
     def create_bucket(self, name, overwrite=False, **kwargs):
         if name in self._collection:
@@ -61,54 +54,52 @@ class DummyFeatureStorage(FeatureStorage):
 class DummyFeatureBucket(FeatureBucket):
     def __init__(self, name):
         FeatureBucket.__init__(self, name)
-
         self._storage = dict()
 
     def commit(self, name, mapper, parent=None):
         timestamp = datetime.datetime.now()
         self._storage[name] = mapper, timestamp
-        commit = Commit(name=name,
-                        revision=None,
-                        create_at=timestamp,
-                        expire_at=datetime.datetime.max)
+
+        commit = Commit(
+            name=name,
+            revision=None,
+            create_at=timestamp,
+            expire_at=datetime.datetime.max)
+
         return commit
 
     def checkout(self, name, revision=None):
         try:
             mapper, timestamp = self._storage[name]
-            commit = Commit(name=name,
-                            revision=None,
-                            create_at=timestamp,
-                            expire_at=datetime.datetime.max)
         except KeyError:
             raise FeatureNotFound(name)
+
+        commit = Commit(
+            name=name,
+            revision=None,
+            create_at=timestamp,
+            expire_at=datetime.datetime.max)
+
         return commit, mapper
 
-    def head(self, name):
-        try:
-            mapper, timestamp = self._storage[name]
-        except KeyError:
-            raise FeatureNotFound(name)
-        commit = Commit(name=name,
-                        revision=None,
-                        create_at=timestamp,
-                        expire_at=datetime.datetime.max)
+    def status(self, name, revision=None):
+        commit, mapper = self.checkout(name)
         return commit
 
-    def status(self, name, revision=None):
-        return self.head(name)
-
     def remove(self, name, parent=None):
-        timestamp = datetime.datetime.now()
         try:
+            commit, mapper = self.checkout(name)
             del self._storage[name]
         except KeyError:
             raise FeatureNotFound(name)
-        commit = Commit(name=name,
-                        revision=None,
-                        create_at=timestamp,
-                        expire_at=datetime.datetime.max)
-        return commit
+
+        new_commit = Commit(
+            name=name,
+            revision=None,
+            create_at=commit.create_at,
+            expire_at=datetime.datetime.now())
+
+        return new_commit
 
     def make_random_name(self):
         name = uuid.uuid4().hex
