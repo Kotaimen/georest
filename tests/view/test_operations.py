@@ -102,3 +102,23 @@ class TestOperations(ViewTestMixin, unittest.TestCase):
                              content_type='application/json',
                              data=self.geojsons[0])
         self.assertEqual(r.status_code, 400)
+
+
+class TestAttributes(ViewTestMixin, unittest.TestCase):
+    def test_attributes(self):
+        jdata = '{"foo": "bar"}'
+        geom = geo.Geometry.build_geometry('{"type":"Point","coordinates":[30,10]}')
+        self.mock_attributes_model.attributes.return_value = jdata
+        self.mock_geometry_model.get.return_value = geom, {}
+        r = self.client.get('/features/kanga.roo/geometry/attributes',
+                            query_string={'srid': '100',
+                                          'include_length': 'T',
+                                          'exclude_area': 'T',
+                                          'foo': 'bar'})
+        self.assertEqual(r.status_code, 200)
+        self.mock_geometry_model.get.assert_called_once_with('kanga.roo')
+        self.mock_attributes_model.attributes.assert_called_once_with(geom,
+                                                                      includes=['length'],
+                                                                      excludes=['area'],
+                                                                      srid=100,
+                                                                      foo='bar')

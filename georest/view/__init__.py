@@ -16,7 +16,7 @@ from flask.json import jsonify
 
 from georest import __version__, geo
 from .feature import Features, Geometry, Properties
-from .operations import Operations
+from .operations import Operations, Attributes
 
 
 def describe():

@@ -20,5 +20,5 @@ __author__ = 'pp'
 """
 
 from .feature import FeaturesModel, GeometryModel, FeaturePropertiesModel
-from .operations import OperationsModel
+from .operations import OperationsModel, AttributesModel
 from .exceptions import ModelException

@@ -53,6 +53,31 @@ def _split_arg_list(arg_list):
             yield arg
 
 
+def _get_kwargs():
+    kwargs = request.args.to_dict()
+    if 'srid' in kwargs:
+        srid = kwargs['srid']
+        try:
+            kwargs['srid'] = int(srid)
+        except ValueError:
+            raise InvalidRequest('srid %s cannot convert to integer' % srid)
+    return kwargs
+
+
+def _str2bool(s):
+    s = s.strip().lower()
+
+    if not s:
+        return False
+    elif s.startswith('n'):
+        return False
+    elif s.startswith('f'):
+        return False
+    elif s == '0':
+        return False
+    return True
+
+
 class Operations(MethodView):
     def __init__(self, operations_model, geometry_model):
         self.operations_model = operations_model
@@ -64,7 +89,7 @@ class Operations(MethodView):
         if arg_list is None:
             return jsonify(self.operations_model.describe_operation(op_name))
         geoms = self._load_geoms(arg_list)
-        kwargs = self._get_kwargs()
+        kwargs = _get_kwargs()
         result = self.operations_model.invoke(op_name, *geoms, **kwargs)
         return result.json(), 200, {'Content-Type': 'application/json'}
 
@@ -74,7 +99,7 @@ class Operations(MethodView):
         data = get_json_content()
         geom = geo.Geometry.build_geometry(data)
         geoms = self._load_geoms(arg_list, geom)
-        kwargs = self._get_kwargs()
+        kwargs = _get_kwargs()
         result = self.operations_model.invoke(op_name, *geoms, **kwargs)
         return result.json(), 200, {'Content-Type': 'application/json'}
 
@@ -102,12 +127,27 @@ class Operations(MethodView):
 
         return geoms
 
-    def _get_kwargs(self):
-        kwargs = request.args.to_dict()
-        if 'srid' in kwargs:
-            srid = kwargs['srid']
-            try:
-                kwargs['srid'] = int(srid)
-            except ValueError:
-                raise InvalidRequest('srid %s cannot convert to integer' % srid)
-        return kwargs
+
+class Attributes(MethodView):
+    """get all useful attributes at once"""
+    def __init__(self, attributes_model, geometry_model):
+        self.attributes_model = attributes_model
+        self.geometry_model = geometry_model
+
+    def get(self, key):
+        kwargs = _get_kwargs()
+        includes = []
+        excludes = []
+        for k, v in kwargs.items():
+            if k.startswith('include_') and _str2bool(v):
+                includes.append(k[8:])
+                del kwargs[k]
+            elif k.startswith('exclude_') and _str2bool(v):
+                excludes.append(k[8:])
+                del kwargs[k]
+
+        geometry, metadata = self.geometry_model.get(key)
+        result = self.attributes_model.attributes(geometry,
+                                                  includes=includes,
+                                                  excludes=excludes, **kwargs)
+        return result, 200, {'Content-Type': 'application/json'}

@@ -28,6 +28,7 @@ OPERATION_MAPPING = dict(
     boundary=ops.Boundary,
     centroid=ops.Centroid,
     point_on_surface=ops.PointOnSurface,
+    distance=ops.Distance,
     equals=ops.Equals,
     contains=ops.Contains,
     crosses=ops.Crosses,
@@ -40,6 +41,20 @@ OPERATION_MAPPING = dict(
     symmetric_difference=ops.SymmetricDifference,
     union=ops.Union,
 )
+
+ATTRIBUTE_MAPPING = dict((k, v) for k, v in OPERATION_MAPPING.items() if
+                         (issubclass(v, ops.UnaryOperation) and
+                          not v.RESULT_TYPE is geo.Geometry))
+
+GEOM_TYPE_ATTRIBUTES_MAPPING = {
+    'Point': [],
+    'LineString': ['length'],
+    'Polygon': ['area'],
+    'MultiPoint': [],
+    'MultiLineString': ['length'],
+    'MultiPolygon': ['area'],
+    'GeometryCollection': [],
+}
 
 
 class OperationResult(namedtuple('OperationResult', ['value', 'is_pod'])):
@@ -55,7 +70,11 @@ class OperationResult(namedtuple('OperationResult', ['value', 'is_pod'])):
 
 
 class OperationsModel(object):
-    """"""
+    """high-level operation model
+
+    This model wraps georest.geo.operations, provide ways to invoke, inspect
+    operations for view.
+    """
     def __init__(self):
         self.operations = OPERATION_MAPPING
 
@@ -98,8 +117,35 @@ class OperationsModel(object):
                             % (op_name, l_args))
 
         value = op(**kwargs)(*args)
-        return OperationResult(value, not isinstance(value, geo.Geometry))
+        is_pod = not op.RESULT_TYPE is geo.Geometry
+        return OperationResult(value, is_pod)
 
 
 class AttributesModel(object):
-    pass
+    """high level abstraction of geometry attributes"""
+    def __init__(self):
+        self.operations = ATTRIBUTE_MAPPING
+
+    def attributes(self, geometry, includes=None, excludes=None, **kwargs):
+        """Expose interesting attributes of the geometry"""
+        includes = set(includes) if includes else set()
+        excludes = set(excludes) if excludes else set()
+        default_keys = set(GEOM_TYPE_ATTRIBUTES_MAPPING[geometry.geom_type])
+        keys = (default_keys | includes) - excludes
+
+        result = {}
+
+        for key in keys:
+            try:
+                result[key] = self._get_attribute(geometry, key, **kwargs)
+            except NoSuchOperation:
+                pass
+        return json.dumps(result)
+
+    def _get_attribute(self, geometry, key, **kwargs):
+        op = self.operations.get(key, None)
+        if not op:
+            raise NoSuchOperation('Cannot find attribute %s' % op)
+
+        value = op(**kwargs)(geometry)
+        return value
