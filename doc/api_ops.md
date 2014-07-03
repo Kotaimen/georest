@@ -76,7 +76,7 @@ GET /ops/overlaps/foo.bar/hodor.hodor
 
 When using `POST` method:
 
-  - the posted content **MUST** be an geojson geometry.
+  - the posted content **MUST** be geojson geometry.
   - `~` can be used as a key, to represent the posted geometry.
   - `~.<i>` can also be used as a key, When posted geometry is a 
     multi-geometry(e.g. geometry collection), to represent the `<i>`th
@@ -141,3 +141,30 @@ For example, response of `GET /ops/area/ranch.sheep`:
   "result": 42.0
 }
 ```
+
+## Attributes
+
+Simple way to access geometry attributes is provided.
+
+### Request
+
+```
+GET /features/:key/geometry/attributes  # get interesting attributes of the geometry
+GET /features/:key/geometry/attributes/:op_name  # same as /operations/:op_name/:key
+```
+
+query arguments are provided for the first variation, to include extra attributes,
+or exclude some unnecessary attributes.
+
+e.g.
+```
+GET /features/:key/geometry/attributes?include_length=t&exclude_area=1
+```
+
+this request will always include `length` attribute
+and exclude `area` attribute.
+
+### Response
+
+the result will be a json object, with attribute names as keys and attribute
+result as values.
