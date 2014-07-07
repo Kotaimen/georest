@@ -141,7 +141,7 @@ def benchmark_update_feature(iteration=1000):
 
 
 # def benchmark_async_put_feature(iteration=1000):
-# entry = FeatureEntry(bucket)
+#     entry = FeatureEntry(bucket)
 #     key = Key.make_key(bucket='test_bucket')
 #
 #     logging.info('Start spawning %d workers' % iteration)
