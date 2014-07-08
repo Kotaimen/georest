@@ -97,6 +97,8 @@ class MemcacheFeatureStorage(FeatureStorage):
         pass
 
     def _make_bucket_name(self, name):
+        if isinstance(name, unicode):
+            name = name.encode('utf-8')
         return '.'.join((self.PREFIX, name))
 
 
@@ -157,6 +159,8 @@ class MemcacheFeatureBucket(FeatureBucket):
         return commit
 
     def _make_full_name(self, name):
+        if isinstance(name, unicode):
+            name = name.encode('utf-8')
         return ':'.join((self._prefix, name))
 
 

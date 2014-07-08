@@ -19,9 +19,9 @@ class TestMemcacheFeatureStorage(unittest.TestCase):
     def setUp(self):
         self.storage = MemcacheFeatureStorage(hosts=['localhost'])
 
-        self.bucket = self.storage.create_bucket('', overwrite=True)
+        self.bucket = self.storage.create_bucket(u'mem_test', overwrite=True)
 
-        self.test_name = 'feature'
+        self.test_name = u'feature'
         self.test_mapper = FeatureMapper(
             properties=dict(x=1, y=1),
             metadata=dict(z=2),
@@ -33,7 +33,7 @@ class TestMemcacheFeatureStorage(unittest.TestCase):
         self.storage.close()
 
     def test_create_get_delete_bucket(self):
-        bucket_name = 'bb1'
+        bucket_name = u'bb1'
 
         self.storage.create_bucket(bucket_name, overwrite=True)
         self.assertTrue(self.storage.has_bucket(bucket_name))
