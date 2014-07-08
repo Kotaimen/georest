@@ -10,7 +10,8 @@ __date__ = '7/3/14'
 
 """
 import time
-from memcache import Client
+from pylibmc import Client
+#from memcache import Client
 
 from ..storage import FeatureStorage
 from ..bucket import FeatureBucket, Commit
@@ -61,7 +62,7 @@ class MemcacheFeatureStorage(FeatureStorage):
         bucket_name = self._make_bucket_name(name)
 
         try:
-            timestamp = self._client.get(key=bucket_name)
+            timestamp = self._client.get(bucket_name)
         except Exception as e:
             raise StorageInternalError(message='get error', e=e)
 
@@ -74,7 +75,7 @@ class MemcacheFeatureStorage(FeatureStorage):
         bucket_name = self._make_bucket_name(name)
 
         try:
-            delete_ok = self._client.delete(key=bucket_name)
+            delete_ok = self._client.delete(bucket_name)
         except Exception as e:
             raise StorageInternalError(message='delete error', e=e)
 
@@ -128,7 +129,7 @@ class MemcacheFeatureBucket(FeatureBucket):
         full_name = self._make_full_name(name)
 
         try:
-            mapper = self._client.get(key=full_name)
+            mapper = self._client.get(full_name)
         except Exception as e:
             raise StorageInternalError(name, e)
 
@@ -143,7 +144,7 @@ class MemcacheFeatureBucket(FeatureBucket):
         full_name = self._make_full_name(name)
 
         try:
-            delete_ok = self._client.delete(key=full_name)
+            delete_ok = self._client.delete(full_name)
         except Exception as e:
             raise StorageInternalError(name, e)
 
