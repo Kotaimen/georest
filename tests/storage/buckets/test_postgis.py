@@ -50,6 +50,8 @@ class TestPostGISStorage(unittest.TestCase):
         self.storage.create_bucket(bucket_name, overwrite=True)
         self.assertTrue(self.storage.has_bucket(bucket_name))
 
+        self.assertRaises(DuplicatedBucket, self.storage.create_bucket, bucket_name)
+
         bucket = self.storage.get_bucket(bucket_name)
         self.assertEqual(bucket.bucket_name, bucket_name)
 

@@ -310,10 +310,11 @@ class PostGISFeatureBucket(FeatureBucket):
                         inserted = self._update_against_parent(
                             conn, name, mapper, parent)
                     except sqlalchemy.exc.InternalError as e:
-                        raise NotHeadRevision(name, parent, e)
+                        raise NotHeadRevision(
+                            message='%s@%s' % (name, parent), e=e)
             else:
                 if parent is not None:
-                    raise ParentRevisionNotFound(name, parent)
+                    raise ParentRevisionNotFound(message='%s@%s' % (name, parent))
 
                 inserted = self._insert(conn, name, mapper)
 
@@ -331,12 +332,12 @@ class PostGISFeatureBucket(FeatureBucket):
             if revision is not None:
                 selected = self._select(conn, name, revision)
                 if selected is None:
-                    raise FeatureNotFound(name, revision)
+                    raise FeatureNotFound(message='%s@%s' % (name, revision))
 
             else:
                 selected = self._select_top(conn, name)
                 if selected is None:
-                    raise FeatureNotFound(name, revision)
+                    raise FeatureNotFound(message='%s@%s' % (name, revision))
 
             commit = Commit(
                 name=selected.name,
@@ -362,7 +363,7 @@ class PostGISFeatureBucket(FeatureBucket):
                 selected = self._select_revision(conn, name, revision)
 
             if selected is None:
-                raise FeatureNotFound(name, revision)
+                raise FeatureNotFound(message='%s@%s' % (name, parent))
 
             commit = Commit(
                 name=selected.name,
@@ -381,7 +382,8 @@ class PostGISFeatureBucket(FeatureBucket):
                 try:
                     deleted = self._delete_agains_parent(conn, name, parent)
                 except sqlalchemy.exc.InternalError as e:
-                    raise NotHeadRevision(name, parent, e)
+                    raise NotHeadRevision(
+                        message='%s@%s' % (name, parent), e=e)
 
             selected = self._select_revision(conn, name, deleted.revision)
 

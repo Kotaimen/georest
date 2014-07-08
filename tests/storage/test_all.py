@@ -34,7 +34,7 @@ class TestPostGISFeatureStorage(unittest.TestCase):
         )
 
     def test_buckets(self):
-        self.storage.create_bucket('bob', srid=4326, checkfirst=True)
+        self.storage.create_bucket('bob', srid=4326, overwrite=True)
 
         bucket = self.storage.get_bucket('bob')
         self.assertIsNotNone(bucket)

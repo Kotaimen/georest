@@ -26,15 +26,20 @@ from georest.storage import *
 
 # logging.basicConfig(level=logging.INFO)
 
+# storage = build_feature_storage(
+#     'postgis',
+#     host='172.26.183.193',
+#     port=5432,
+#     username='postgres',
+#     password=123456,
+#     database='georest-test',
+#     pool_size=5,
+#     debug=True,
+# )
+
 storage = build_feature_storage(
-    'postgis',
-    host='172.26.183.193',
-    port=5432,
-    username='postgres',
-    password=123456,
-    database='georest-test',
-    pool_size=5,
-    debug=True,
+    'memcache',
+    hosts=['localhost']
 )
 
 bucket = storage.get_bucket('benchmark')
@@ -167,4 +172,4 @@ def benchmark_update_feature(iteration=1000):
 
 
 if __name__ == '__main__':
-    cProfile.run('put_feature(1)', sort='tottime')
+    cProfile.run('benchmark_put_feature_simple(1000)', sort='tottime')

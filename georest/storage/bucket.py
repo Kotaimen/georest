@@ -14,35 +14,15 @@ from collections import namedtuple
 
 
 class Commit(namedtuple('Foo', 'name revision create_at expire_at')):
-    """Commit result"""
+    """Commit result
+    """
     pass
 
 
-class FeatureMapper(object):
+class FeatureMapper(namedtuple('Bar', 'properties metadata wkt srid')):
     """ Object Model of Geo Feature Bucket
     """
-
-    def __init__(self, properties, metadata, wkt, srid):
-        self._properties = properties
-        self._metadata = metadata
-        self._wkt = wkt
-        self._srid = srid
-
-    @property
-    def properties(self):
-        return self._properties
-
-    @property
-    def metadata(self):
-        return self._metadata
-
-    @property
-    def wkt(self):
-        return self._wkt
-
-    @property
-    def srid(self):
-        return self._srid
+    pass
 
 
 class FeatureBucket(object):
