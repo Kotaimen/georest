@@ -30,7 +30,7 @@ function rand_point()
 end
 
 
-Points = {points = {}, get_i = 1, set_i = 1, max_i = 1000}
+Points = {points = {}, get_i = 1, set_i = 1, max_i = 100000}
 
 
 function Points:new_point()
@@ -39,7 +39,7 @@ function Points:new_point()
         self.set_i = 1
     end
     local p = rand_point()
-    self.points[self.set_i] = p
+    self.points[self.set_i] = p['name']
     self.set_i = self.set_i + 1
     return p
 end
@@ -98,7 +98,7 @@ function Points:make_binary_ops()
     local point1 = self:get_point()
     local point2 = self:get_point()
     local op = binary_op_list[math.random(#binary_op_list)]
-    local url = '/operations/' .. op .. '/' .. point1.name .. '/' .. point2.name
+    local url = '/operations/' .. op .. '/' .. point1 .. '/' .. point2
     return wrk.format('GET', url)
 end
 
