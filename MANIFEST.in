@@ -1,0 +1,6 @@
+include requirements.txt
+include application.py
+recursive-include tests *
+recursive-exclude tests *.pyc
+recursive-exclude tests *.pyo
+recursive-include instance *
