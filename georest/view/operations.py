@@ -22,7 +22,7 @@ from flask.json import jsonify
 from .. import geo
 
 from .exceptions import InvalidRequest
-from .utils import get_json_content
+from .utils import get_json_content, catcher
 
 
 def _split_arg_list(arg_list):
@@ -79,6 +79,9 @@ def _str2bool(s):
 
 
 class Operations(MethodView):
+
+    decorators = [catcher]
+
     def __init__(self, operations_model, geometry_model):
         self.operations_model = operations_model
         self.geometry_model = geometry_model
@@ -130,6 +133,9 @@ class Operations(MethodView):
 
 class Attributes(MethodView):
     """get all useful attributes at once"""
+
+    decorators = [catcher]
+
     def __init__(self, attributes_model, geometry_model):
         self.attributes_model = attributes_model
         self.geometry_model = geometry_model

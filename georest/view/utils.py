@@ -9,9 +9,13 @@ __date__ = '6/25/14'
     helper/mixin things for views
 """
 
+import sys
+from functools import wraps
+
 from flask import request
 
 from .exceptions import InvalidRequest
+from ..geo import GeoException
 
 
 def get_json_content():
@@ -36,3 +40,17 @@ def get_if_match():
             raise InvalidRequest('Cannot process if_match %s' % \
                                  request.if_match)
     return etag
+
+
+def catcher(f):
+    """catching uncatched errors, and filling the traceback"""
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except GeoException as e:
+            if not e.traceback:
+                e.traceback = sys.exc_info()[2]
+            raise
+
+    return decorator
