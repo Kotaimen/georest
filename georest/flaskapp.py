@@ -11,6 +11,8 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
+import logging.config
+
 from flask import Flask, redirect
 
 from . import default_settings
@@ -34,7 +36,7 @@ class GeoRestApp(Flask):
                                          instance_relative_config=True,
                                          **kwargs)
         self.load_config(settings)
-
+        self.init_logging()
         self.init_datasources()
         self.init_api()
         self.init_views()
@@ -61,3 +63,8 @@ class GeoRestApp(Flask):
 
     def init_api(self):
         api = GeoRestApi(self)  # avoid circular reference, dont store handler
+
+    def init_logging(self):
+        cfg = self.config.get('LOGGING', None)
+        if cfg:
+            logging.config.dictConfig(cfg)
