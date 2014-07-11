@@ -23,7 +23,9 @@ pip install -r requirements.txt
 
 ## Start Georest
 
-Just run `./application.py`, it's Georest's default WSGI application.
+Just run `./manage.py`.
+
+Run gunicorn: `gunicorn georest.app`
 
 To use Gunicorn/Gunicorn+NGINX, check
 [gunicorn](http://gunicorn.org/#deployment).
