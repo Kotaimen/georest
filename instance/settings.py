@@ -6,9 +6,29 @@
 
 
 STORAGE = {
-    'prototype': 'postgis',
-    'host': '127.0.0.1',
-    'username': 'postgres',
-    'password': '123456',
-    'database': 'georest-test',
+    'prototype': 'memcache',
+    'hosts': ['localhost:11211']
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'loggers': {
+        'georest.restapi': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'gunicornish',
+        },
+    },
+    'formatters': {
+        'gunicornish': {
+            'format': '%(asctime)s [%(process)d] [%(levelname)s] %(message)s',
+        },
+    },
 }

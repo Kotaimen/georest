@@ -8,12 +8,16 @@
 """
 
 import traceback
+import logging
 
 import flask
 
 from . import geo
 from . import view
 from . import model
+
+
+API_LOGGER = logging.getLogger('georest.restapi')
 
 
 class GeoRestApi(object):
@@ -83,9 +87,26 @@ class GeoRestApi(object):
 
 def rest_error(e):
     code = getattr(e, 'HTTP_STATUS_CODE', 500)
-    response = flask.jsonify(dict(code=code,
-                                  message=str(e),
-                                  exception=e.__class__.__name__,
-                                  traceback=traceback.format_tb(e.traceback)))
+
+    # log if: DEBUG or 500
+    # log traceback ALWAYS
+    if code >= 500:
+        log = API_LOGGER.error
+    else:
+        log = API_LOGGER.debug
+
+    exc_info = e.__class__, e, e.traceback
+
+    log('%s %s', flask.request.headers.get('X-Request-Id', '-'), code,
+        exc_info=exc_info)
+
+    # response traceback only if 500 and DEBUG
+    data = dict(code=code,
+                message=str(e),
+                exception=e.__class__.__name__
+                )
+    if code >= 500 and flask.current_app.config['debug'] or True:
+        data['traceback'] = traceback.format_tb(e.traceback)
+    response = flask.jsonify(data)
     response.status_code = code
     return response

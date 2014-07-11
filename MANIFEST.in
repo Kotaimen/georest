@@ -1,0 +1,11 @@
+include README.md
+include LICENSE
+include requirements.txt
+include manage.py
+recursive-include tests *
+recursive-include instance *
+recursive-include doc *
+recursive-include scripts *
+global-exclude *~
+global-exclude *.pyc
+global-exclude *.pyo

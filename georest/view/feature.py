@@ -20,12 +20,14 @@ from flask.views import MethodView
 from flask.json import jsonify
 
 from .exceptions import InvalidRequest
-from .utils import get_json_content, get_if_match
+from .utils import get_json_content, get_if_match, catcher
 
 
 class StorageView(MethodView):
     """Basic view for handling georest.model persist operations
     """
+    decorators = [catcher]
+
     def __init__(self, model):
         super(StorageView, self).__init__()
         self.model = model
