@@ -1,36 +1,33 @@
 # -*- encoding: utf-8 -*-
 
+__author__ = 'pp'
+
 """
     georest.view
     ~~~~~~~~~~~~~
 
     Restful resources
 """
+import platform
 
-__author__ = 'kotaimen'
-__date__ = '3/19/14'
-
+import flask
 from flask import current_app
-from flask.ext.restful import Resource
+from flask.json import jsonify
 
-from .geometries import *
-from .operations import *
-from .features import *
-
-from ..geo.jsonhelper import JSON_LIB_NAME
-
-from ..geo.engine import describe
-from .. import __version__
+from georest import __version__, geo
+from .feature import Features, Geometry, Properties
+from .operations import Operations, Attributes
 
 
-class Describe(Resource):
-    def get(self):
-        return {
+def describe():
+    return jsonify(
+        {
             'version': __version__,
-            'json_library': JSON_LIB_NAME,
-            'geo_engine': describe(),
-            'geo_store': current_app.store.describe(),
-        }
-
-
-del Resource
+            'platform': {'system': platform.platform(aliased=1),
+                         'python': '%s-%s' % (
+                             platform.python_implementation(),
+                             platform.python_version()),
+                },
+            'engine': geo.describe(),
+            'feature_storage': current_app.feature_storage.describe(),
+    })

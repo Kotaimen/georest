@@ -11,27 +11,13 @@
 __author__ = 'kotaimen'
 __date__ = '3/18/14'
 
-from werkzeug.security import safe_join
+import logging.config
 
-from flask import Flask, render_template, redirect, abort
-from flask.ext.markdown import Markdown
+from flask import Flask, redirect
 
 from . import default_settings
-
-from .model import build_model
-from .store import build_store
-
 from .restapi import GeoRestApi
-
-
-def render_markdown(md_file, title):
-    try:
-        with open(md_file) as fp:
-            markdown = fp.read()
-            return render_template('markdown.html', title=title,
-                               markdown=markdown)
-    except IOError as e:
-        abort(404)
+from . import storage
 
 
 class GeoRestApp(Flask):
@@ -50,11 +36,9 @@ class GeoRestApp(Flask):
                                          instance_relative_config=True,
                                          **kwargs)
         self.load_config(settings)
-
-        self.store = self.create_store()
-        self.model = self.create_model()
-
-        self.init_plugins()
+        self.init_logging()
+        self.init_datasources()
+        self.init_api()
         self.init_views()
 
     def load_config(self, settings):
@@ -67,36 +51,20 @@ class GeoRestApp(Flask):
             # Load setting from instance config
             self.config.from_pyfile(settings, silent=True)
 
-    def create_store(self):
-        return build_store(**self.config['GEOREST_GEOSTORE_CONFIG'])
-
-    def create_model(self):
-        return build_model(store=self.store,
-                           **self.config['GEOREST_GEOMODEL_CONFIG'])
-
-    def init_plugins(self):
-        # Flask-Markdown
-        Markdown(self,
-                 extensions=self.config.get('MARKDOWN_EXTENSIONS'),
-                 extension_configs=self.config.get(
-                     'MARKDOWN_EXTENSION_CONFIGS'), )
-        # Flask-Restful
-        api = GeoRestApi(self)
+    def init_datasources(self):
+        self.feature_storage = storage.build_feature_storage(
+            **self.config['STORAGE'])
 
     def init_views(self):
-        self.install_markdown_doc()
-
-    def install_markdown_doc(self):
+        """initiate extra views"""
         @self.route('/')
         def index():
-            return redirect('/doc')
+            return redirect('/describe')
 
-        @self.route('/doc/')
-        def doc_index():
-            md_file = safe_join(self.config['GEOREST_DOC_DIR'], 'index.md')
-            return render_markdown(md_file, 'GeoRest Doc')
+    def init_api(self):
+        api = GeoRestApi(self)  # avoid circular reference, dont store handler
 
-        @self.route('/doc/<doc>')
-        def doc_page(doc):
-            md_file = safe_join(self.config['GEOREST_DOC_DIR'], doc)
-            return render_markdown(md_file, doc)
+    def init_logging(self):
+        cfg = self.config.get('LOGGING', None)
+        if cfg:
+            logging.config.dictConfig(cfg)

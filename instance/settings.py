@@ -3,14 +3,32 @@
 """
     App instance specific settings
 """
-import os
 
-GEOREST_DOC_DIR = os.path.abspath('doc')
 
-GEOREST_GEOSTORE_CONFIG = {
-    'type': 'memory'
+STORAGE = {
+    'prototype': 'memcache',
+    'hosts': ['localhost:11211']
 }
 
-GEOREST_GEOMODEL_CONFIG = {
-    'type': 'simple'
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'loggers': {
+        'georest.restapi': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'gunicornish',
+        },
+    },
+    'formatters': {
+        'gunicornish': {
+            'format': '%(asctime)s [%(process)d] [%(levelname)s] %(message)s',
+        },
+    },
 }

@@ -1,21 +1,93 @@
 # -*- encoding: utf-8 -*-
 
+__author__ = 'kotaimen'
+__date__ = '5/29/14'
+
 """
     georest.geo
     ~~~~~~~~~~~
 
-    Package contains spatial data model, geo engine.
+    This package provides GeoJson a-like Feature data model.
+
+    Various python geo packages:
+
+    - Geometry Engine:
+        - shapely
+        - geos
+        - osgeo.ogr
+        - django.contrib.gis.geos
+    - Coordinate Reference System:
+        - pyproj
+        - django.contrib.gis.gdal
+        - osgeo.osr
+    - GeoJson IO:
+        - json
+        - geojson
+        - ujson
+        - yajl
+    - Feature Abstraction:
+        - geojson.Feature
+        - osgeo.ogr.Feature
+    
+    Note on packages (after a lot of painful research):
+    - shapely: good geometry abstraction, fast, much better API than the 
+               official python binding, no out-of-box CRS support,
+               GeometryCollection support not complete.
+    - geos/osgeo.ogr/osgeo.osr: official binding of c++ interface, powerful,
+                                too complex, not pythonic at all, requires 
+                                convert `GEOSGeometry` to `OGRGeometry` to do
+                                coordinate transform, slow GeoJson
+                                serialization (load/dump json...).
+    - django.contrib.gis: very nice python bindings, still requires convert 
+                          geometry for CRS transform, and it feels strange
+                          to use `django` in a `Flask` project ...
+                          (used in Mark1, don't require python-gdal)
+    - geojson: Feature abstraction is what we want but uses `simplejson` for
+               serialization which is slow.
+    - ujson: Fast, stable, not as much options as standard library `json`, and
+             does not preserve float point xxx (smaller dump result)
+    - yajl: Promising but crashes interpreter ...slower than `ujson` anyway.
+    - pyshape: Very slow (10x-20x) compared to `osgeo.ogr.DataSource`,
+               can't read a lot of shapefiles, implemented in pure python.
+    - pyproj: Very weird abstraction compared to `osgeo.osr`, don't require
+              `python-gdal` and `gdal`, supports transform coordinates without
+              load geometry from `geos` into `gdal`.  Note it doesn't use
+              standard `gdal` projection database and don't link to libgdal.
 
 """
 
-__author__ = 'kotaimen'
-__date__ = '3/18/14'
+from .exceptions import GeoException
 
-from .geometry import Geometry, build_geometry, build_srs
-from .feature import Feature, \
-    literial2feature, feature2literal, \
-    json2feature, feature2json, \
-    build_feature, build_feature_from_geojson, \
-    check_properties, build_properties_from_json
+from .key import Key
+from .metadata import Metadata
+from .spatialref import SpatialReference
+from .geometry import Geometry
+from .feature import Feature
+from .operations import *
+from .import jsonhelper
 
-import jsonhelper
+def _describe():
+    import ujson
+    import shapely
+    import shapely.geos
+    import shapely.speedups
+    import shapely.geometry
+    import pyproj
+
+    return {
+        'json': 'ujson-%s' % ujson.__version__,
+        'geometry': 'shapely-%s' % shapely.__version__,
+        'geometry_engine': 'GEOS %s' % shapely.geos.geos_version_string,
+        'operation_speedups': shapely.speedups.available,
+        'proj': 'pyproj-%s' % pyproj.__version__,
+        'proj_data': '%s' % pyproj.pyproj_datadir,
+    }
+
+# cache the _describe call since its data is static
+_description = _describe()
+del _describe
+
+
+def describe():
+    global _description
+    return _description

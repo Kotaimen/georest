@@ -41,3 +41,8 @@ cover
 
 # setup.py
 build
+
+sandbox
+
+# gedit temp
+*~

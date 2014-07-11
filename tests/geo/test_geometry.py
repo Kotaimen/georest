@@ -1,168 +1,209 @@
 # -*- encoding: utf-8 -*-
 
 __author__ = 'kotaimen'
-__date__ = '3/19/14'
+__date__ = '6/5/14'
 
 import unittest
-import json
-import pickle
 
-from georest.geo import Geometry, build_geometry, build_srs
-from georest.geo.exception import GeoException
+import shapely.geometry
+import geojson
+import json
+
+from georest.geo.exceptions import InvalidGeometry, InvalidSpatialReference, \
+    InvalidGeoJsonInput
+from georest.geo.geometry import Geometry, \
+    create_geometrycollection_from_geojson
+from georest.geo.spatialref import SpatialReference
+
+from tests.geo.data import jsondata, pydata
 
 
 class TestBuildGeometry(unittest.TestCase):
-    def test_build_failure(self):
-        self.assertRaises(GeoException, build_geometry, 'bad')
-        self.assertRaises(GeoException, build_geometry, 'POINT(1 2, x)')
-        self.assertRaises(GeoException, build_geometry, 'POINT(1 2)',
-                          srid=123456)
-        self.assertRaises(GeoException, build_geometry, 'POINT(1 2)',
-                          srid='blah')
-        self.assertRaises(GeoException, build_geometry, 'GEOMETRYCOLLECTION EMPTY')
-        self.assertRaises(GeoException, build_geometry,
-                          'POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', )
+    def test_wkt(self):
+        # self.assertRaises(NotImplementedError, Geometry)
 
-    def test_build_geojson_geometry(self):
-        geom = build_geometry(
+        geom1 = Geometry.build_geometry('POINT(1 2)')
+        self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
+        self.assertTrue(geom1.crs.equals(SpatialReference(srid=4326)))
+
+        geom2 = Geometry.build_geometry('POINT(1 2)', srid=3857)
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=3857)))
+
+        geom3 = Geometry.build_geometry('SRID=3857;POINT(1 2)')
+        self.assertTrue(geom3.crs.equals(SpatialReference(srid=3857)))
+
+        geom4 = Geometry.build_geometry('SRID=3857;POINT(1 2)', srid=4326)
+        self.assertTrue(geom4.equals(shapely.geometry.Point(1, 2)))
+        self.assertTrue(geom4.crs.equals(SpatialReference(srid=3857)))
+
+        geom5 = Geometry.build_geometry(
+            'GEOMETRYCOLLECTION (POINT (2 2), LINESTRING (0 0, 1 1))')
+
+        self.assertEqual(geom5.geom_type, 'GeometryCollection')
+
+    def test_wkb(self):
+        geom1 = Geometry.build_geometry(
+            '0101000000000000000000F03F0000000000000040')
+        self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
+        self.assertTrue(geom1.crs.equals(SpatialReference(srid=4326)))
+
+        geom2 = Geometry.build_geometry(
+            buffer(
+                '\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\xf0?\x00\x00\x00\x00\x00\x00\x00@'))
+        self.assertTrue(geom2.equals(shapely.geometry.Point(1, 2)))
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=4326)))
+
+    def test_geojson(self):
+        geom1 = Geometry.build_geometry(
             '{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }')
-        self.assertEqual(
-            'POINT (1.0000000000000000 2.0000000000000000)',
-            geom.wkt)
-        self.assertEqual(
-            'SRID=4326;POINT (1.0000000000000000 2.0000000000000000)',
-            geom.ewkt)
+        self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
+        self.assertTrue(geom1.crs.equals(SpatialReference(srid=4326)))
 
-    def test_build_ewkt_geometry(self):
-        geom = build_geometry(
-            'SRID=3857;POINT(1 2)', srid=4326)
-        self.assertEqual(
-            'SRID=3857;POINT (1.0000000000000000 2.0000000000000000)',
-            geom.ewkt)
+        geom2 = Geometry.build_geometry(
+            u'{ "type": "Point", "coordinates": [ 1.0, 2.0 ] }')
+        self.assertTrue(geom2.equals(shapely.geometry.Point(1, 2)))
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=4326)))
 
-    def test_geometry_methods(self):
-        geom1 = build_geometry('POINT(1 2)', srid=4326)
-        geom2 = build_geometry('POINT(3 4)', srid=4326)
-        self.assertIsInstance(geom1.buffer(3), Geometry)
-        self.assertIsInstance(geom1.union(geom2), Geometry)
-        self.assertEqual(2, len(geom1))
+    def test_literal(self):
+        geom1 = Geometry.build_geometry(
+            {"type": "Point", "coordinates": [1.0, 2.0]})
+        self.assertTrue(geom1.equals(shapely.geometry.Point(1, 2)))
+        self.assertTrue(geom1.crs.equals(SpatialReference(srid=4326)))
 
-    def test_geometry_methods_failure(self):
-        geom1 = build_geometry('POINT(1 2)', srid=4326)
-        self.assertIsInstance(geom1.buffer(0), Geometry)
+        geom2 = Geometry.build_geometry(
+            {"type": "Point", "coordinates": [1.0, 2.0],
+             "crs": {'type': 'name',
+                     'properties': {
+                         'name': 'EPSG:3857'
+                     }}})
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=3857)))
 
+    def test_failure(self):
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          object())
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          'bad')
+        self.assertRaises(InvalidGeoJsonInput,
+                          Geometry.build_geometry,
+                          '{"type": "point", "coordinates": {bad} }')
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          'POINT(1 2, x)')
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          'POINT(1 2, 3, 4)')
+        self.assertRaises(InvalidSpatialReference,
+                          Geometry.build_geometry,
+                          'POINT(1 2)',
+                          srid=123456)
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          'GEOMETRYCOLLECTION EMPTY')
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          'MULTIPOLYGON EMPTY')
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          'POLYGON((0 0, 1 0, 0 1, 1 1, 0 0))', )
+        self.assertRaises(InvalidGeoJsonInput,
+                          Geometry.build_geometry,
+                          '{{1}', )
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          {'x': 1})
+        self.assertRaises(InvalidGeometry,
+                          Geometry.build_geometry,
+                          {'type': 'Point', 'coordinates': ['x']})
 
-class TestBuildGeometryWithGeoJson(unittest.TestCase):
-    def setUp(self):
-        # Sample geometry taken from
-        #   http://geojson.org/geojson-spec.html#appendix-a-geometry-examples
-        self.geoms = dict(
-            point={'type': 'Point', 'coordinates': [100.0, 0.0]},
-            linestring={'type': 'LineString',
-                        'coordinates': [[100.0, 0.0], [101.0, 1.0]]},
-            polygon={'type': 'Polygon',
-                     'coordinates': [
-                         [[100.0, 0.0], [101.0, 0.0], [101.0, 1.0],
-                          [100.0, 1.0], [100.0, 0.0]],
-                         [[100.2, 0.2], [100.8, 0.2], [100.8, 0.8],
-                          [100.2, 0.8], [100.2, 0.2]]
-                     ]},
-            multipoint=
-            {'type': 'MultiPoint',
-             'coordinates': [[100.0, 0.0], [101.0, 1.0]]},
-            multilinestring={'type': 'MultiLineString',
-                             'coordinates': [
-                                 [[100.0, 0.0], [101.0, 1.0]],
-                                 [[102.0, 2.0], [103.0, 3.0]]
-                             ]},
-            multipolygon={'type': 'MultiPolygon',
-                          'coordinates': [
-                              [[[102.0, 2.0], [103.0, 2.0], [103.0, 3.0],
-                                [102.0, 3.0], [102.0, 2.0]]],
-                              [[[100.0, 0.0], [101.0, 0.0], [101.0, 1.0],
-                                [100.0, 1.0], [100.0, 0.0]],
-                               [[100.2, 0.2], [100.8, 0.2], [100.8, 0.8],
-                                [100.2, 0.8], [100.2, 0.2]]]
-                          ]},
-            geomcollection={'type': 'GeometryCollection',
-                            'geometries': [
-                                {'type': 'Point',
-                                 'coordinates': [100.0, 0.0]
-                                },
-                                {'type': 'LineString',
-                                 'coordinates': [[101.0, 0.0], [102.0, 1.0]]
-                                }
-                            ]},
-        )
-
-    def test_point(self):
-        geom = build_geometry(json.dumps(self.geoms['point']), srid=4326)
-        self.assertEqual(geom.geom_type, 'Point')
-        self.assertEqual(self.geoms['point'], json.loads(geom.json))
-
-    def test_linestring(self):
-        geom = build_geometry(json.dumps(self.geoms['linestring']), srid=4326)
-        self.assertEqual(geom.geom_type, 'LineString')
-        self.assertEqual(self.geoms['linestring'], json.loads(geom.json))
-
-    def test_polygon(self):
-        geom = build_geometry(json.dumps(self.geoms['polygon']), srid=4326)
-        self.assertEqual(geom.geom_type, 'Polygon')
-        self.assertEqual(self.geoms['polygon'], json.loads(geom.json))
-
-    def test_multipoint(self):
-        geom = build_geometry(json.dumps(self.geoms['multipoint']), srid=4326)
-        self.assertEqual(geom.geom_type, 'MultiPoint')
-
-    def test_multilinestring(self):
-        geom = build_geometry(json.dumps(self.geoms['multilinestring']),
-                              srid=4326)
-        self.assertEqual(geom.geom_type, 'MultiLineString')
-
-    def test_multipolygon(self):
-        geom = build_geometry(json.dumps(self.geoms['multipolygon']), srid=4326)
-        self.assertEqual(geom.geom_type, 'MultiPolygon')
-
-    def test_geomcollection(self):
-        geom = build_geometry(json.dumps(self.geoms['geomcollection']),
-                              srid=4326)
-        self.assertEqual(geom.geom_type, 'GeometryCollection')
-        self.assertEqual(2, geom.num_geom)
-
-    def test_feature(self):
-        feat = {'type': 'Feature', 'geometry': self.geoms['point']}
-        self.assertRaises(GeoException, build_geometry, json.dumps(feat),
-                          srid=4326)
+    def test_geometry(self):
+        geom = shapely.geometry.Point(1, 2)
+        geom2 = Geometry.build_geometry(geom)
+        self.assertTrue(geom2.crs.equals(SpatialReference(srid=4326)))
 
 
-class TestGeometryPickling(unittest.TestCase):
-    def test_pickle(self):
-        geom1 = build_geometry('POINT(1 2)', 4326)
-        pk = pickle.dumps(geom1)
-        geom2 = pickle.loads(pk)
+class TestBuildGeometryCollection(unittest.TestCase):
+    def test_collection(self):
+        geo_input = geojson.loads('''{
+          "type": "GeometryCollection",
+          "geometries": [
+            {
+              "type": "Point",
+              "coordinates": [4.0,6.0]
+            },
+            {
+              "type": "LineString",
+              "coordinates": [[4.0,6.0],[7.0,10.0]]
+            }
+          ]
+        }''')
+        geometry = create_geometrycollection_from_geojson(geo_input)
+        self.assertEqual(geometry.geom_type, 'GeometryCollection')
 
-        self.assertEqual(geom1.ewkt, geom2.ewkt)
-        self.assertEqual(geom1.srid, geom2.srid)
+    def test_collection_empty(self):
+        geo_input = geojson.loads('''{
+          "type": "GeometryCollection",
+          "geometries": []
+        }''')
+        geometry = create_geometrycollection_from_geojson(geo_input)
+        self.assertEqual(geometry.geom_type, 'GeometryCollection')
+
+    def test_collection_in_collection(self):
+        geo_input = geojson.loads('''
+        {
+            "type": "GeometryCollection",
+            "geometries": [
+                {
+                  "type": "Point",
+                  "coordinates": [1.0, 1.0]
+                },
+                {
+                  "type": "GeometryCollection",
+                  "geometries": [
+                    {
+                      "type": "Point",
+                      "coordinates": [4.0, 6.0]
+                    },
+                    {
+                      "type": "LineString",
+                      "coordinates": [[4.0, 6.0], [7.0, 10.0]]
+                    }
+                  ]
+                }
+            ]
+        }
+        ''')
+        geometry = create_geometrycollection_from_geojson(geo_input)
+        self.assertEqual(geometry.geom_type, 'GeometryCollection')
 
 
-class TestSpatialReference(unittest.TestCase):
-    def test_build_failure(self):
-        self.assertRaises(GeoException, build_srs, 123445)
-        self.assertRaises(GeoException, build_srs, 'wgs blah')
+class TestBuildAllGeometryTypes(unittest.TestCase):
+    def test_geometry_types(self):
+        for k, v in jsondata.iteritems():
+            geometry = Geometry.build_geometry(v)
+            self.assertDictEqual(
+                json.loads(geometry.geojson),
+                pydata[k]
+            )
 
-    def test_build_srs(self):
-        self.assertRaises(GeoException, build_srs, 12345678)
-        self.assertEqual(build_srs(4326).srid, 4326)
-        self.assertEqual(build_srs('wgs84').srid, 4326)
+    def test_geometry_types_copy(self):
+        for k, v in jsondata.iteritems():
+            geometry = Geometry.build_geometry(v, copy=True)
+            self.assertDictEqual(
+                json.loads(geometry.geojson),
+                pydata[k]
+            )
 
+    def test_geometry_types_with_crs(self):
+        for k, v in jsondata.iteritems():
+            geometry = Geometry.build_geometry(v, srid=3857)
+            self.assertTrue('crs' in geometry.geojson)
 
-class TestSpatialReferencePickling(unittest.TestCase):
-    def test_pickle(self):
-        srs = build_srs(3857)
-        pk = pickle.dumps(srs)
-        srs2 = pickle.loads(pk)
-
-        self.assertEqual(srs.proj, srs2.proj)
+    def test_geometry_types_with_crs(self):
+        for k, v in jsondata.iteritems():
+            geometry = Geometry.build_geometry(v, copy=True, srid=3857)
+            self.assertTrue('crs' in geometry.geojson)
 
 
 if __name__ == '__main__':
