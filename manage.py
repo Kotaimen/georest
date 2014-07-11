@@ -14,11 +14,7 @@ __date__ = '3/18/14'
 
 import os
 
-from georest import GeoRestApp
-
-instance_path = os.environ.get('GEOREST_INSTANCE_PATH', None)
-app = GeoRestApp(settings='settings.py', instance_path=instance_path)
-application = app
+from georest.app import app
 
 if __name__ == '__main__':
     from flask.ext.runner import Runner
