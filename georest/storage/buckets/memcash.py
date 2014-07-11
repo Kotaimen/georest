@@ -10,8 +10,8 @@ __date__ = '7/3/14'
 
 """
 import time
-from pylibmc import Client
-#from memcache import Client
+#from pylibmc import Client
+from memcache import Client
 
 from ..storage import FeatureStorage
 from ..bucket import FeatureBucket, Commit
