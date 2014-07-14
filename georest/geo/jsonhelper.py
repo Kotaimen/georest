@@ -1,31 +1,24 @@
 # -*- encoding: utf-8 -*-
 
+__author__ = 'kotaimen'
+__date__ = '6/12/14'
+
 """
     georest.geo.jsonhelper
     ~~~~~~~~~~~~~~~~~~~~~~
-    Hide differences of json implementations
-
+    Wraps ujson
 """
 
-__author__ = 'kotaimen'
-__date__ = '4/21/14'
+import ujson
 
-try:
-    # Prefer ujson because its faster
-    import ujson
+# ujson doesn't support most kwargs in standard json library
+def dumps(obj, ensure_ascii=False, encode_html_chars=False,
+          double_precision=9, **kw):
+    return ujson.dumps(obj, ensure_ascii=ensure_ascii,
+                       encode_html_chars=encode_html_chars,
+                       double_precision=double_precision)
 
-    # ujson doesn't support most kwargs in standard json library
-    def dumps(obj, ensure_ascii=True, **kw):
-        return ujson.dumps(obj, ensure_ascii=ensure_ascii)
 
-    def loads(s, **kw):
-        return ujson.loads(s)
-
-    JSON_LIB_NAME = 'ujson'
-
-except ImportError:
-
-    from json import dumps, loads
-
-    JSON_LIB_NAME = 'json'
+def loads(s, precise_float=False, **kw):
+    return ujson.loads(s, precise_float=precise_float)
 

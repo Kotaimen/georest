@@ -1,188 +1,170 @@
-# Geometry Operation API
+# Geometry operation API
 
-Operations always works with Geometry, not Feature.
-
-Operation doc taken from [geodjango](https://docs.djangoproject.com/en/1.6/ref/contrib/gis/geos/).
-
-[TOC]
-
-## Stored Geometry Operations
-
-Operations on stored feature's geometry.
+## Operations
 
 ### Unary
 
-Operations on single geometry.
+Unary Geometry Properties
 
-#### Endpoint
+Operation | Parameters | result    | Description
+--------- | ---------- | --------- | -----------
+area      | `srid`     | pod/float | Area of the geometry in `srid` unit
 
-    GET /operations/:operation/:key
+Unary Topological Properties
 
-#### Operations
+Operation | Parameters | result    | Description
+--------- | ---------- | --------- | -----------
+boundary  | `srid`     | geojson   | Boundary of the geometry
 
-##### Unary Geometry Properties
+Unary Topological Methods
 
-Returns a POD result.
-
-Operation | Parameters | Description
-----------|------------|----------------------
-type      |            | Type of the geometry
-coords    |            | Returns the number of coordinates in the geometry. 
-geoms     |            | Returns the number of geometries in this geometry. In other words, will return 1 on anything but geometry collections.
-area      | `srid`     | Area of the geometry in `srid` unit
-length    | `srid`     | Length of the geometry in `srid` unit
-is_empty  |            | Returns whether or not the set of points in the geometry is empty.
-is_simple |            | Returns a boolean indicating whether the geometry is simple. A geometry is simple if and only if it does not intersect itself (except at boundary points).
-
-
-##### Unary Topological Properties
-
-Returns a new geometry.
-
-Operation        | Parameters       | Description
------------------|------------------|--------------
-boundary         | `format`, `srid` | Boundary of the geometry
-centroid         | `format`, `srid` | Returns a Point object representing the geometric center of the geometry. The point is not guaranteed to be on the interior of the geometry.
-convex_hull      | `format`, `srid` | Returns the smallest Polygon that contains all the points in the geometry.
-envelope         | `format`, `srid` | Returns a Polygon that represents the bounding envelope of this geometry.
-point_on_surface | `format`, `srid` | Computes and returns a Point guaranteed to be on the interior of this geometry.
-
-##### Unary Topological Methods
-
-Returns a new geometry.
-
-Method           | Parameters                            | Description
------------------|---------------------------------------|----------
-buffer           | `width`, `quadsegs`, `format`, `srid` | Returns a geometry that represents all points whose distance from this geometry is less than or equal to the given width.
-simplify         | `tolerance`, `topo`, `format`, `srid` | Returns a new geometry, simplified using the Douglas-Peucker algorithm to the specified tolerance
-
-#### Parameters
-
-Common Parameters:
-
-Name      | Type    | Description
-----------|---------|--------------------
-`:operation`| string| Name of the operation
-`:key`    | string  | Key of the geometry    
-`format`  | string  | Format of the return geometry, one of `json`, `ewkt`, `ewkb`, default is `json`
-`srid`    | integer | SRID of the geometry, default is `0`, geometry will be converted to `srid` before operation
-
-`Buffer` Operation Parameters:
-
-Name      | Type    | Description
-----------|---------|--------------------
-`width`   | float   | Width of the buffer
-`quadsegs`| integer | keyword sets the number of segments used to approximate a quarter circle (defaults is 8).
-
-`Simplify` Operation Parameters:
-
-Name        | Type    | Description
-------------|---------|--------------------
-`tolerance` | float   | Tolerance of the simplification algorithm.  A higher tolerance value implies less points in the output.
-`topo`      | boolean | By default, this function does not preserve topology. By setting this parameter to `true`, the result will have the same dimension and number of components as the input, however, this is significantly slower.
+Operation | Parameters                  | result    | Description
+--------- | --------------------------- | --------- | -----------
+buffer    | `width`, `quadsegs`, `srid` | geojson   | Returns a geometry that represents all points whose distance from this geometry is less than or equal to the given width.
 
 
 ### Binary
 
-Operations on two geometries.
+Binary Geometry Predicates
 
-#### Endpoint
-    
-    GET /operations/:operation/:this/:other
+Operation | result    | Description
+--------- | --------- | -----------
+overlaps  | pod/bool  | Returns True if the DE-9IM intersection matrix for the two geometries is `T*T***T**` (for two points or two surfaces) `1*T***T**` (for two curves).
 
-#### Operations
+Binary Geometry Methods
 
-##### Binary Geometry Predicates
+Operation | result     | Description
+--------- | ---------- | -----------
+distance  | pod/float  | Returns the distance between the closest points on this geometry and the other geometry
 
-Returns POD result.
+Binary Topological Methods
 
-Operation   | Description
-------------|-----------------
-overlaps    | Returns True if the DE-9IM intersection matrix for the two geometries is `T*T***T**` (for two points or two surfaces) `1*T***T**` (for two curves). 
-touches     | Returns True if the DE-9IM intersection matrix for the two geometries is `FT*******`, `F**T*****` or `F***T****`.
-crosses     | Returns True if the DE-9IM intersection matrix for the two geometries is `T*F**F***`.
-intersects  | Returns True if disjoint is False.
-within      | Returns True if the DE-9IM intersection matrix for the two geometries is `T*F**F***`.
-disjoint    | Returns True if the DE-9IM intersection matrix for the two geometries is `FF*FF****`.
-contains    | Returns True if within is False.
-equals      | Returns True if the DE-9IM intersection matrix for the two geometries is `T*F**FFF*`.
-
-##### Binary Geometry Methods
-
-Operation   | Description
-------------|-----------------
-distance    | Returns the distance between the closest points on this geometry and the other geometry
-
-##### Binary Topological Methods
-
-Returns a new geometry:
-
-Operation    | Parameters       | Description
--------------|------------------|------------
-intersection | `format`, `srid` | Returns a geometry representing the points shared by this geometry and other.
-difference   | `format`, `srid` | Returns a geometry combining the points in this geometry not in other, and the points in other not in this geometry.
-union        | `format`, `srid` | Returns a geometry representing all the points in this geometry and the other.
+Operation    | Parameters | result    | Description
+------------ | ---------- | --------- | -----------
+intersection | `srid`     | geojson   | Returns a geometry representing the points shared by this geometry and other.
 
 
-#### Parameters
+### Variadic
 
-Common Parameters:
+Operation | Parameters | result    | Description
+--------- | ---------- | --------- | -----------
+union     | `srid`     | geojson   | Returns a geometry representing all the points in all given geometries.
 
-Name         | Type    | Description
--------- ----|---------|--------------------
-`:operation` | string  | Name of the operation
-`:this`      | string  | Key of the geometry as first operation parameter
-`:other`      | string  | Key of the geometry as second operation parameter
-`format`  | string  | Format of the return geometry, one of `json`, `ewkt`, `ewkb`, default is `json`
-`srid`    | integer | SRID of the geometry, default is `0`, geometry will be converted to `srid` before operation
+## Query parameters
 
+## Request
 
-## Posted Geometry Operation
+### URL pattern
 
-Operations on geometries posted by API caller.
+```
+/ops/:op/:key  # for unary operations
+/ops/:op/:key1/:key2  # for binary operations
+/ops/:op/:keys-split-by-slash  # for variadic operations
+```
 
-### Unary
+### GET method
 
-#### Endpoint
-    
-    POST /operations/:operation
+When using `GET` method, all geometry-keys **MUST** exist.
 
-#### Request
-    
-Post a GeoJSON `Geometry` object:
-    
-    Data:
-        <geojson geometry>
-    Content-Type:
-        application/json
-        
-### Binary
+For example:
 
-#### Endpoint
-    
-    POST /operations/:operation
+```
+GET /ops/overlaps/foo.bar/hodor.hodor
+```
 
-#### Request
-    
-Post a GeoJSON `GeometryCollection` object which contains extract two geometries.  The first one is `this` geometry, the second one is `other` geometry:
-    
-    Data:
-        <geojson geometry>
-    Content-Type:
-        application/json
-        
-### Mixed Binary    
+### POST method
 
-    POST /geometries/:this/operation
+When using `POST` method:
 
-#### Request
-    
-Post a GeoJSON `Geometry` object which is `other` geometry:
-    
-    Data:
-        <geojson geometry>
-    Content-Type:
-        application/json
-        
+  - the posted content **MUST** be geojson geometry.
+  - `~` can be used as a key, to represent the posted geometry.
+  - `~.<i>` can also be used as a key, When posted geometry is a 
+    multi-geometry(e.g. geometry collection), to represent the `<i>`th
+    sub-geometry in the posted geometry, start from **0**.
 
-        
+For example:
+
+```
+POST /ops/overlaps/~/hodor.hodor
+
+-d
+{
+  "type": "Point",
+  "coordinates": [100, 105]
+}
+```
+
+```
+POST /ops/overlaps/~.0/~.1
+
+-d
+{
+  "type": "GeometryCollection",
+  "geometries": [
+    {
+      "type": "Point",
+      "coordinates": [100, 105]
+    },
+    {
+      "type": "Polygon",
+      "coordinates": [
+        [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0]
+      ]
+    }
+  ]
+}
+```
+
+## Response
+
+When result type is geojson, a success operation response is **ALWAYS** geojson
+document, representing the resulted geometry.
+
+For example, response of `GET /ops/boundary/ranch.sheep`:
+
+```json
+{
+  "type": "MultiLineString",
+  "coordinates": [[
+    [100.0, 0.0], [101.0, 0.0], [101.0, 1.0], [100.0, 1.0], [100.0, 0.0]
+  ]]
+}
+```
+
+When result type is pod, a success operation returns a json object with
+"result" key that bears the pod result.
+
+For example, response of `GET /ops/area/ranch.sheep`:
+
+```json
+{
+  "result": 42.0
+}
+```
+
+## Attributes
+
+Simple way to access geometry attributes is provided.
+
+### Request
+
+```
+GET /features/:key/geometry/attributes  # get interesting attributes of the geometry
+GET /features/:key/geometry/attributes/:op_name  # same as /operations/:op_name/:key
+```
+
+query arguments are provided for the first variation, to include extra attributes,
+or exclude some unnecessary attributes.
+
+e.g.
+```
+GET /features/:key/geometry/attributes?include_length=t&exclude_area=1
+```
+
+this request will always include `length` attribute
+and exclude `area` attribute.
+
+### Response
+
+the result will be a json object, with attribute names as keys and attribute
+result as values.

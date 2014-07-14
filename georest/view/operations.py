@@ -1,270 +1,159 @@
 # -*- encoding: utf-8 -*-
 
+__author__ = 'pp'
+__date__ = '6/23/14'
+
 """
     georest.view.operations
-    ~~~~~~~~~~~~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~
 
+    operation controller
 """
 
-
-__author__ = 'kotaimen'
-__date__ = '3/25/14'
-
+from collections import namedtuple
+from werkzeug.http import http_date
+from werkzeug.datastructures import ETags
+import flask
 from flask import request
+from flask import current_app
+from flask.views import MethodView
+from flask.json import jsonify
 
-from ..geo import build_geometry
-from ..geo.exception import InvalidGeometry
+from .. import geo
 
-from .base import BaseResource, make_response_from_geometry, \
-    OperationRequestParser
-
-from .exception import InvalidGeometryOperator, IdentialGeometryError
-
-
-__all__ = ['UNARY_OPERATIONS', 'BINARY_OPERATIONS',
-           'MixedGeometryOperation', 'BinaryGeometryOperation',
-           'MixedPostGeometryOperation']
+from .exceptions import InvalidRequest
+from .utils import get_json_content, catcher
 
 
-def make_predicate_result(ret):
-    return dict(result=ret)
+def _split_arg_list(arg_list):
+    """generate tokens from args
 
-#
-# Parsers
-#
-default_parser = OperationRequestParser()
+    key tokens are yielded as-is;
+    literal token '~' are yielded as None
+    sub-literal token `~.i` are yielded as integer
+    """
+    if not arg_list:
+        flask.abort(404)
 
-buffer_parser = OperationRequestParser()
-buffer_parser.add_argument('width',
-                           dest='width',
-                           action='store',
-                           location='args',
-                           type=float,
-                           required=True)
-buffer_parser.add_argument('quadsegs',
-                           dest='quadsegs',
-                           action='store',
-                           location='args',
-                           type=int,
-                           default=8,
-                           required=False)
+    if arg_list.endswith('/'):
+        flask.abort(404)
 
-simplify_parser = OperationRequestParser()
-simplify_parser.add_argument('tolerance',
-                             dest='tolerance',
-                             action='store',
-                             location='args',
-                             type=float,
-                             required=True)
-simplify_parser.add_argument('topo',
-                             dest='preserve_topology',
-                             action='store',
-                             location='args',
-                             type=bool,
-                             default=False,
-                             required=False)
-
-#
-# Operations
-#
-
-# operation name: method name
-UNARY_GEOMETRY_PROPERTIES = {
-    'type': 'geom_type',
-    'coords': 'coords',
-    'geoms': 'num_geom',
-    'area': 'area',
-    'length': 'length',
-    'is_empty': 'empty',
-    'is_ring': 'ring',
-    'is_simple': 'simple',
-}
-
-# operation name: method name
-UNARY_TOPOLOGICAL_PROPERTIES = {
-    'boundary': 'boundary',
-    'centroid': 'centroid',
-    'convex_hull': 'convex_hull',
-    'envelope': 'envelope',
-    'point_on_surface': 'point_on_surface',
-}
-
-# operation name: (method name, parser)
-UNARY_TOPOLOGICAL_METHODS = {
-    'buffer': ('buffer', buffer_parser),
-    'simplify': ('simplify', simplify_parser)
-}
-
-# operation name: (method name, parser)
-BINARY_GEOMETRY_PREDICATES = {
-    'contains': 'contains',
-    'crosses': 'crosses',
-    'disjoint': 'disjoint',
-    'equals': 'equals',
-    'intersects': 'intersects',
-    'overlaps': 'overlaps',
-    'touches': 'touches',
-    'within': 'within',
-}
-
-# operation name: (method name, parser)
-BINARY_GEOMETRY_METHODS = {
-    'distance': 'distance',
-}
-
-BINARY_TOPOLOGICAL_METHODS = {
-    'intersection': 'intersection',
-    'difference': 'difference',
-    'union': 'union',
-}
-
-UNARY_OPERATIONS = set()
-UNARY_OPERATIONS.update(UNARY_GEOMETRY_PROPERTIES.keys())
-UNARY_OPERATIONS.update(UNARY_TOPOLOGICAL_METHODS.keys())
-UNARY_OPERATIONS.update(UNARY_TOPOLOGICAL_PROPERTIES.keys())
-
-BINARY_OPERATIONS = set()
-BINARY_OPERATIONS.update(BINARY_GEOMETRY_METHODS.keys())
-BINARY_OPERATIONS.update(BINARY_GEOMETRY_PREDICATES.keys())
-BINARY_OPERATIONS.update(BINARY_TOPOLOGICAL_METHODS.keys())
-
-
-#
-# Unary operations
-#
-
-class GeometryOperationBase(object):
-    def _parse_args(self, operation):
-        if operation in UNARY_TOPOLOGICAL_METHODS:
-            _method, parser = UNARY_TOPOLOGICAL_METHODS[operation]
+    args = arg_list.split('/')
+    for arg in args:
+        if arg == '~':
+            yield None
+        elif arg.startswith('~.'):
+            try:
+                i = int(arg[2:])
+            except ValueError:
+                raise InvalidRequest('Arg %s is not valid literal token' % arg)
+            yield i
         else:
-            parser = default_parser
-
-        return parser.parse_args()
-
-    def _process(self, operation, this, other=None):
-        args = self._parse_args(operation)
-
-        if args.srid:
-            this.transform(args.srid)
-            if other is not None:
-                other.transform(args.srid)
-
-        # XXX: This is so so ugly...
-        # Ideas: Select a geometry attribute or bounded method call from given
-        # operation string.  Argument list, arg parsing, result are all
-        # different and depends on the operation selected.  Maybe Command
-        # patten fits here?
-        if operation in UNARY_GEOMETRY_PROPERTIES:
-            attribute_name = UNARY_GEOMETRY_PROPERTIES[operation]
-            return make_predicate_result(getattr(this, attribute_name))
-
-        elif operation in UNARY_TOPOLOGICAL_PROPERTIES:
-            attribute_name = UNARY_TOPOLOGICAL_PROPERTIES[operation]
-            attribute = getattr(this, attribute_name)
-            return make_response_from_geometry(attribute, args.format)
-
-        elif operation in UNARY_TOPOLOGICAL_METHODS:
-            method_args = dict(args)
-            del method_args['srid']
-            del method_args['format']
-            method_name, parser = UNARY_TOPOLOGICAL_METHODS[operation]
-            bounded_method = getattr(this, method_name)
-            result = bounded_method(**method_args)
-            return make_response_from_geometry(result, args.format)
-
-        elif operation in BINARY_GEOMETRY_PREDICATES:
-            method_name = BINARY_GEOMETRY_PREDICATES[operation]
-            bounded_method = getattr(this, method_name)
-            result = bounded_method(other)
-            return make_predicate_result(result)
-
-        elif operation in BINARY_GEOMETRY_METHODS:
-            method_name = BINARY_GEOMETRY_METHODS[operation]
-            bounded_method = getattr(this, method_name)
-            # HACK: GEOSGeometry.distance() checks distance type explicitly
-            result = bounded_method(other.the_geom)
-            return make_predicate_result(result)
-
-        elif operation in BINARY_TOPOLOGICAL_METHODS:
-            method_name = BINARY_TOPOLOGICAL_METHODS[operation]
-            bounded_method = getattr(this, method_name)
-            result = bounded_method(other)
-            return make_response_from_geometry(result, args.format)
-
-        else:
-            raise InvalidGeometryOperator(operation)
+            # it's a Key
+            yield arg
 
 
-class MixedGeometryOperation(GeometryOperationBase, BaseResource):
-    def get(self, key, operation):
-        """ Unary operation on stored geometry
-
-            GET /geometries/<key>/operation
-        """
-        if operation not in UNARY_OPERATIONS:
-            raise InvalidGeometryOperator(
-                'Invalid unary operation :"%s"' % operation)
-
-        feature = self.model.get_feature(key)
-        return self._process(operation, feature.geometry)
-
-    def post(self, key, operation):
-        """ Binary operation on stored geometry and posted geometry
-            POST /geometries/<this>/operation
-            DATA <other>
-        """
-        if operation not in BINARY_OPERATIONS:
-            raise InvalidGeometryOperator(
-                'Invalid binary operation :"%s"' % operation)
-
-        this_geometry = self.model.get_feature(key).geometry
-        other_geometry = build_geometry(request.data, srid=4326)
-
-        return self._process(operation, this_geometry, other_geometry)
+def _get_kwargs():
+    kwargs = request.args.to_dict()
+    if 'srid' in kwargs:
+        srid = kwargs['srid']
+        try:
+            kwargs['srid'] = int(srid)
+        except ValueError:
+            raise InvalidRequest('srid %s cannot convert to integer' % srid)
+    return kwargs
 
 
-class BinaryGeometryOperation(GeometryOperationBase, BaseResource):
-    def get(self, this, operation, other):
-        """ Binary operation on stored geometries
-            GET /geometries/<this>/operation/<other>
-        """
-        if operation not in BINARY_OPERATIONS:
-            raise InvalidGeometryOperator(
-                'Invalid binary operation :"%s"' % operation)
+def _str2bool(s):
+    s = s.strip().lower()
 
-        if this == other:
-            raise IdentialGeometryError('Given geometries are identical')
-
-        this_geometry = self.model.get_feature(this).geometry
-        other_geometry = self.model.get_feature(other).geometry
-
-        return self._process(operation, this_geometry, other_geometry)
+    if not s:
+        return False
+    elif s.startswith('n'):
+        return False
+    elif s.startswith('f'):
+        return False
+    elif s == '0':
+        return False
+    return True
 
 
-class MixedPostGeometryOperation(GeometryOperationBase, BaseResource):
-    def post(self, operation):
-        if operation in UNARY_OPERATIONS:
-            geometry = build_geometry(request.data)
-            return self._process(operation, geometry)
+class Operations(MethodView):
 
-        elif operation in BINARY_OPERATIONS:
-            geometry_collection = build_geometry(request.data)
-            if geometry_collection.geom_typeid < 7:
-                raise InvalidGeometry(
-                    'Requires a GeometryCollection, got "%s" instead' % geometry_collection.geo_type)
+    decorators = [catcher]
 
-            if geometry_collection.num_geom != 2:
-                raise InvalidGeometry(
-                    'GeometryCollection, should contain 2 geometries, got %d',
-                    geometry_collection.num_geom)
-            this_geometry = geometry_collection[0]
-            other_geometry = geometry_collection[1]
-            return self._process(operation, this_geometry, other_geometry)
+    def __init__(self, operations_model, geometry_model):
+        self.operations_model = operations_model
+        self.geometry_model = geometry_model
 
-        else:
-            raise InvalidGeometryOperator(
-                'Invalid geometry operation :"%s"' % operation)
+    def get(self, op_name=None, arg_list=None):
+        if op_name is None:
+            return jsonify(self.operations_model.describe())
+        if arg_list is None:
+            return jsonify(self.operations_model.describe_operation(op_name))
+        geoms = self._load_geoms(arg_list)
+        kwargs = _get_kwargs()
+        result = self.operations_model.invoke(op_name, *geoms, **kwargs)
+        return result.json(), 200, {'Content-Type': 'application/json'}
+
+    def post(self, op_name=None, arg_list=None):
+        if op_name is None or arg_list is None:
+            flask.abort(404)
+        data = get_json_content()
+        geom = geo.Geometry.build_geometry(data)
+        geoms = self._load_geoms(arg_list, geom)
+        kwargs = _get_kwargs()
+        result = self.operations_model.invoke(op_name, *geoms, **kwargs)
+        return result.json(), 200, {'Content-Type': 'application/json'}
+
+    def _load_geoms(self, arg_list, input_geom=None):
+        geoms = []
+        for token in _split_arg_list(arg_list):
+            if token is None:
+                if input_geom is None:
+                    raise InvalidRequest('Want literal tokens? use POST')
+                geoms.append(input_geom)
+            elif isinstance(token, int):
+                if input_geom is None:
+                    raise InvalidRequest('Want literal tokens? use POST')
+                try:
+                    sub_geom = input_geom[token]
+                except (IndexError, TypeError):
+                    raise InvalidRequest(
+                        'literal token ~.%s is invalid' % token)
+                sub_geom = geo.Geometry.build_geometry(sub_geom,
+                                                       srid=input_geom.crs.srid)
+                geoms.append(sub_geom)
+            else:
+                geom, metadata = self.geometry_model.get(token)
+                geoms.append(geom)
+
+        return geoms
 
 
+class Attributes(MethodView):
+    """get all useful attributes at once"""
 
+    decorators = [catcher]
+
+    def __init__(self, attributes_model, geometry_model):
+        self.attributes_model = attributes_model
+        self.geometry_model = geometry_model
+
+    def get(self, key):
+        kwargs = _get_kwargs()
+        includes = []
+        excludes = []
+        for k, v in kwargs.items():
+            if k.startswith('include_') and _str2bool(v):
+                includes.append(k[8:])
+                del kwargs[k]
+            elif k.startswith('exclude_') and _str2bool(v):
+                excludes.append(k[8:])
+                del kwargs[k]
+
+        geometry, metadata = self.geometry_model.get(key)
+        result = self.attributes_model.attributes(geometry,
+                                                  includes=includes,
+                                                  excludes=excludes, **kwargs)
+        return result, 200, {'Content-Type': 'application/json'}

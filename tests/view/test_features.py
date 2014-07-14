@@ -1,213 +1,124 @@
 # -*- encoding: utf-8 -*-
 
-__author__ = 'kotaimen'
-__date__ = '3/25/14'
+__author__ = 'pp'
+__date__ = '6/11/14'
 
-import unittest
-import datetime
 import json
-
-from tests.view import ResourceTestBase
-
-
-class TestGetFeatureAPI(ResourceTestBase, unittest.TestCase):
-    def test_get_feature(self):
-        key = 'point1'
-
-        response = self.client.get(
-            path='/features/%s' % key,
-        )
-
-        result = self.checkResponse(response, 200)
-
-        self.assertEqual(response.headers['Etag'], self.point1.etag)
-        self.assertEqual(response.date, self.point1.created)
-        self.assertEqual(response.last_modified, self.point1.modified)
-        expires = self.point1.created + datetime.timedelta(
-            seconds=self.app.config['EXPIRES'])
-        self.assertEqual(response.expires, expires)
-
-        self.assertEqual(result['geometry'],
-                         json.loads(self.point1.geometry.json))
-        self.assertEqual(result['type'], 'Feature')
-        self.assertIn('_key', result)
-        self.assertIn('_geohash', result)
-        self.assertIn('bbox', result)
-        self.assertIn('crs', result)
-
-    def test_get_feature_with_prefix(self):
-        key = '1'
-
-        response = self.client.get(
-            path='/features/%s' % key,
-            query_string={'prefix': 'point'},
-        )
-
-        result = self.checkResponse(response, 200)
-
-    def test_get_feature_geohash(self):
-        key = 'point1'
-
-        response = self.client.get(
-            path='/features/%s/geohash' % key,
-        )
-        result = self.checkResponse(response, 200)
-        self.assertEqual(result['result'], 's0000000d6ds')
-
-    def test_get_feature_bbox(self):
-        key = 'point1'
-
-        response = self.client.get(
-            path='/features/%s/bbox' % key,
-        )
-        result = self.checkResponse(response, 200)
-        self.assertListEqual(result['result'], [0.0001, 0.0001, 0.0001, 0.0001])
+from datetime import datetime
+import unittest
+from tests.view.base import ViewTestMixin
 
 
-class PutTestFeatureAPI(ResourceTestBase, unittest.TestCase):
+class StorageViewBase(ViewTestMixin):
+    def test_get_ok(self):
+        self.model.get.return_value = self.data, {'last_modified': datetime(2014, 6, 20, 1, 0, 0), 'etag': 'foooo'}
+        self.model.as_json.return_value = self.jdata
+        r = self.client.get(self.get_url)
+        self.assertEqual(r.status_code, 200)
+        self.model.get.assert_called_once_with(self.key)
+        self.model.as_json.assert_called_once_with(self.data)
+
+    def test_get_not_modified(self):
+        # in this case, foo.bar is not modified since '2014-06-20-01:00:00 GMT'
+        self.model.get.return_value = self.data, {'last_modified': datetime(2014, 6, 20, 1, 0, 0)}
+        self.model.as_json.return_value = self.jdata
+        d = datetime(2014, 6, 20, 2, 0, 0)
+        r = self.client.get(self.get_url, headers={'If-Modified-Since': d.strftime('%a, %d %b %Y %H:%M:%S GMT')})
+        self.assertEqual(r.status_code, 304)
+        self.model.get.assert_called_once_with(self.key)
+
+    def test_get_non_match(self):
+        # in this case, foo.bar is already has etag 'hodorhodorhodor'
+        self.model.get.return_value = self.data, {'etag': 'hodorhodorhodor'}
+        self.model.as_json.return_value = self.jdata
+        r = self.client.get(self.get_url,
+                            headers={'If-None-Match': '"hodorhodorhodor"'})
+        self.assertEqual(r.status_code, 304)
+        self.model.get.assert_called_once_with(self.key)
+
+    def test_put_ok(self):
+        r = self.client.put(self.put_url, data=self.jdata,
+                            content_type='application/json')
+        self.assertEqual(r.status_code, 201)
+        rv = json.loads(r.data)
+        self.assertEqual(rv['key'], self.key)
+
+    @unittest.skip('Not in thin wrapper')
+    def test_put_conflict(self):
+        pass
+
+    def test_post_ok(self):
+        self.model.create.return_value = 'foo.shoot', {'etag': 'hodorx2'}
+        self.model.from_json.return_value = self.data
+        r = self.client.post(self.post_url, data=self.jdata,
+                             content_type='application/json')
+
+        self.model.create.assert_called_once_with(self.data, bucket=self.bucket)
+        self.model.from_json.assert_called_once_with(self.jdata)
+        self.assertEqual(r.status_code, 201)
+        rv = json.loads(r.data)
+        self.assertEqual(rv['key'], 'foo.shoot')
+        self.assertEqual(rv['etag'], 'hodorx2')
+        self.assertEqual(r.headers['ETag'], '"hodorx2"')
+
+
+class TestFeatures(StorageViewBase, unittest.TestCase):
     def setUp(self):
-        ResourceTestBase.setUp(self)
+        super(TestFeatures, self).setUp()
+        self.data = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [1, 2]
+            }
+        }
+        self.jdata = json.dumps(self.data)
+        self.model = self.mock_feature_model
+        self.get_url = '/features/foo.bar'
+        self.put_url = '/features/foo.bar'
+        self.post_url = '/features?bucket=foo'
+        self.delete_url = '/features/foo.bar'
+        self.bucket = 'foo'
+        self.key = 'foo.bar'
 
-        self.payload = json.dumps(
-            {"type": "Feature",
-             "geometry": {"type": "Polygon",
-                          "coordinates": [
-                              [[100.0, 0.0], [101.0, 0.0], [101.0, 1.0],
-                               [100.0, 1.0], [100.0, 0.0]],
-                              [[100.2, 0.2], [100.8, 0.2], [100.8, 0.8],
-                               [100.2, 0.8], [100.2, 0.2]]
-                          ]
-             },
-             "properties": {
-                 "hello": "world",
-                 "life": 42
-             }
-            })
-
-    def test_post_feature(self):
-        payload = self.payload
-
-        response = self.client.post(
-            path='/features',
-            data=payload
-        )
-        self.checkResponse(response, 201)
-
-    def test_post_feature_with_prefix(self):
-        payload = self.payload
-
-        response = self.client.post(
-            path='/features',
-            data=payload,
-            query_string={'prefix': 'point'},
-        )
-
-        self.checkResponse(response, 201)
-
-    def test_put_feature(self):
-        payload = self.payload
-
-        response = self.client.put(
-            path='/features/blah',
-            data=payload
-        )
-        self.checkResponse(response, 201)
-
-    def test_put_feature_with_prefix(self):
-        payload = self.payload
-
-        response = self.client.put(
-            path='/features/blah',
-            data=payload,
-            query_string={'prefix': 'foo.'},
-        )
-
-        self.checkResponse(response, 201)
+    def test_delete(self):
+        self.model.delete.return_value = {}
+        r = self.client.delete(self.delete_url, headers={'If-Match': '"tatar"'})
+        self.model.delete.assert_called_once_with(self.key, etag='tatar')
+        self.assertEqual(r.status_code, 204)
 
 
-class TestDeleteFeatureAPI(ResourceTestBase, unittest.TestCase):
-    def test_delete_feature(self):
-        key = 'linestring1'
-        path = '/features/%s' % key
-        self.checkResponse(self.client.get(path=path), 200)
-        self.checkResponse(self.client.delete(path=path), 204)
-        self.checkResponse(self.client.get(path=path), 404)
-        self.checkResponse(self.client.delete(path=path), 404)
+class TestGeometry(StorageViewBase, unittest.TestCase):
+    def setUp(self):
+        super(TestGeometry, self).setUp()
+        self.data = {
+            "type": "Point",
+            "coordinates": [1, 2]
+        }
+        self.jdata = json.dumps(self.data)
+        self.model = self.mock_geometry_model
+        self.get_url = '/features/foo.bar/geometry'
+        self.put_url = '/features/foo.bar/geometry'
+        self.post_url = '/geometries?bucket=foo'
+        self.bucket = 'foo'
+        self.key = 'foo.bar'
 
 
-class TestFeaturePropertiesAPI(ResourceTestBase, unittest.TestCase):
-    def test_get_properties(self):
-        old_props = self.point1.properties
+class TestProperties(StorageViewBase, unittest.TestCase):
+    def setUp(self):
+        super(TestProperties, self).setUp()
+        self.data = {
+            "hodor": "hodor",
+            "foo": "kung"
+        }
+        self.jdata = json.dumps(self.data)
+        self.model = self.mock_feature_prop_model
+        self.get_url = '/features/foo.bar/properties'
+        self.put_url = '/features/foo.bar/properties'
+        # self.post_url = '/geometries?bucket=foo'
+        self.bucket = 'foo'
+        self.key = 'foo.bar'
 
-        response = self.client.get(
-            '/features/point1/properties'
-        )
-
-        result = self.checkResponse(response)
-        self.assertDictEqual(old_props, result)
-
-    def test_update_properties(self):
-        old_props = self.point1.properties
-        new_props = {'cheese': 'shop', 'answer': None}
-
-        response = self.client.post(
-            '/features/point1/properties',
-            data=json.dumps(new_props)
-        )
-
-        result = self.checkResponse(response, 201)
-        old_props.update(new_props)
-        self.assertDictEqual(result, old_props)
-
-
-    def test_delete_properties(self):
-        response = self.client.delete(
-            '/features/point1/properties',
-        )
-        self.checkResponse(response, 204)
-
-        response = self.client.get(
-            '/features/point1/properties'
-        )
-
-        result = self.checkResponse(response)
-        self.assertDictEqual({}, result)
-
-
-    def test_update_properties_invalid_key(self):
-        new_props = {'cheese': 'shop'}
-
-        response = self.client.post(
-            '/features/invalid/properties',
-            data=json.dumps(new_props)
-        )
-
-        self.checkResponse(response, 404)
-
-    def test_get_property_by_name(self):
-        response = self.client.get(
-            '/features/point1/properties/answer'
-        )
-
-        result = self.checkResponse(response)
-        self.assertDictEqual(result, {'answer': 42})
-
-    def test_delete_property_by_name(self):
-        old_props = self.point1.properties
-        del old_props['answer']
-        response = self.client.delete(
-            '/features/point1/properties/answer'
-        )
-
-        self.checkResponse(response, 204)
-
-        response = self.client.get(
-            '/features/point1/properties'
-        )
-
-        result = self.checkResponse(response)
-        self.assertDictEqual(old_props, result)
-
-
-if __name__ == '__main__':
-    unittest.main()
+    @unittest.skip('No post for properties')
+    def test_post_ok(self):
+        pass
