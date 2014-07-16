@@ -1,35 +1,72 @@
 # GeoRest
 
-A restful, schema-less, searchable GeoFeature object storage.
+A restful, schema-less, searchable Geo-spatial Feature object storage.
+
+Note: still in development, only features required by geoevent system 
+is implemented.
 
 ## Features
 
 - Restful API
-- GeoJSON exchange format
-- Geometry operation
-- Spatial query
+- GeoJSON as exchange format
+- Spatial operation/algorithm RPC
+- Object based revision
+- Simple spatial query support (todo)
 - Switchable storage backend
-- Entity tracking support
+    - postgis
+    - memcached
+    - mongodb (todo)
+    - s3 (todo)
+- Entity tracking support (todo)
+- Builtin monitoring (todo)
 
-## Install on Ubuntu 12.04
+## Install on Ubuntu 12.04+ 
 
 ```sh
-# assume you are root user
-# sudo -s
-apt-get update
-apt-get install libgeos-dev libpq-dev python-dev python-pip build-essential g++ 
+sudo apt-get update
+sudo apt-get install g++ libgeos-dev libpq-dev python-dev python-pip build-essential  
+sudo pip install -r requirements.txt
+```
+
+## Install on Mac using homebrew
+
+Assuming use brew python instead of system python. 
+
+```sh
+brew install geos libpq python 
 pip install -r requirements.txt
 ```
 
-## Start Georest
+## Configuration and Running
 
-Just run `./manage.py`.
+For debug/test, just run `./manage.py`.
 
-Run gunicorn: `gunicorn georest.app`
+Or run via gunicorn: 
+    
+    gunicorn georest.app -w 2
 
-To use Gunicorn/Gunicorn+NGINX, check
-[gunicorn](http://gunicorn.org/#deployment).
+Recommended production deployment is use `nginx` + `Gunicorn`, 
+see [offcial manual](http://gunicorn.org/#deployment).
 
-## How to run tests
+We uses `flask` instance configuration so default setting is 
+    
+    ./instance/setting.py
+    
+(if you didn't install `georest` into system python or virtual environment).
+    
 
-run `nosetests`
+## Unittest
+
+Simply run:
+    
+    nosetests
+    
+This will also generate a coverage report, note using `unittest` runner in
+an IDE is also OK.
+
+You have to setup a local memcache/postgres server and several 
+environment variables to be able to run the complete test.
+
+## API Document
+
+Check `./doc`
