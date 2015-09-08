@@ -77,7 +77,7 @@ def _describe():
     return {
         'json': 'ujson-%s' % ujson.__version__,
         'geometry': 'shapely-%s' % shapely.__version__,
-        'geometry_engine': 'GEOS %s' % shapely.geos.geos_version_string,
+        'geometry_engine': 'GEOS %d.%d.%d' % shapely.geos.geos_version,
         'operation_speedups': shapely.speedups.available,
         'proj': 'pyproj-%s' % pyproj.__version__,
         'proj_data': '%s' % pyproj.pyproj_datadir,

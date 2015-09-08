@@ -58,14 +58,12 @@ class TestTransformOps(unittest.TestCase):
             pyproj.Proj(init='epsg:4326'))
 
     def test_geometry_collection_transform(self):
-        """shapely don't support transform on GeometryCollection "by design"
-
-        See: https://github.com/Toblerity/Shapely/issues/74
+        """See: https://github.com/Toblerity/Shapely/issues/74 (fixed)
         """
         g1 = shapely.wkt.loads(
             'GEOMETRYCOLLECTION (POINT (100 0), LINESTRING (101 0, 102 1))')
 
-        self.assertRaises(TypeError, shapely.ops.transform, self.project, g1)
+        # self.assertRaises(TypeError, shapely.ops.transform, self.project, g1)
 
     def test_geometry_multipoint_transform(self):
         """shapely's multi geometry adapter doesn't perfectly mimics a geometry
